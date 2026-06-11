@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText } from "lucide-react";
+import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText, SlidersHorizontal } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
@@ -24,6 +24,7 @@ function AdminLayout() {
         { label: "Users & roles", icon: Users, to: "/admin/users" },
         { label: "Audit log", icon: ScrollText, to: "/admin/audit" },
         { label: "Announcements", icon: Megaphone, to: "/admin/announcements" },
+        { label: "Config", icon: SlidersHorizontal, to: "/admin/config" },
         { label: "Leads", icon: FileText, to: "/admin/leads" },
         { label: "Settings", icon: SettingsIcon, to: "/admin/settings" },
       ]}

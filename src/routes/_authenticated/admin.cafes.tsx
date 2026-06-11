@@ -14,7 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { listAllCafes, setCafeRestriction, deleteCafe, cafeDeepStats } from "@/lib/admin.functions";
+import { listAllCafes, setCafeRestriction, deleteCafe, cafeDeepStats, exportDataset } from "@/lib/admin.functions";
+import { downloadCsv } from "@/lib/csv";
+import { Download } from "lucide-react";
 import { createCafe, toggleCafeActive } from "@/lib/cafes.functions";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { isMaintenanceActive } from "@/lib/maintenance";
@@ -67,12 +69,14 @@ function CafesPanel() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">{cafes.length} cafés on network</div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
-              <Plus className="h-4 w-4" /> Onboard café
-            </Button>
-          </DialogTrigger>
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButton kind="cafes" />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+                <Plus className="h-4 w-4" /> Onboard café
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader><DialogTitle>Onboard a café</DialogTitle></DialogHeader>
             <form
@@ -116,7 +120,9 @@ function CafesPanel() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
 
       <Tabs defaultValue="all" className="mt-5">
         <TabsList className="glass-strong flex-wrap rounded-2xl p-1">
@@ -413,4 +419,23 @@ function StatBox({ label, value, className = "" }: { label: string; value: numbe
     </div>
   );
 }
+
+export function ExportButton({ kind }: { kind: "cafes" | "users" | "orders" | "sessions" | "bookings" | "leads" }) {
+  const fn = useServerFn(exportDataset);
+  const m = useMutation({
+    mutationFn: fn,
+    onSuccess: (rows) => {
+      if (!rows || rows.length === 0) { toast.info("Nothing to export"); return; }
+      downloadCsv(`${kind}-${new Date().toISOString().slice(0, 10)}.csv`, rows as unknown as Record<string, unknown>[]);
+      toast.success(`Exported ${rows.length} rows`);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  return (
+    <Button variant="outline" className="gap-2" disabled={m.isPending} onClick={() => m.mutate({ data: { kind } })}>
+      <Download className="h-4 w-4" /> {m.isPending ? "Exporting…" : `Export ${kind}`}
+    </Button>
+  );
+}
+
 
