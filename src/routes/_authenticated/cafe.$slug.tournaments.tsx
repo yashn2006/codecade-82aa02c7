@@ -108,8 +108,11 @@ function TournamentsPage() {
                   <div className="relative mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
                     <CalendarClock className="h-3.5 w-3.5" /> {new Date(t.starts_at).toLocaleString()}
                   </div>
-                  <div className="relative mt-3 flex items-center gap-2">
+                  <div className="relative mt-3 flex flex-wrap items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => setView(t)}>Roster</Button>
+                    <a href={`/cafe/${slug}/tournaments/${t.id}`} className="inline-flex h-9 items-center justify-center rounded-md bg-primary/10 px-3 text-xs font-semibold text-primary hover:bg-primary/20">
+                      <Trophy className="mr-1 h-3 w-3" /> Bracket
+                    </a>
                     <Button size="sm" variant="ghost" onClick={() => setEdit(t)}>Edit</Button>
                     <Button size="icon" variant="ghost" className="ml-auto" onClick={() => { if (confirm("Delete?")) rm.mutate({ data: { id: t.id } }); }}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
