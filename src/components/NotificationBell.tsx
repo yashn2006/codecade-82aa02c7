@@ -26,7 +26,7 @@ export function NotificationBell() {
     refetchInterval: 30_000,
   });
   const markM = useMutation({
-    mutationFn: mark,
+    mutationFn: () => mark(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
   const [open, setOpen] = useState(false);
