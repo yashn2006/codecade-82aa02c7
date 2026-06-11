@@ -65,6 +65,7 @@ function CafeLayout() {
         { label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
       ]}
     >
+      <CafeBreadcrumbs slug={slug} cafeName={cafe?.name ?? null} />
       <div className="mb-4 space-y-3">
         <MaintenanceBanner window={platform} title="CoreCade network maintenance" />
         {cafe && (
