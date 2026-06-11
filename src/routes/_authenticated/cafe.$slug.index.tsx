@@ -17,6 +17,7 @@ import { StationPod, SuspendCountdown } from "@/components/StationPod";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { LiveAnalyticsPanel } from "@/components/LiveAnalyticsPanel";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
@@ -124,6 +125,9 @@ function LiveFloor() {
 
   return (
     <div className="space-y-6">
+      {/* Cinematic live analytics — revenue spark, 24h heatmap, top stations */}
+      <LiveAnalyticsPanel sessions={sessions} devices={devices} activeCount={counts.in_use} />
+
       {/* Hero strip — floor pulse */}
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
