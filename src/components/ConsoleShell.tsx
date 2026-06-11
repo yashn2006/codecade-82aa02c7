@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { HeroBackdrop3D } from "@/components/HeroBackdrop3D";
 import { BrandLockup } from "@/components/Brand";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export type NavItem = {
   label: string;
@@ -99,6 +100,9 @@ export function ConsoleShell({
             })}
           </nav>
           <div className="border-t border-border/70 p-3">
+            <div className="mb-2 flex justify-end">
+              <NotificationBell />
+            </div>
             <div className="flex items-center gap-2 rounded-xl bg-secondary/60 p-2.5">
               <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground">
                 {(email[0] ?? "?").toUpperCase()}
@@ -133,13 +137,16 @@ export function ConsoleShell({
               </button>
               <BrandLockup size={24} badge={badge} />
             </div>
-            <button
-              onClick={signOut}
-              className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <button
+                onClick={signOut}
+                className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                aria-label="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </header>
 
           {/* Main content */}

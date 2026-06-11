@@ -52,6 +52,8 @@ function PublicCafePage() {
   const heroUrl = page?.hero_url ?? cafe.cover_url;
   const social = (page?.socials ?? {}) as Record<string, string>;
   const gallery = (page?.gallery ?? []) as string[];
+  const theme = (page?.theme ?? {}) as { accent?: string; bg?: string; mode?: string };
+  const mapUrl = (page?.map_url ?? null) as string | null;
   const cafeMaint = {
     starts_at: (cafe as { maintenance_starts_at?: string | null }).maintenance_starts_at ?? null,
     ends_at: (cafe as { maintenance_ends_at?: string | null }).maintenance_ends_at ?? null,
@@ -60,8 +62,8 @@ function PublicCafePage() {
   const inMaintenance = isMaintenanceActive(cafeMaint) || isMaintenanceActive(platform);
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <AuroraBackground />
+    <div className="relative min-h-screen overflow-hidden" style={theme.bg ? { background: `radial-gradient(circle at 50% -10%, ${theme.accent}33, transparent 50%), ${theme.bg}` } : undefined}>
+      {!theme.bg && <AuroraBackground />}
 
       <header className="sticky top-0 z-30">
         <div className="mx-auto mt-3 max-w-6xl px-4">
@@ -212,6 +214,15 @@ function PublicCafePage() {
           </div>
         </div>
       </section>
+
+      {mapUrl && (
+        <section className="mx-auto mt-12 max-w-6xl px-4">
+          <h2 className="font-display text-2xl font-bold">Find us</h2>
+          <div className="mt-4 overflow-hidden rounded-2xl border border-border/60">
+            <iframe src={mapUrl} className="aspect-[21/9] w-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={`${cafe.name} on map`} />
+          </div>
+        </section>
+      )}
 
       <footer className="mx-auto mt-16 max-w-6xl px-4 py-10 text-center text-xs text-muted-foreground">
         Powered by <span className="text-gradient font-semibold">CoreCade</span>

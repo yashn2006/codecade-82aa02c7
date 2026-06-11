@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed, Wrench, LineChart, ChevronRight, Home, LayoutDashboard } from "lucide-react";
+import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed, Wrench, LineChart, ChevronRight, Home, LayoutDashboard, Trophy, History } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
@@ -57,10 +57,12 @@ function CafeLayout() {
         { label: "POS counter", icon: Receipt, to: "/cafe/$slug/pos", params: { slug } },
         { label: "Devices", icon: Cpu, to: "/cafe/$slug/devices", params: { slug } },
         { label: "Bookings", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug } },
+        { label: "Tournaments", icon: Trophy, to: "/cafe/$slug/tournaments", params: { slug } },
         { label: "Customers", icon: Users, to: "/cafe/$slug/customers", params: { slug } },
         { label: "Wallet", icon: Wallet, to: "/cafe/$slug/wallet", params: { slug } },
         { label: "Memberships", icon: Crown, to: "/cafe/$slug/memberships", params: { slug } },
         { label: "Ledger", icon: ScrollText, to: "/cafe/$slug/ledger", params: { slug } },
+        { label: "Audit log", icon: History, to: "/cafe/$slug/audit", params: { slug } },
         { label: "Public page", icon: Globe, to: "/cafe/$slug/page", params: { slug } },
         { label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
       ]}
@@ -105,10 +107,12 @@ const SECTION_LABELS: Record<string, { label: string; icon: typeof Activity }> =
   pos: { label: "POS counter", icon: Receipt },
   devices: { label: "Devices", icon: Cpu },
   bookings: { label: "Bookings", icon: CalendarRange },
+  tournaments: { label: "Tournaments", icon: Trophy },
   customers: { label: "Customers", icon: Users },
   wallet: { label: "Wallet", icon: Wallet },
   memberships: { label: "Memberships", icon: Crown },
   ledger: { label: "Ledger", icon: ScrollText },
+  audit: { label: "Audit log", icon: History },
   page: { label: "Public page", icon: Globe },
   staff: { label: "Staff", icon: Settings },
 };

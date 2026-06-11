@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Image as ImageIcon, Save, ExternalLink } from "lucide-react";
+import { Image as ImageIcon, Save, ExternalLink, Palette, MapPin, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { getCafePage, updateCafePage } from "@/lib/cafe-page.functions";
@@ -25,6 +25,14 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/page")({
 });
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+const THEME_PRESETS = [
+  { mode: "dark",    label: "Midnight",  accent: "#ec4899", bg: "#0a0a1a" },
+  { mode: "neon",    label: "Neon Arcade", accent: "#00f0ff", bg: "#050014" },
+  { mode: "minimal", label: "Minimal",    accent: "#171717", bg: "#fafafa" },
+  { mode: "arcade",  label: "Retro CRT",  accent: "#ffd000", bg: "#1a0033" },
+] as const;
+
+type Theme = { mode?: string; accent?: string; bg?: string; font?: string };
 
 function PageEditor() {
   const { slug } = Route.useParams();
@@ -42,20 +50,26 @@ function PageEditor() {
     tagline: "", hero_url: "", about: "",
     hours: Object.fromEntries(DAYS.map((d) => [d, ""])) as Record<string, string>,
     socials: { instagram: "", youtube: "", discord: "" } as Record<string, string>,
-    gallery: "" as string,
+    gallery: [] as string[],
+    galleryInput: "",
+    theme: { mode: "dark", accent: "#ec4899", bg: "#0a0a1a" } as Theme,
+    map_url: "",
   });
 
   useEffect(() => {
     const p = pageQ.data;
     if (p) {
-      setForm({
+      setForm((cur) => ({
+        ...cur,
         tagline: p.tagline ?? "",
         hero_url: p.hero_url ?? "",
         about: p.about ?? "",
         hours: { ...Object.fromEntries(DAYS.map((d) => [d, ""])), ...(p.hours ?? {}) },
         socials: { instagram: "", youtube: "", discord: "", ...(p.socials ?? {}) },
-        gallery: Array.isArray(p.gallery) ? p.gallery.join("\n") : "",
-      });
+        gallery: Array.isArray(p.gallery) ? p.gallery : [],
+        theme: { mode: "dark", accent: "#ec4899", bg: "#0a0a1a", ...(p.theme ?? {}) },
+        map_url: p.map_url ?? "",
+      }));
     }
   }, [pageQ.data]);
 
@@ -76,8 +90,20 @@ function PageEditor() {
       about: form.about || null,
       hours: form.hours,
       socials: Object.fromEntries(Object.entries(form.socials).filter(([, v]) => v)),
-      gallery: form.gallery.split("\n").map((s) => s.trim()).filter(Boolean),
+      gallery: form.gallery,
+      theme: form.theme,
+      map_url: form.map_url || null,
     } });
+  }
+
+  function addGallery() {
+    const v = form.galleryInput.trim();
+    if (!v) return;
+    if (!/^https?:\/\//.test(v)) return toast.error("Must be a URL");
+    setForm((c) => ({ ...c, gallery: [...c.gallery, v], galleryInput: "" }));
+  }
+  function removeGallery(i: number) {
+    setForm((c) => ({ ...c, gallery: c.gallery.filter((_, idx) => idx !== i) }));
   }
 
   return (
@@ -86,6 +112,48 @@ function PageEditor() {
         <div className="space-y-1"><Label>Tagline</Label><Input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="The fastest rigs in town" /></div>
         <div className="space-y-1"><Label>Hero image URL</Label><Input value={form.hero_url} onChange={(e) => setForm({ ...form, hero_url: e.target.value })} placeholder="https://…" /></div>
         <div className="space-y-1"><Label>About</Label><Textarea rows={5} value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value })} /></div>
+
+        {/* Theme picker */}
+        <div>
+          <Label className="flex items-center gap-2"><Palette className="h-4 w-4 text-primary" /> Theme</Label>
+          <div className="mt-2 grid gap-2 sm:grid-cols-4">
+            {THEME_PRESETS.map((t) => {
+              const active = form.theme.mode === t.mode;
+              return (
+                <button
+                  key={t.mode}
+                  type="button"
+                  onClick={() => setForm((c) => ({ ...c, theme: { ...c.theme, mode: t.mode, accent: t.accent, bg: t.bg } }))}
+                  className={`group relative overflow-hidden rounded-xl border p-3 text-left transition ${active ? "border-primary shadow-soft" : "border-border hover:border-primary/40"}`}
+                  style={{ background: `linear-gradient(135deg, ${t.bg}, ${t.bg}cc)` }}
+                >
+                  <div className="text-xs font-semibold" style={{ color: t.mode === "minimal" ? "#111" : "#fff" }}>{t.label}</div>
+                  <div className="mt-2 flex gap-1">
+                    <span className="h-4 w-4 rounded-full ring-1 ring-white/30" style={{ background: t.accent }} />
+                    <span className="h-4 w-4 rounded-full ring-1 ring-white/30" style={{ background: t.bg }} />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Accent color</Label>
+              <Input type="color" value={form.theme.accent ?? "#ec4899"} onChange={(e) => setForm((c) => ({ ...c, theme: { ...c.theme, accent: e.target.value } }))} className="h-10 w-full" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Background</Label>
+              <Input type="color" value={form.theme.bg ?? "#0a0a1a"} onChange={(e) => setForm((c) => ({ ...c, theme: { ...c.theme, bg: e.target.value } }))} className="h-10 w-full" />
+            </div>
+          </div>
+        </div>
+
+        {/* Map */}
+        <div className="space-y-1">
+          <Label className="flex items-center gap-2"><MapPin className="h-4 w-4 text-azure" /> Google Maps embed URL</Label>
+          <Input value={form.map_url} onChange={(e) => setForm({ ...form, map_url: e.target.value })} placeholder="https://www.google.com/maps/embed?pb=…" />
+          <p className="text-[11px] text-muted-foreground">In Google Maps → Share → Embed a map → copy the src URL from the iframe.</p>
+        </div>
 
         <div>
           <Label>Opening hours</Label>
@@ -108,7 +176,27 @@ function PageEditor() {
           </div>
         </div>
 
-        <div className="space-y-1"><Label>Gallery (one image URL per line)</Label><Textarea rows={4} value={form.gallery} onChange={(e) => setForm({ ...form, gallery: e.target.value })} placeholder="https://...&#10;https://..." /></div>
+        {/* Gallery */}
+        <div>
+          <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-primary" /> Gallery</Label>
+          <div className="mt-2 flex gap-2">
+            <Input value={form.galleryInput} onChange={(e) => setForm({ ...form, galleryInput: e.target.value })} placeholder="https://image-url.jpg" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGallery(); } }} />
+            <Button type="button" variant="outline" onClick={addGallery}>Add</Button>
+          </div>
+          {form.gallery.length > 0 && (
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {form.gallery.map((url, i) => (
+                <div key={i} className="group relative overflow-hidden rounded-lg border border-border/60">
+                  <img src={url} alt="" className="aspect-square w-full object-cover" />
+                  <button type="button" onClick={() => removeGallery(i)} className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-destructive/90 text-destructive-foreground opacity-0 transition group-hover:opacity-100">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-[11px] text-muted-foreground">Paste hosted image URLs. (Direct uploads coming with storage setup.)</p>
+        </div>
 
         <Button type="submit" className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
           <Save className="h-4 w-4" /> Save page
@@ -127,6 +215,12 @@ function PageEditor() {
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
             <img src={form.hero_url} alt="Hero preview" className="aspect-[16/9] w-full object-cover" />
             <div className="p-3 text-xs text-muted-foreground"><ImageIcon className="mr-1 inline h-3 w-3" /> Hero preview</div>
+          </div>
+        )}
+        {form.map_url && (
+          <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
+            <iframe src={form.map_url} className="aspect-[16/12] w-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Map preview" />
+            <div className="p-3 text-xs text-muted-foreground"><MapPin className="mr-1 inline h-3 w-3" /> Map preview</div>
           </div>
         )}
       </aside>

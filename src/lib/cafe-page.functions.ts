@@ -10,7 +10,7 @@ export const getPublicCafe = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: cafe, error } = await supabaseAdmin
       .from("cafes")
-      .select("id, slug, name, city, state, address, phone, email, description, logo_url, cover_url, maintenance_starts_at, maintenance_ends_at, maintenance_message")
+      .select("id, slug, name, city, state, address, phone, email, description, logo_url, cover_url, latitude, longitude, gst_no, maintenance_starts_at, maintenance_ends_at, maintenance_message")
       .eq("slug", data.slug)
       .eq("is_active", true)
       .maybeSingle();
@@ -60,6 +60,13 @@ export const updateCafePage = createServerFn({ method: "POST" })
       hours: z.record(z.string(), z.string()).optional(),
       socials: z.record(z.string(), z.string()).optional(),
       gallery: z.array(z.string().url()).optional(),
+      theme: z.object({
+        accent: z.string().max(20).optional(),
+        bg: z.string().max(20).optional(),
+        font: z.string().max(40).optional(),
+        mode: z.enum(["dark", "neon", "minimal", "arcade"]).optional(),
+      }).optional(),
+      map_url: z.string().url().max(800).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {

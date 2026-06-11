@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Wallet, Plus, Minus, Receipt } from "lucide-react";
+import { Wallet, Plus, Minus, Receipt, Download } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listCustomers } from "@/lib/customers.functions";
-import { adjustWallet, listWalletTransactions } from "@/lib/wallet.functions";
+import { adjustWallet, listWalletTransactions, exportWalletCSV } from "@/lib/wallet.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,7 @@ function WalletPage() {
   const lCus = useServerFn(listCustomers);
   const lTx = useServerFn(listWalletTransactions);
   const adj = useServerFn(adjustWallet);
+  const csvFn = useServerFn(exportWalletCSV);
 
   const customersQ = useQuery({ queryKey: ["customers", cafeId], queryFn: () => lCus({ data: { cafe_id: cafeId! } }), enabled: !!cafeId });
   const txQ = useQuery({ queryKey: ["wallet-tx", cafeId], queryFn: () => lTx({ data: { cafe_id: cafeId! } }), enabled: !!cafeId });
@@ -56,10 +57,28 @@ function WalletPage() {
 
   if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
 
+  async function downloadCSV() {
+    try {
+      const r = await csvFn({ data: { cafe_id: cafeId! } });
+      const blob = new Blob([r.csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `wallet-statement-${cafeId}-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${r.count} rows`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <div>
-        <div className="text-sm text-muted-foreground">Customer wallets</div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-sm text-muted-foreground">Customer wallets</div>
+          <Button size="sm" variant="outline" className="gap-2" onClick={downloadCSV}>
+            <Download className="h-4 w-4" /> Statement CSV
+          </Button>
+        </div>
         <div className="mt-3 space-y-2">
           {(customersQ.data ?? []).length === 0 ? (
             <EmptyState icon={Wallet} title="No customers" description="Add customers first to manage their wallets." />

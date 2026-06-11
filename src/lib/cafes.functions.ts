@@ -167,6 +167,10 @@ export const updateCafe = createServerFn({ method: "POST" })
         is_active: z.boolean().optional(),
         floor_cols: z.number().int().min(4).max(40).optional(),
         floor_rows: z.number().int().min(3).max(30).optional(),
+        latitude: z.number().min(-90).max(90).nullable().optional(),
+        longitude: z.number().min(-180).max(180).nullable().optional(),
+        gst_no: z.string().max(40).nullable().optional(),
+        default_gst_rate: z.number().min(0).max(50).optional(),
       }),
     }).parse(d),
   )

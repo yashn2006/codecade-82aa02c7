@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Shield, Building2, Users, FileText, Settings as SettingsIcon } from "lucide-react";
+import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
@@ -18,6 +18,7 @@ function AdminLayout() {
       intensity="hero"
       nav={[
         { label: "Overview", icon: Shield, to: "/admin", exact: true },
+        { label: "Revenue", icon: TrendingUp, to: "/admin/revenue" },
         { label: "Cafés", icon: Building2, to: "/admin/cafes" },
         { label: "Users & roles", icon: Users, to: "/admin/users" },
         { label: "Leads", icon: FileText, to: "/admin/leads" },

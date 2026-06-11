@@ -77,3 +77,17 @@ export const grantMembership = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const listCustomerMemberships = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("customer_memberships")
+      .select("id, customer_id, starts_at, ends_at, hours_remaining, customers!inner(full_name, cafe_id), memberships(name, hours_included)")
+      .eq("customers.cafe_id", data.cafe_id)
+      .gt("ends_at", new Date().toISOString())
+      .order("ends_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });

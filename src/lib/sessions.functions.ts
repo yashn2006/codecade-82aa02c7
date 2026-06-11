@@ -8,7 +8,7 @@ export const listSessions = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("sessions")
-      .select("id, device_id, customer_id, started_at, ended_at, duration_minutes, amount, status, customers(full_name), devices(name, hourly_rate, type)")
+      .select("id, device_id, customer_id, started_at, ended_at, duration_minutes, amount, status, membership_minutes_used, no_show, customers(full_name), devices(name, hourly_rate, type)")
       .eq("cafe_id", data.cafe_id)
       .order("started_at", { ascending: false })
       .limit(100);
@@ -26,7 +26,6 @@ export const startSession = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    // Ensure device is free
     const { data: dev } = await context.supabase
       .from("devices").select("status").eq("id", data.device_id).single();
     if (dev?.status === "in_use") throw new Error("Device already in use");
@@ -53,7 +52,7 @@ export const endSession = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: s, error: se } = await context.supabase
       .from("sessions")
-      .select("started_at, device_id, devices(hourly_rate)")
+      .select("started_at, device_id, customer_id, cafe_id, devices(hourly_rate)")
       .eq("id", data.id)
       .single();
     if (se || !s) throw new Error(se?.message ?? "Session not found");
@@ -61,13 +60,25 @@ export const endSession = createServerFn({ method: "POST" })
     const startedAt = new Date(s.started_at).getTime();
     const minutes = Math.max(1, Math.ceil((Date.now() - startedAt) / 60000));
     const rate = (s.devices as { hourly_rate?: number } | null)?.hourly_rate ?? 0;
-    const amount = Math.ceil((rate * minutes) / 60);
+
+    // Try auto-deduct membership minutes first
+    let membershipMinutes = 0;
+    if (s.customer_id) {
+      const { data: consumed } = await context.supabase.rpc("consume_membership_minutes", {
+        _customer_id: s.customer_id,
+        _minutes: minutes,
+      });
+      membershipMinutes = (consumed as number) || 0;
+    }
+    const billableMinutes = Math.max(0, minutes - membershipMinutes);
+    const amount = Math.ceil((rate * billableMinutes) / 60);
 
     const { error } = await context.supabase
       .from("sessions")
       .update({
         ended_at: new Date().toISOString(),
         duration_minutes: minutes,
+        membership_minutes_used: membershipMinutes,
         amount,
         status: "completed",
       })
@@ -75,5 +86,5 @@ export const endSession = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     await context.supabase.from("devices").update({ status: "available" }).eq("id", s.device_id);
-    return { ok: true, minutes, amount };
+    return { ok: true, minutes, amount, membershipMinutes };
   });
