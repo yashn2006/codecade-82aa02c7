@@ -118,7 +118,9 @@ function CafesPanel() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
 
       <Tabs defaultValue="all" className="mt-5">
         <TabsList className="glass-strong flex-wrap rounded-2xl p-1">
