@@ -143,3 +143,55 @@ export const revokeRole = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const adminCreateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      email: z.string().email().max(200),
+      full_name: z.string().max(120).optional().nullable(),
+      password: z.string().min(8).max(120).optional().nullable(),
+      role: z.enum(["super_admin", "cafe_owner", "cafe_staff", "customer"]).optional(),
+      cafe_id: z.string().uuid().optional().nullable(),
+      send_invite: z.boolean().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+
+    // Reuse if profile exists
+    const { data: existing } = await supabaseAdmin
+      .from("profiles").select("id").eq("email", data.email).maybeSingle();
+    let userId = existing?.id as string | undefined;
+
+    if (!userId) {
+      if (data.send_invite) {
+        const { data: inv, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
+          data: { full_name: data.full_name ?? null },
+        });
+        if (error) throw new Error(error.message);
+        userId = inv.user?.id;
+      } else {
+        const { data: cr, error } = await supabaseAdmin.auth.admin.createUser({
+          email: data.email,
+          password: data.password ?? crypto.randomUUID(),
+          email_confirm: true,
+          user_metadata: { full_name: data.full_name ?? null },
+        });
+        if (error) throw new Error(error.message);
+        userId = cr.user?.id;
+      }
+    }
+    if (!userId) throw new Error("Could not create user");
+
+    if (data.full_name) {
+      await supabaseAdmin.from("profiles").update({ full_name: data.full_name }).eq("id", userId);
+    }
+    if (data.role) {
+      await supabaseAdmin.from("user_roles").insert({
+        user_id: userId, role: data.role, cafe_id: data.cafe_id ?? null,
+      });
+    }
+    return { ok: true, user_id: userId };
+  });
