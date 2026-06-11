@@ -40,7 +40,12 @@ export const getPublicCafe = createServerFn({ method: "GET" })
       menu: { items: menuItems.data ?? [], categories: menuCats.data ?? [] },
       tournaments: tournaments.data ?? [],
       activeDeviceIds: (liveSessions.data ?? []).map((s) => s.device_id),
-      platform: platform.data ?? null,
+      platform: platform.data ? {
+        starts_at: platform.data.maintenance_starts_at,
+        ends_at: platform.data.maintenance_ends_at,
+        message: platform.data.maintenance_message,
+        title: platform.data.maintenance_title,
+      } : null,
     };
   });
 
