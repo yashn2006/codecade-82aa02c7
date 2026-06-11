@@ -1,23 +1,37 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Gamepad2 } from "lucide-react";
-import { PortalShell } from "./portal";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { Activity, Cpu, CalendarRange, Users, Settings } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { ConsoleShell } from "@/components/ConsoleShell";
+import { getCafeBySlug } from "@/lib/cafes.functions";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug")({
-  head: () => ({ meta: [{ title: "Café — CoreCade" }] }),
-  component: CafeOwner,
+  head: () => ({ meta: [{ title: "Café Console — CoreCade" }] }),
+  component: CafeLayout,
 });
 
-function CafeOwner() {
+function CafeLayout() {
   const { slug } = Route.useParams();
+  const fn = useServerFn(getCafeBySlug);
+  const { data: cafe } = useQuery({
+    queryKey: ["cafe", slug],
+    queryFn: () => fn({ data: { slug } }),
+  });
+
   return (
-    <PortalShell title="Café dashboard" subtitle={`Workspace: ${slug}`} badge="Café Owner">
-      <div className="mt-12 rounded-2xl border border-border/60 bg-card/40 p-10 text-center backdrop-blur">
-        <Gamepad2 className="mx-auto h-12 w-12 text-violet" />
-        <h2 className="mt-4 font-display text-2xl font-bold">Your café, ready for liftoff</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Devices, sessions, bookings, memberships — all unlock in Phase 2.
-        </p>
-      </div>
-    </PortalShell>
+    <ConsoleShell
+      badge="Café Console"
+      title={cafe?.name ?? "Café"}
+      subtitle={cafe ? `${cafe.city ?? ""}${cafe.city ? " · " : ""}/${cafe.slug}` : "Loading workspace…"}
+      nav={[
+        { label: "Live floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
+        { label: "Devices", icon: Cpu, to: "/cafe/$slug/devices", params: { slug } },
+        { label: "Bookings", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug } },
+        { label: "Customers", icon: Users, to: "/cafe/$slug/customers", params: { slug } },
+        { label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
+      ]}
+    >
+      <Outlet />
+    </ConsoleShell>
   );
 }
