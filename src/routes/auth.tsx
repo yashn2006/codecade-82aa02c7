@@ -597,7 +597,7 @@ async function routeByRole(navigate: ReturnType<typeof useNavigate>) {
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
   const set = new Set((roles ?? []).map((r) => r.role));
   if (set.has("super_admin")) navigate({ to: "/admin" });
-  else if (set.has("cafe_owner")) navigate({ to: "/portal" });
+  else if (set.has("cafe_owner")) navigate({ to: "/owner" });
   else if (set.has("cafe_staff")) navigate({ to: "/portal" });
   else navigate({ to: "/portal" });
 }
