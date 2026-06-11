@@ -73,8 +73,8 @@ export function ConsoleShell({
                   params={item.params}
                   className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                     active
-                      ? "bg-primary/10 text-primary shadow-soft"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      ? "bg-primary/10 text-primary shadow-[0_0_24px_-6px_oklch(0.7_0.26_335/0.55)] ring-1 ring-primary/30"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:ring-1 hover:ring-primary/15"
                   }`}
                 >
                   {active && (
