@@ -176,11 +176,21 @@ SET search_path = public
 AS $$
 DECLARE
   o record;
+  v_user uuid := auth.uid();
+  v_allowed boolean;
 BEGIN
   SELECT * INTO o FROM public.orders WHERE id = _order_id;
   IF o IS NULL THEN RAISE EXCEPTION 'Order not found'; END IF;
-  IF o.status <> 'paid' THEN RAISE EXCEPTION 'Only paid orders can be refunded'; END IF;
-  IF _amount <= 0 OR _amount > COALESCE(o.total_amount, o.subtotal) - COALESCE(o.refund_amount,0) THEN
+
+  SELECT
+    public.has_role(v_user, 'super_admin')
+    OR EXISTS (SELECT 1 FROM public.cafes c WHERE c.id = o.cafe_id AND c.owner_id = v_user)
+    OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id = o.cafe_id AND sp.staff_user_id = v_user)
+  INTO v_allowed;
+  IF NOT v_allowed THEN RAISE EXCEPTION 'forbidden'; END IF;
+
+  IF o.status <> 'paid' AND o.status <> 'refunded' THEN RAISE EXCEPTION 'Only paid orders can be refunded'; END IF;
+  IF _amount <= 0 OR _amount > COALESCE(NULLIF(o.total_amount,0), o.subtotal) - COALESCE(o.refund_amount,0) THEN
     RAISE EXCEPTION 'Invalid refund amount';
   END IF;
 
@@ -188,7 +198,7 @@ BEGIN
     SET refund_amount = COALESCE(refund_amount,0) + _amount,
         refund_reason = _reason,
         refunded_at = now(),
-        status = CASE WHEN COALESCE(refund_amount,0) + _amount >= COALESCE(total_amount, subtotal)
+        status = CASE WHEN COALESCE(refund_amount,0) + _amount >= COALESCE(NULLIF(total_amount,0), subtotal)
                       THEN 'refunded' ELSE status END
     WHERE id = _order_id;
 
