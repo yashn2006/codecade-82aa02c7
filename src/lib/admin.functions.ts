@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 
-async function assertSuperAdmin(ctx: { supabase: ReturnType<typeof Object>; userId: string }) {
-  // @ts-expect-error supabase typed via middleware
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
   const { data: ok } = await ctx.supabase.rpc("has_role", {
     _user_id: ctx.userId, _role: "super_admin",
   });
