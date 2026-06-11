@@ -24,7 +24,10 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminRevenueRouteImport } from './routes/_authenticated/admin.revenue'
 import { Route as AuthenticatedAdminLeadsRouteImport } from './routes/_authenticated/admin.leads'
+import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
 import { Route as AuthenticatedAdminCafesRouteImport } from './routes/_authenticated/admin.cafes'
+import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedAdminAnnouncementsRouteImport } from './routes/_authenticated/admin.announcements'
 import { Route as AuthenticatedCafeSlugIndexRouteImport } from './routes/_authenticated/cafe.$slug.index'
 import { Route as AuthenticatedCafeSlugWalletRouteImport } from './routes/_authenticated/cafe.$slug.wallet'
 import { Route as AuthenticatedCafeSlugTournamentsRouteImport } from './routes/_authenticated/cafe.$slug.tournaments'
@@ -118,11 +121,28 @@ const AuthenticatedAdminLeadsRoute = AuthenticatedAdminLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminHealthRoute =
+  AuthenticatedAdminHealthRouteImport.update({
+    id: '/health',
+    path: '/health',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminCafesRoute = AuthenticatedAdminCafesRouteImport.update({
   id: '/cafes',
   path: '/cafes',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminAnnouncementsRoute =
+  AuthenticatedAdminAnnouncementsRouteImport.update({
+    id: '/announcements',
+    path: '/announcements',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedCafeSlugIndexRoute =
   AuthenticatedCafeSlugIndexRouteImport.update({
     id: '/',
@@ -229,7 +249,10 @@ export interface FileRoutesByFullPath {
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRoute
+  '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
+  '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
+  '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/leads': typeof AuthenticatedAdminLeadsRoute
   '/admin/revenue': typeof AuthenticatedAdminRevenueRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
@@ -261,7 +284,10 @@ export interface FileRoutesByTo {
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRoute
+  '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
+  '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
+  '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/leads': typeof AuthenticatedAdminLeadsRoute
   '/admin/revenue': typeof AuthenticatedAdminRevenueRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
@@ -295,7 +321,10 @@ export interface FileRoutesById {
   '/_authenticated/owner': typeof AuthenticatedOwnerRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRoute
+  '/_authenticated/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
+  '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/cafes': typeof AuthenticatedAdminCafesRoute
+  '/_authenticated/admin/health': typeof AuthenticatedAdminHealthRoute
   '/_authenticated/admin/leads': typeof AuthenticatedAdminLeadsRoute
   '/_authenticated/admin/revenue': typeof AuthenticatedAdminRevenueRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
@@ -330,7 +359,10 @@ export interface FileRouteTypes {
     | '/owner'
     | '/portal'
     | '/c/$slug'
+    | '/admin/announcements'
+    | '/admin/audit'
     | '/admin/cafes'
+    | '/admin/health'
     | '/admin/leads'
     | '/admin/revenue'
     | '/admin/settings'
@@ -362,7 +394,10 @@ export interface FileRouteTypes {
     | '/owner'
     | '/portal'
     | '/c/$slug'
+    | '/admin/announcements'
+    | '/admin/audit'
     | '/admin/cafes'
+    | '/admin/health'
     | '/admin/leads'
     | '/admin/revenue'
     | '/admin/settings'
@@ -395,7 +430,10 @@ export interface FileRouteTypes {
     | '/_authenticated/owner'
     | '/_authenticated/portal'
     | '/c/$slug'
+    | '/_authenticated/admin/announcements'
+    | '/_authenticated/admin/audit'
     | '/_authenticated/admin/cafes'
+    | '/_authenticated/admin/health'
     | '/_authenticated/admin/leads'
     | '/_authenticated/admin/revenue'
     | '/_authenticated/admin/settings'
@@ -536,11 +574,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminLeadsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/health': {
+      id: '/_authenticated/admin/health'
+      path: '/health'
+      fullPath: '/admin/health'
+      preLoaderRoute: typeof AuthenticatedAdminHealthRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/cafes': {
       id: '/_authenticated/admin/cafes'
       path: '/cafes'
       fullPath: '/admin/cafes'
       preLoaderRoute: typeof AuthenticatedAdminCafesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/audit': {
+      id: '/_authenticated/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/announcements': {
+      id: '/_authenticated/admin/announcements'
+      path: '/announcements'
+      fullPath: '/admin/announcements'
+      preLoaderRoute: typeof AuthenticatedAdminAnnouncementsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/cafe/$slug/': {
@@ -659,7 +718,10 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminAnnouncementsRoute: typeof AuthenticatedAdminAnnouncementsRoute
+  AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminCafesRoute: typeof AuthenticatedAdminCafesRoute
+  AuthenticatedAdminHealthRoute: typeof AuthenticatedAdminHealthRoute
   AuthenticatedAdminLeadsRoute: typeof AuthenticatedAdminLeadsRoute
   AuthenticatedAdminRevenueRoute: typeof AuthenticatedAdminRevenueRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
@@ -668,7 +730,10 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminAnnouncementsRoute: AuthenticatedAdminAnnouncementsRoute,
+  AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminCafesRoute: AuthenticatedAdminCafesRoute,
+  AuthenticatedAdminHealthRoute: AuthenticatedAdminHealthRoute,
   AuthenticatedAdminLeadsRoute: AuthenticatedAdminLeadsRoute,
   AuthenticatedAdminRevenueRoute: AuthenticatedAdminRevenueRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
