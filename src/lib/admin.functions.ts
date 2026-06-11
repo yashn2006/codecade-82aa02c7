@@ -34,12 +34,22 @@ export const listAllCafes = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { data: cafes, error } = await supabaseAdmin
       .from("cafes")
-      .select("id, slug, name, city, state, is_active, restricted_message, owner_id, created_at, profiles:owner_id(email, full_name)")
+      .select("id, slug, name, city, state, is_active, restricted_message, owner_id, created_at")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const rows = cafes ?? [];
+    const ownerIds = Array.from(new Set(rows.map((c) => c.owner_id).filter(Boolean)));
+    let ownerMap = new Map<string, { email: string | null; full_name: string | null }>();
+    if (ownerIds.length) {
+      const { data: owners } = await supabaseAdmin
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", ownerIds);
+      ownerMap = new Map((owners ?? []).map((o) => [o.id, { email: o.email, full_name: o.full_name }]));
+    }
+    return rows.map((c) => ({ ...c, profiles: ownerMap.get(c.owner_id) ?? null }));
   });
 
 export const setCafeRestriction = createServerFn({ method: "POST" })
