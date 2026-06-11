@@ -70,7 +70,8 @@ function FloorBuilder() {
 
   const placeM = useMutation({
     mutationFn: place,
-    onMutate: async (vars) => {
+    onMutate: async (vars: { data: { id: string; pos_x: number | null; pos_y: number | null } } | undefined) => {
+      if (!vars) return;
       await qc.cancelQueries({ queryKey: ["devices", cafe?.id] });
       const prev = qc.getQueryData<Device[]>(["devices", cafe?.id]);
       qc.setQueryData<Device[]>(["devices", cafe?.id], (old) =>
