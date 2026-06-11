@@ -2,47 +2,46 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Gamepad2, Zap, Shield, BarChart3, Users, Sparkles, ArrowRight, Check } from "lucide-react";
-import { ParticleField } from "@/components/ParticleField";
+import {
+  Zap, Shield, BarChart3, Users, Cpu, ArrowRight, Check,
+  Wifi, Activity, Clock, Sparkles, IndianRupee,
+} from "lucide-react";
+import { AuroraBackground } from "@/components/AuroraBackground";
+import { BrandLockup, BrandMark } from "@/components/Brand";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { submitContact } from "@/lib/contact.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import glowAsset from "@/assets/corecade-glow.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Giganexa — The Gaming Café OS" },
-      {
-        name: "description",
-        content:
-          "All-in-one platform for India's gaming cafés. Live sessions, bookings, memberships, devices — engineered for speed.",
-      },
-      { property: "og:title", content: "Giganexa — The Gaming Café OS" },
-      {
-        property: "og:description",
-        content: "Run your gaming café like a billion-dollar brand.",
-      },
+      { title: "CoreCade — The Operating System for Gaming Cafés" },
+      { name: "description", content: "CoreCade powers India's gaming cafés. Live sessions, bookings, memberships, devices — one ridiculously fast platform." },
+      { property: "og:title", content: "CoreCade — Powering Gaming Cafés" },
+      { property: "og:description", content: "Run your gaming café like a billion-dollar brand." },
     ],
   }),
   component: Landing,
 });
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
+  hidden: { opacity: 0, y: 24 },
   visible: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.07, duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
   }),
 };
 
 function Landing() {
   return (
-    <div className="min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden">
       <Header />
       <Hero />
+      <Marquee />
       <Features />
       <Stats />
       <Pricing />
@@ -54,106 +53,128 @@ function Landing() {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-50 glass border-b border-border/40">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan to-magenta glow-cyan">
-            <Gamepad2 className="h-5 w-5 text-primary-foreground" />
+    <header className="sticky top-0 z-50">
+      <div className="mx-auto mt-3 max-w-7xl px-3 sm:px-6">
+        <nav className="glass-strong flex items-center justify-between rounded-2xl px-3 py-2.5 sm:px-5">
+          <BrandLockup size={32} />
+          <div className="hidden gap-7 md:flex">
+            {["Features", "Pricing", "Contact"].map((l) => (
+              <a key={l} href={`#${l.toLowerCase()}`} className="text-sm text-muted-foreground transition hover:text-foreground">
+                {l}
+              </a>
+            ))}
           </div>
-          <span className="font-display text-xl font-bold tracking-wider">GIGANEXA</span>
-        </Link>
-        <div className="hidden gap-8 md:flex">
-          <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition">Features</a>
-          <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition">Pricing</a>
-          <a href="#contact" className="text-sm text-muted-foreground hover:text-foreground transition">Contact</a>
-        </div>
-        <Link
-          to="/auth"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-        >
-          Sign in
-        </Link>
-      </nav>
+          <Link
+            to="/auth"
+            className="group inline-flex items-center gap-1.5 rounded-xl bg-foreground px-4 py-2 text-sm font-semibold text-background transition hover:bg-foreground/90"
+          >
+            Sign in <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+          </Link>
+        </nav>
+      </div>
     </header>
   );
 }
 
 function Hero() {
+  const headline = "Powering";
   return (
-    <section className="relative overflow-hidden px-4 pt-20 pb-32 sm:px-6 grid-bg">
-      <ParticleField />
-      <div className="relative z-10 mx-auto max-w-5xl text-center">
+    <section className="relative px-4 pt-20 pb-32 sm:px-6">
+      <AuroraBackground intensity="hero" />
+
+      <div className="relative z-10 mx-auto max-w-6xl text-center">
         <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-          className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs font-medium text-muted-foreground"
+          initial="hidden" animate="visible" variants={fadeUp}
+          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur"
         >
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          Built for India's gaming café revolution
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+          </span>
+          Live in 12 Indian cities · Onboarding cafés daily
         </motion.div>
 
         <motion.h1
-          initial="hidden"
-          animate="visible"
-          custom={1}
-          variants={fadeUp}
-          className="mt-8 font-display text-5xl font-black leading-[1.05] tracking-tight sm:text-7xl md:text-8xl"
+          initial="hidden" animate="visible" custom={1} variants={fadeUp}
+          className="mt-8 font-display text-[3.25rem] font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-7xl md:text-[7.5rem]"
         >
-          The Operating System
-          <br />
-          for <span className="text-gradient">Gaming Cafés</span>
+          <span className="block text-foreground/95">{headline}</span>
+          <span className="relative block">
+            <span className="text-gradient-hot">Gaming Cafés.</span>
+            <span className="absolute -bottom-2 left-1/2 h-1 w-[60%] -translate-x-1/2 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent blur-sm" />
+          </span>
         </motion.h1>
 
         <motion.p
-          initial="hidden"
-          animate="visible"
-          custom={2}
-          variants={fadeUp}
-          className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg"
+          initial="hidden" animate="visible" custom={2} variants={fadeUp}
+          className="mx-auto mt-7 max-w-2xl text-base text-muted-foreground sm:text-lg"
         >
-          Sessions. Bookings. Memberships. Devices. Analytics. One platform.
+          Sessions, bookings, memberships, devices, analytics — one platform.
           Real-time everything. Built mobile-first for café owners across India.
         </motion.p>
 
         <motion.div
-          initial="hidden"
-          animate="visible"
-          custom={3}
-          variants={fadeUp}
+          initial="hidden" animate="visible" custom={3} variants={fadeUp}
           className="mt-10 flex flex-wrap items-center justify-center gap-3"
         >
           <Link
             to="/auth"
-            className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan to-magenta px-6 py-3.5 text-sm font-semibold text-primary-foreground glow-cyan transition hover:scale-105"
+            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl px-7 py-3.5 text-sm font-semibold text-primary-foreground glow-violet"
+            style={{ background: "var(--gradient-brand-hot)" }}
           >
-            Start your café <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+            <span className="relative z-10">Launch your café</span>
+            <ArrowRight className="relative z-10 h-4 w-4 transition group-hover:translate-x-1" />
+            <span className="absolute inset-0 -z-0 animate-shimmer" />
           </Link>
           <a
             href="#features"
-            className="inline-flex items-center gap-2 rounded-xl glass px-6 py-3.5 text-sm font-semibold transition hover:bg-secondary/50"
+            className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/40 px-6 py-3.5 text-sm font-semibold backdrop-blur transition hover:border-primary/50 hover:bg-background/60"
           >
-            See features
+            Explore the OS
           </a>
         </motion.div>
 
+        {/* Floating brand mark */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.6, duration: 0.8 }}
-          className="relative mx-auto mt-20 max-w-4xl"
+          transition={{ delay: 0.7, duration: 1, ease: [0.22, 1, 0.36, 1] }}
+          className="relative mx-auto mt-16 h-56 w-56 sm:h-72 sm:w-72"
         >
-          <div className="relative rounded-2xl glass p-2 glow-cyan animate-pulse-glow">
-            <div className="rounded-xl bg-background/80 p-6 sm:p-10">
-              <div className="grid grid-cols-3 gap-4 text-left">
+          <div className="absolute inset-0 rounded-full blur-3xl opacity-60" style={{ background: "var(--gradient-brand-hot)" }} />
+          <img src={glowAsset.url} alt="" className="relative h-full w-full object-contain animate-float" aria-hidden />
+        </motion.div>
+
+        {/* Live ops widget */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9, duration: 0.8 }}
+          className="relative mx-auto mt-12 max-w-4xl"
+        >
+          <div className="border-conic glass-strong rounded-2xl p-2">
+            <div className="rounded-xl bg-background/70 p-5 sm:p-7">
+              <div className="mb-4 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-3 w-3 text-primary" /> Live · Mumbai · Andheri W
+                </div>
+                <div className="font-mono">UPDATED 00:01s</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-4">
                 {[
-                  { label: "Active Sessions", value: "24", color: "text-cyan" },
-                  { label: "Today's Revenue", value: "₹18.4K", color: "text-magenta" },
-                  { label: "Devices Online", value: "30/30", color: "text-primary" },
+                  { label: "Active sessions", value: 24, icon: Cpu, c: "text-violet" },
+                  { label: "Today's revenue", value: 18420, icon: IndianRupee, c: "text-magenta", prefix: "₹" },
+                  { label: "Devices online", value: 30, icon: Wifi, c: "text-azure", suffix: "/30" },
+                  { label: "Avg. session", value: 92, icon: Clock, c: "text-primary", suffix: "m" },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-lg bg-card/60 p-4">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</div>
-                    <div className={`mt-2 font-mono text-2xl font-bold sm:text-3xl ${s.color}`}>{s.value}</div>
+                  <div key={s.label} className="rounded-lg border border-border/40 bg-card/40 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{s.label}</span>
+                      <s.icon className={`h-3.5 w-3.5 ${s.c}`} />
+                    </div>
+                    <div className={`mt-2 font-mono text-2xl font-bold ${s.c}`}>
+                      <AnimatedNumber value={s.value} prefix={s.prefix} suffix={s.suffix} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -165,37 +186,68 @@ function Hero() {
   );
 }
 
-function Features() {
+function Marquee() {
   const items = [
-    { icon: Zap, title: "Real-time Sessions", desc: "Track every PC live. Auto-bill by the minute. Pause, resume, transfer in one tap." },
-    { icon: Gamepad2, title: "Device Manager", desc: "Lock screens remotely. Monitor specs, uptime, health. Push updates in bulk." },
-    { icon: Users, title: "Memberships", desc: "Sell hour packs and monthly passes. Wallets, loyalty, referrals — built-in." },
-    { icon: BarChart3, title: "Analytics That Matter", desc: "Peak hours. Top games. Customer retention. India-first metrics dashboards." },
-    { icon: Shield, title: "Staff Permissions", desc: "Granular role control. Owner sees everything. Staff sees only what they need." },
-    { icon: Sparkles, title: "Mobile-First Portal", desc: "Customers book from their phone. Owners run the café from theirs." },
+    "Real-time billing", "Per-minute precision", "UPI checkout", "Razorpay-ready",
+    "Multi-branch", "Offline-tolerant", "Mobile-first", "60fps everywhere",
+    "RLS-secured", "Made in India",
   ];
   return (
-    <section id="features" className="relative px-4 py-24 sm:px-6">
+    <section className="relative overflow-hidden border-y border-border/30 bg-background/30 py-6">
+      <div className="flex w-max animate-marquee gap-12 whitespace-nowrap">
+        {[...items, ...items].map((it, i) => (
+          <div key={i} className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
+            <Sparkles className="h-3 w-3 text-primary" />
+            {it}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Features() {
+  const items = [
+    { icon: Zap, title: "Real-time sessions", desc: "Track every PC live. Auto-bill by the minute. Pause, resume, transfer in one tap.", c: "violet" },
+    { icon: Cpu, title: "Device manager", desc: "Remote lock, push updates, monitor specs, uptime, health — all from one console.", c: "azure" },
+    { icon: Users, title: "Memberships & wallets", desc: "Hour packs, monthly passes, referrals, loyalty. Designed for repeat gamers.", c: "magenta" },
+    { icon: BarChart3, title: "Analytics that matter", desc: "Peak hours. Top games. Customer retention. India-first metrics, not vanity charts.", c: "violet" },
+    { icon: Shield, title: "Staff permissions", desc: "Granular role control. Owner sees everything. Staff sees only what they need.", c: "azure" },
+    { icon: Activity, title: "Mobile portal", desc: "Customers book from their phone. Owners run the floor from theirs. PWA-ready.", c: "magenta" },
+  ];
+  return (
+    <section id="features" className="relative px-4 py-28 sm:px-6">
       <div className="mx-auto max-w-7xl">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
-          <h2 className="font-display text-4xl font-bold sm:text-5xl">Everything. In one place.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">No more juggling Excel, WhatsApp, and clipboards.</p>
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+            <span className="h-1 w-1 rounded-full bg-primary" /> The Platform
+          </div>
+          <h2 className="mt-5 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
+            Everything you need.<br /><span className="text-gradient">Nothing you don't.</span>
+          </h2>
+          <p className="mt-5 text-muted-foreground sm:text-lg">
+            Replace 6 apps, 3 spreadsheets, and a WhatsApp group with one beautiful, brutally fast console.
+          </p>
         </motion.div>
 
-        <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((f, i) => (
             <motion.div
               key={f.title}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              custom={i}
-              variants={fadeUp}
-              className="group relative overflow-hidden rounded-2xl glass p-6 transition hover:border-primary/50"
+              initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i} variants={fadeUp}
+              className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/40 p-6 backdrop-blur hover-lift hover:border-primary/40"
             >
-              <div className="absolute inset-0 -z-10 bg-gradient-to-br from-cyan/0 to-magenta/0 transition group-hover:from-cyan/10 group-hover:to-magenta/10" />
-              <f.icon className="h-8 w-8 text-primary" />
-              <h3 className="mt-5 font-heading text-xl font-semibold">{f.title}</h3>
+              <div
+                className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-70"
+                style={{ background: `oklch(var(--${f.c}) / 0.5)` }}
+              />
+              <div
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/60"
+                style={{ background: `oklch(0.15 0.03 285 / 0.7)` }}
+              >
+                <f.icon className={`h-5 w-5 text-${f.c}`} />
+              </div>
+              <h3 className="mt-5 font-heading text-xl font-bold tracking-tight">{f.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.desc}</p>
             </motion.div>
           ))}
@@ -207,26 +259,22 @@ function Features() {
 
 function Stats() {
   const stats = [
-    { value: "50K+", label: "Sessions Tracked" },
-    { value: "₹2.4Cr", label: "Revenue Processed" },
-    { value: "99.9%", label: "Uptime" },
-    { value: "<50ms", label: "Real-time Latency" },
+    { value: 50000, suffix: "+", label: "Sessions tracked" },
+    { value: 24000000, label: "Revenue processed", format: (n: number) => `₹${(n / 10000000).toFixed(1)}Cr` },
+    { value: 99.9, label: "Uptime", suffix: "%", format: (n: number) => n.toFixed(1) },
+    { value: 50, label: "Real-time latency", prefix: "<", suffix: "ms" },
   ];
   return (
-    <section className="border-y border-border/40 bg-card/30 px-4 py-16 sm:px-6">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 md:grid-cols-4">
-        {stats.map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1 }}
-            className="text-center"
-          >
-            <div className="font-mono text-4xl font-bold text-gradient sm:text-5xl">{s.value}</div>
-            <div className="mt-2 text-xs uppercase tracking-wider text-muted-foreground">{s.label}</div>
-          </motion.div>
+    <section className="relative border-y border-border/40 bg-background/40 px-4 py-20 sm:px-6">
+      <div className="absolute inset-0 grid-arcade opacity-30" />
+      <div className="relative mx-auto grid max-w-7xl grid-cols-2 gap-10 md:grid-cols-4">
+        {stats.map((s) => (
+          <div key={s.label} className="text-center">
+            <div className="font-display text-4xl font-extrabold tracking-tight text-gradient sm:text-5xl">
+              <AnimatedNumber value={s.value} prefix={s.prefix} suffix={s.suffix} format={s.format} />
+            </div>
+            <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{s.label}</div>
+          </div>
         ))}
       </div>
     </section>
@@ -235,41 +283,39 @@ function Stats() {
 
 function Pricing() {
   const plans = [
-    { name: "Starter", price: "₹999", devices: "10", features: ["Basic POS", "Session tracking", "Email support"] },
-    { name: "Pro", price: "₹2,499", devices: "30", features: ["All Starter", "Bookings", "Memberships", "Analytics", "Priority support"], featured: true },
-    { name: "Enterprise", price: "₹5,999", devices: "100", features: ["All Pro", "Multi-branch", "White-label", "Dedicated manager", "API access"] },
+    { name: "Starter", price: "₹999", devices: "10", features: ["POS basics", "Session tracking", "Email support"] },
+    { name: "Pro", price: "₹2,499", devices: "30", features: ["All Starter", "Bookings + memberships", "Analytics dashboard", "Priority support"], featured: true },
+    { name: "Enterprise", price: "₹5,999", devices: "100", features: ["All Pro", "Multi-branch", "White-label portal", "Dedicated manager", "API access"] },
   ];
   return (
-    <section id="pricing" className="px-4 py-24 sm:px-6">
+    <section id="pricing" className="relative px-4 py-28 sm:px-6">
       <div className="mx-auto max-w-7xl">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
-          <h2 className="font-display text-4xl font-bold sm:text-5xl">Pricing built for India.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">Pay monthly. Cancel anytime. No setup fees.</p>
+          <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-6xl">
+            Pricing for <span className="text-gradient">India.</span>
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">Pay monthly. Cancel anytime. No setup fees. No surprises.</p>
         </motion.div>
 
-        <div className="mt-16 grid gap-6 md:grid-cols-3">
+        <div className="mt-14 grid gap-6 md:grid-cols-3">
           {plans.map((p, i) => (
             <motion.div
               key={p.name}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              custom={i}
-              variants={fadeUp}
-              className={`relative rounded-2xl p-8 transition ${
+              initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i} variants={fadeUp}
+              className={`relative rounded-3xl p-7 backdrop-blur transition ${
                 p.featured
-                  ? "glass border-2 border-primary glow-cyan scale-105"
-                  : "glass hover:border-primary/40"
+                  ? "border-conic glass-strong glow-violet md:scale-[1.03]"
+                  : "border border-border/60 bg-card/40 hover-lift hover:border-primary/40"
               }`}
             >
               {p.featured && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan to-magenta px-3 py-1 text-xs font-semibold text-primary-foreground">
-                  MOST POPULAR
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
+                  Most popular
                 </div>
               )}
-              <h3 className="font-heading text-2xl font-semibold">{p.name}</h3>
+              <h3 className="font-heading text-2xl font-bold tracking-tight">{p.name}</h3>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="font-mono text-5xl font-bold">{p.price}</span>
+                <span className="font-display text-5xl font-extrabold tracking-tight">{p.price}</span>
                 <span className="text-sm text-muted-foreground">/mo</span>
               </div>
               <div className="mt-1 text-sm text-muted-foreground">Up to {p.devices} devices</div>
@@ -285,9 +331,10 @@ function Pricing() {
                 to="/auth"
                 className={`mt-8 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition ${
                   p.featured
-                    ? "bg-gradient-to-r from-cyan to-magenta text-primary-foreground hover:opacity-90"
-                    : "border border-border hover:bg-secondary"
+                    ? "text-primary-foreground hover:opacity-90"
+                    : "border border-border bg-background/40 hover:bg-background/70"
                 }`}
+                style={p.featured ? { background: "var(--gradient-brand-hot)" } : undefined}
               >
                 Get started
               </Link>
@@ -316,7 +363,7 @@ function Contact() {
           message: String(fd.get("message") ?? ""),
         },
       });
-      toast.success("Message sent — we'll get back to you within 24 hours.");
+      toast.success("Message sent — we'll get back within 24 hours.");
       e.currentTarget.reset();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send. Try again.");
@@ -326,12 +373,12 @@ function Contact() {
   };
 
   return (
-    <section id="contact" className="px-4 py-24 sm:px-6">
+    <section id="contact" className="relative px-4 py-28 sm:px-6">
       <div className="mx-auto grid max-w-5xl gap-12 md:grid-cols-2">
         <div>
-          <h2 className="font-display text-4xl font-bold sm:text-5xl">Let's talk.</h2>
+          <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl">Let's talk.</h2>
           <p className="mt-4 text-muted-foreground">
-            Run a café? Thinking of opening one? Drop us a line — we reply within 24 hours, IST.
+            Running a café? Thinking of opening one? Drop us a line — humans reply within 24 hours, IST.
           </p>
           <div className="mt-8 space-y-3 text-sm">
             <div className="flex items-center gap-3">
@@ -340,12 +387,16 @@ function Contact() {
             </div>
           </div>
         </div>
-        <form onSubmit={onSubmit} className="glass rounded-2xl p-6 space-y-4">
-          <Input name="name" placeholder="Your name" required maxLength={120} />
-          <Input name="email" type="email" placeholder="Email address" required maxLength={200} />
-          <Input name="phone" placeholder="Phone (optional)" maxLength={20} />
+        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur">
+          <Input name="name" placeholder="Your name" required maxLength={120} className="h-12" />
+          <Input name="email" type="email" placeholder="Email" required maxLength={200} className="h-12" />
+          <Input name="phone" placeholder="Phone (optional)" maxLength={20} className="h-12" />
           <Textarea name="message" placeholder="What are you building?" rows={4} required maxLength={2000} />
-          <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-cyan to-magenta text-primary-foreground glow-cyan h-12 text-base font-semibold">
+          <Button
+            type="submit" disabled={loading}
+            className="h-12 w-full text-base font-semibold text-primary-foreground glow-violet"
+            style={{ background: "var(--gradient-brand-hot)" }}
+          >
             {loading ? "Sending…" : "Send message"}
           </Button>
         </form>
@@ -358,9 +409,11 @@ function Footer() {
   return (
     <footer className="border-t border-border/40 px-4 py-12 sm:px-6">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
-        <div className="flex items-center gap-2">
-          <Gamepad2 className="h-4 w-4 text-primary" />
-          <span className="font-display font-bold">GIGANEXA</span>
+        <div className="flex items-center gap-3">
+          <BrandMark size={28} />
+          <span className="font-display font-bold">
+            <span className="text-foreground">core</span><span className="text-gradient">cade</span>
+          </span>
           <span>© {new Date().getFullYear()}</span>
         </div>
         <div className="flex gap-6">
