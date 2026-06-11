@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarRange, Plus, Check, X } from "lucide-react";
+import { CalendarRange, Plus, Check, X, UserX, IndianRupee } from "lucide-react";
 import { useState } from "react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listBookings, updateBookingStatus, createBookingForCustomer } from "@/lib/bookings.functions";
