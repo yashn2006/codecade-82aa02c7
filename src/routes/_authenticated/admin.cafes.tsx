@@ -3,20 +3,22 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
-import { Plus, Building2, Power, PowerOff, Lock, Unlock, Wrench } from "lucide-react";
+import { Plus, Building2, Power, PowerOff, Lock, Unlock, Wrench, MoreHorizontal, Trash2, ExternalLink, LayoutDashboard, Cpu, CalendarClock, Users as UsersIcon, ShoppingBag, Wallet, Receipt, UserCog, Utensils, Map as MapIcon, BadgePercent, Trophy, FileEdit, BarChart3 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { listAllCafes, setCafeRestriction } from "@/lib/admin.functions";
+import { listAllCafes, setCafeRestriction, deleteCafe, cafeDeepStats } from "@/lib/admin.functions";
 import { createCafe, toggleCafeActive } from "@/lib/cafes.functions";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { isMaintenanceActive } from "@/lib/maintenance";
+
 
 export const Route = createFileRoute("/_authenticated/admin/cafes")({
   component: CafesPanel,
@@ -147,10 +149,20 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
   const qc = useQueryClient();
   const toggle = useServerFn(toggleCafeActive);
   const restrict = useServerFn(setCafeRestriction);
+  const del = useServerFn(deleteCafe);
+  const statsFn = useServerFn(cafeDeepStats);
   const [restrictOpen, setRestrictOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const stats = useQuery({
+    queryKey: ["cafe-deep-stats", cafe.id],
+    queryFn: () => statsFn({ data: { cafe_id: cafe.id } }),
+    enabled: statsOpen,
+  });
   const tM = useMutation({
     mutationFn: toggle,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-cafes"] }); qc.invalidateQueries({ queryKey: ["admin-overview"] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const rM = useMutation({
     mutationFn: restrict,
@@ -159,6 +171,17 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
       qc.invalidateQueries({ queryKey: ["admin-cafes"] });
       setRestrictOpen(false);
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const dM = useMutation({
+    mutationFn: del,
+    onSuccess: () => {
+      toast.success("Café deleted");
+      qc.invalidateQueries({ queryKey: ["admin-cafes"] });
+      qc.invalidateQueries({ queryKey: ["admin-overview"] });
+      setConfirmDelete(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const isRestricted = !!cafe.restricted_message;
   const maintWindow = {
@@ -167,6 +190,23 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
     message: cafe.maintenance_message,
   };
   const inMaintenance = isMaintenanceActive(maintWindow);
+
+  const consolePages = [
+    { to: "/cafe/$slug", label: "Overview", icon: LayoutDashboard },
+    { to: "/cafe/$slug/devices", label: "Devices", icon: Cpu },
+    { to: "/cafe/$slug/floor", label: "Floor map", icon: MapIcon },
+    { to: "/cafe/$slug/bookings", label: "Bookings", icon: CalendarClock },
+    { to: "/cafe/$slug/customers", label: "Customers", icon: UsersIcon },
+    { to: "/cafe/$slug/pos", label: "POS", icon: ShoppingBag },
+    { to: "/cafe/$slug/ledger", label: "Ledger", icon: Receipt },
+    { to: "/cafe/$slug/wallet", label: "Wallet", icon: Wallet },
+    { to: "/cafe/$slug/menu", label: "Menu", icon: Utensils },
+    { to: "/cafe/$slug/memberships", label: "Memberships", icon: BadgePercent },
+    { to: "/cafe/$slug/tournaments", label: "Tournaments", icon: Trophy },
+    { to: "/cafe/$slug/staff", label: "Staff", icon: UserCog },
+    { to: "/cafe/$slug/page", label: "Public page", icon: FileEdit },
+  ] as const;
+
 
   return (
     <motion.div
@@ -238,8 +278,87 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
             {isRestricted ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
             {isRestricted ? "Unlock" : "Restrict"}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Jump into café console
+              </DropdownMenuLabel>
+              {consolePages.map((p) => (
+                <DropdownMenuItem key={p.to} asChild>
+                  <Link to={p.to} params={{ slug: cafe.slug }} className="flex items-center gap-2">
+                    <p.icon className="h-3.5 w-3.5" /> {p.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setStatsOpen(true)}>
+                <BarChart3 className="mr-2 h-3.5 w-3.5" /> Deep stats
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/c/${cafe.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                  <ExternalLink className="h-3.5 w-3.5" /> Open public page
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete café
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Deep stats dialog */}
+      <Dialog open={statsOpen} onOpenChange={setStatsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><BarChart3 className="h-4 w-4" /> {cafe.name} — live stats</DialogTitle>
+            <DialogDescription>Aggregated from the cafés database tables.</DialogDescription>
+          </DialogHeader>
+          {stats.isLoading || !stats.data ? (
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-card/60" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <StatBox label="Devices" value={stats.data.devices} />
+              <StatBox label="Customers" value={stats.data.customers} />
+              <StatBox label="Staff" value={stats.data.staff} />
+              <StatBox label="Sessions (all-time)" value={stats.data.sessionsTotal} />
+              <StatBox label="Sessions today" value={stats.data.sessionsToday} />
+              <StatBox label="Revenue today" value={`₹${stats.data.revenueToday.toLocaleString("en-IN")}`} />
+              <StatBox label="Revenue (all)" value={`₹${stats.data.revenueAll.toLocaleString("en-IN")}`} className="col-span-2" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive"><Trash2 className="h-4 w-4" /> Delete {cafe.name}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the café, all its devices, customers, sessions and history. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            <Button variant="destructive" disabled={dM.isPending} onClick={() => dM.mutate({ data: { id: cafe.id } })}>
+              {dM.isPending ? "Deleting…" : "Delete forever"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={restrictOpen} onOpenChange={setRestrictOpen}>
         <DialogContent className="sm:max-w-md">
@@ -285,3 +404,13 @@ function Field({ name, label, placeholder, type = "text", required }: { name: st
     </div>
   );
 }
+
+function StatBox({ label, value, className = "" }: { label: string; value: number | string; className?: string }) {
+  return (
+    <div className={`rounded-xl border border-border/60 bg-card/40 p-3 ${className}`}>
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</div>
+      <div className="mt-1 font-display text-xl font-bold">{value}</div>
+    </div>
+  );
+}
+

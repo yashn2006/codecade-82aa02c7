@@ -2,16 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, Search, X, UserPlus } from "lucide-react";
+import { Users, Search, X, UserPlus, MoreHorizontal, Trash2, KeyRound, Mail, Copy } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { searchUsers, grantRole, revokeRole, adminCreateUser } from "@/lib/admin.functions";
+import { searchUsers, grantRole, revokeRole, adminCreateUser, deleteUser, setUserPassword, generateRecoveryLink } from "@/lib/admin.functions";
+
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   component: UsersPanel,
@@ -86,7 +88,7 @@ function UsersPanel() {
                     <div className="font-medium">{u.full_name || "—"}</div>
                     <div className="truncate font-mono text-xs text-muted-foreground">{u.email}</div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {(u.user_roles ?? []).map((r, i) => (
                       <Badge key={i} variant="outline" className="gap-1.5">
                         {r.role}
@@ -101,6 +103,7 @@ function UsersPanel() {
                         ><X className="h-3 w-3" /></button>
                       </Badge>
                     ))}
+                    <UserActions user={u} onChanged={refresh} />
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -117,6 +120,7 @@ function UsersPanel() {
                 </div>
               </div>
             ))}
+
           </TabsContent>
         ))}
       </Tabs>
@@ -192,3 +196,111 @@ function CreateUserButton({ onCreated }: { onCreated: () => void }) {
     </Dialog>
   );
 }
+
+function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void }) {
+  const [pwOpen, setPwOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [recovery, setRecovery] = useState<string | null>(null);
+  const delFn = useServerFn(deleteUser);
+  const pwFn = useServerFn(setUserPassword);
+  const recFn = useServerFn(generateRecoveryLink);
+
+  const dM = useMutation({
+    mutationFn: delFn,
+    onSuccess: () => { toast.success("User deleted"); onChanged(); setDelOpen(false); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const pM = useMutation({
+    mutationFn: pwFn,
+    onSuccess: () => { toast.success("Password updated"); setPwOpen(false); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const rM = useMutation({
+    mutationFn: recFn,
+    onSuccess: (res) => { setRecovery(res?.url ?? null); setLinkOpen(true); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onSelect={() => setPwOpen(true)}>
+            <KeyRound className="mr-2 h-3.5 w-3.5" /> Set password
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => rM.mutate({ data: { email: user.email } })} disabled={rM.isPending}>
+            <Mail className="mr-2 h-3.5 w-3.5" /> {rM.isPending ? "Generating…" : "Generate recovery link"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDelOpen(true)}>
+            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete user
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={pwOpen} onOpenChange={setPwOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4" /> Set password</DialogTitle>
+            <DialogDescription className="truncate">{user.email}</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const password = String(fd.get("password") || "");
+              if (password.length < 8) { toast.error("Min 8 characters"); return; }
+              pM.mutate({ data: { user_id: user.id, password } });
+            }}
+            className="space-y-3"
+          >
+            <Input name="password" type="text" placeholder="New password" minLength={8} required />
+            <DialogFooter>
+              <Button type="submit" disabled={pM.isPending}>{pM.isPending ? "Saving…" : "Save password"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={delOpen} onOpenChange={setDelOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive"><Trash2 className="h-4 w-4" /> Delete user?</DialogTitle>
+            <DialogDescription>
+              This permanently removes <span className="font-mono">{user.email}</span> and all their roles. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDelOpen(false)}>Cancel</Button>
+            <Button variant="destructive" disabled={dM.isPending} onClick={() => dM.mutate({ data: { user_id: user.id } })}>
+              {dM.isPending ? "Deleting…" : "Delete forever"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Mail className="h-4 w-4" /> Recovery link</DialogTitle>
+            <DialogDescription>Send this one-time link to {user.email}. It lets them set a new password.</DialogDescription>
+          </DialogHeader>
+          {recovery ? (
+            <div className="flex items-center gap-2">
+              <Input readOnly value={recovery} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+              <Button size="icon" variant="outline" onClick={async () => {
+                await navigator.clipboard.writeText(recovery);
+                toast.success("Copied");
+              }}><Copy className="h-4 w-4" /></Button>
+            </div>
+          ) : <div className="text-sm text-muted-foreground">No link generated.</div>}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+

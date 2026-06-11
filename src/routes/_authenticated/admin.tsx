@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Shield, Building2, Users, FileText, Settings as SettingsIcon } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
+import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Super Admin — CoreCade" }] }),
@@ -8,6 +9,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminLayout() {
+  useAdminRealtime();
   return (
     <ConsoleShell
       badge="Super Admin"
