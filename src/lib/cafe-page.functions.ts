@@ -10,20 +10,23 @@ export const getPublicCafe = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: cafe, error } = await supabaseAdmin
       .from("cafes")
-      .select("id, slug, name, city, state, address, phone, email, description, logo_url, cover_url")
+      .select("id, slug, name, city, state, address, phone, email, description, logo_url, cover_url, maintenance_starts_at, maintenance_ends_at, maintenance_message")
       .eq("slug", data.slug)
       .eq("is_active", true)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!cafe) throw new Error("Café not found");
 
-    const [page, devices, menuItems, menuCats, tournaments] = await Promise.all([
+    const [page, devices, menuItems, menuCats, tournaments, platform] = await Promise.all([
       supabaseAdmin.from("cafe_pages").select("*").eq("cafe_id", cafe.id).maybeSingle(),
       supabaseAdmin.from("devices").select("id,name,type,hourly_rate,status,specs").eq("cafe_id", cafe.id),
       supabaseAdmin.from("menu_items").select("*").eq("cafe_id", cafe.id).eq("is_active", true),
       supabaseAdmin.from("menu_categories").select("*").eq("cafe_id", cafe.id).order("sort_order"),
       supabaseAdmin.from("tournaments").select("*").eq("cafe_id", cafe.id)
         .in("status", ["upcoming", "live"]).order("starts_at").limit(10),
+      supabaseAdmin.from("platform_settings")
+        .select("maintenance_starts_at, maintenance_ends_at, maintenance_message, maintenance_title")
+        .eq("id", true).maybeSingle(),
     ]);
 
     const liveSessions = await supabaseAdmin
@@ -37,6 +40,12 @@ export const getPublicCafe = createServerFn({ method: "GET" })
       menu: { items: menuItems.data ?? [], categories: menuCats.data ?? [] },
       tournaments: tournaments.data ?? [],
       activeDeviceIds: (liveSessions.data ?? []).map((s) => s.device_id),
+      platform: platform.data ? {
+        starts_at: platform.data.maintenance_starts_at,
+        ends_at: platform.data.maintenance_ends_at,
+        message: platform.data.maintenance_message,
+        title: platform.data.maintenance_title,
+      } : null,
     };
   });
 

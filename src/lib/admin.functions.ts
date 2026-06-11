@@ -36,7 +36,7 @@ export const listAllCafes = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: cafes, error } = await supabaseAdmin
       .from("cafes")
-      .select("id, slug, name, city, state, is_active, restricted_message, owner_id, created_at")
+      .select("id, slug, name, city, state, is_active, restricted_message, maintenance_starts_at, maintenance_ends_at, maintenance_message, owner_id, created_at")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const rows = cafes ?? [];
