@@ -57,6 +57,7 @@ export function TerminalContact() {
       return;
     }
     setSending(true);
+    setError(null);
     try {
       await submit({
         data: {
@@ -69,10 +70,17 @@ export function TerminalContact() {
       setDone(true);
       toast.success("Transmission successful.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Transmission failed.");
+      const msg = e instanceof Error ? e.message : "Transmission failed.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSending(false);
     }
+  }
+
+  function retry() {
+    setError(null);
+    transmit();
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
