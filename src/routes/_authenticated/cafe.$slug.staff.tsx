@@ -19,6 +19,14 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/staff")({
+  head: () => ({
+    meta: [
+      { title: "Staff — CoreCade" },
+      { name: "description", content: "Invite staff, assign roles and shifts." },
+      { property: "og:title", content: "Staff — CoreCade" },
+      { property: "og:description", content: "Invite staff, assign roles and shifts." },
+    ],
+  }),
   component: StaffPage,
 });
 

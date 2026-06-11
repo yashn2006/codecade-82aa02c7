@@ -13,6 +13,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/page")({
+  head: () => ({
+    meta: [
+      { title: "Public Page — CoreCade" },
+      { name: "description", content: "Edit your café's public CoreCade landing page." },
+      { property: "og:title", content: "Public Page — CoreCade" },
+      { property: "og:description", content: "Edit your café's public CoreCade landing page." },
+    ],
+  }),
   component: PageEditor,
 });
 

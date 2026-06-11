@@ -17,6 +17,14 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/tournaments")({
+  head: () => ({
+    meta: [
+      { title: "Tournaments — CoreCade" },
+      { name: "description", content: "Plan brackets, registrations and live tournament ops." },
+      { property: "og:title", content: "Tournaments — CoreCade" },
+      { property: "og:description", content: "Plan brackets, registrations and live tournament ops." },
+    ],
+  }),
   component: TournamentsPage,
 });
 

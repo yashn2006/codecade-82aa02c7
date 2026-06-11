@@ -16,7 +16,14 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/analytics")({
-  head: () => ({ meta: [{ title: "Analytics — Café Console" }] }),
+  head: () => ({
+    meta: [
+      { title: "Analytics — CoreCade" },
+      { name: "description", content: "Activity feed, attendance heatmap and session quality." },
+      { property: "og:title", content: "Analytics — CoreCade" },
+      { property: "og:description", content: "Activity feed, attendance heatmap and session quality." },
+    ],
+  }),
   component: AnalyticsPage,
 });
 

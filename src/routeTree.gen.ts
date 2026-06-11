@@ -16,6 +16,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
+import { Route as AuthenticatedOwnerRouteImport } from './routes/_authenticated/owner'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedCafeSlugRouteImport } from './routes/_authenticated/cafe.$slug'
@@ -70,6 +71,11 @@ const CSlugRoute = CSlugRouteImport.update({
 const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
   id: '/portal',
   path: '/portal',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOwnerRoute = AuthenticatedOwnerRouteImport.update({
+  id: '/owner',
+  path: '/owner',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
+  '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/owner': typeof AuthenticatedOwnerRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRoute
   '/_authenticated/admin/cafes': typeof AuthenticatedAdminCafesRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/admin'
+    | '/owner'
     | '/portal'
     | '/c/$slug'
     | '/admin/cafes'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/setup'
+    | '/owner'
     | '/portal'
     | '/c/$slug'
     | '/admin/cafes'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/_authenticated/admin'
+    | '/_authenticated/owner'
     | '/_authenticated/portal'
     | '/c/$slug'
     | '/_authenticated/admin/cafes'
@@ -427,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/portal'
       fullPath: '/portal'
       preLoaderRoute: typeof AuthenticatedPortalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/owner': {
+      id: '/_authenticated/owner'
+      path: '/owner'
+      fullPath: '/owner'
+      preLoaderRoute: typeof AuthenticatedOwnerRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
@@ -639,12 +658,14 @@ const AuthenticatedCafeSlugRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedOwnerRoute: typeof AuthenticatedOwnerRoute
   AuthenticatedPortalRoute: typeof AuthenticatedPortalRoute
   AuthenticatedCafeSlugRoute: typeof AuthenticatedCafeSlugRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedOwnerRoute: AuthenticatedOwnerRoute,
   AuthenticatedPortalRoute: AuthenticatedPortalRoute,
   AuthenticatedCafeSlugRoute: AuthenticatedCafeSlugRouteWithChildren,
 }

@@ -10,6 +10,14 @@ import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/ledger")({
+  head: () => ({
+    meta: [
+      { title: "Ledger — CoreCade" },
+      { name: "description", content: "Every cash, UPI and card movement, fully auditable." },
+      { property: "og:title", content: "Ledger — CoreCade" },
+      { property: "og:description", content: "Every cash, UPI and card movement, fully auditable." },
+    ],
+  }),
   component: LedgerPage,
 });
 

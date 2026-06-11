@@ -16,6 +16,14 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/devices")({
+  head: () => ({
+    meta: [
+      { title: "Devices — CoreCade" },
+      { name: "description", content: "Manage PCs, consoles, VR rigs and station availability." },
+      { property: "og:title", content: "Devices — CoreCade" },
+      { property: "og:description", content: "Manage PCs, consoles, VR rigs and station availability." },
+    ],
+  }),
   component: DevicesPage,
 });
 
