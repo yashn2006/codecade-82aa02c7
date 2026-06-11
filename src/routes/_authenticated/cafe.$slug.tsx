@@ -107,10 +107,12 @@ const SECTION_LABELS: Record<string, { label: string; icon: typeof Activity }> =
   pos: { label: "POS counter", icon: Receipt },
   devices: { label: "Devices", icon: Cpu },
   bookings: { label: "Bookings", icon: CalendarRange },
+  tournaments: { label: "Tournaments", icon: Trophy },
   customers: { label: "Customers", icon: Users },
   wallet: { label: "Wallet", icon: Wallet },
   memberships: { label: "Memberships", icon: Crown },
   ledger: { label: "Ledger", icon: ScrollText },
+  audit: { label: "Audit log", icon: History },
   page: { label: "Public page", icon: Globe },
   staff: { label: "Staff", icon: Settings },
 };
