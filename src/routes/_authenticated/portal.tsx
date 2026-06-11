@@ -51,6 +51,7 @@ function Portal() {
       {(isSuper || ownerCafe) && (
         <div className="mb-6 flex flex-wrap gap-2">
           {isSuper && <Link to="/admin"><Button variant="outline" size="sm">Open Super Admin →</Button></Link>}
+          {ownerCafe && <Link to="/owner"><Button variant="outline" size="sm">Open Owner Dashboard →</Button></Link>}
           {ownerCafe && <Link to="/cafe/$slug" params={{ slug: ownerCafe.slug }}><Button variant="outline" size="sm">Open {ownerCafe.name} console →</Button></Link>}
         </div>
       )}
