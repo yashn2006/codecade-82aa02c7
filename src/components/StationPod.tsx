@@ -106,7 +106,10 @@ export function StationPod({
         />
 
         {/* Main pod body */}
-        <div className="relative overflow-hidden rounded-[22px] border border-white/5 bg-[oklch(0.13_0.03_285/0.85)] p-4 backdrop-blur-xl">
+        <div
+          className="relative overflow-hidden rounded-[22px] border border-border bg-card p-4 shadow-soft"
+          style={{ backgroundImage: `linear-gradient(180deg, oklch(0.99 0.005 78) 0%, oklch(0.96 0.015 78) 100%)` }}
+        >
           {/* Grid floor (perspective) */}
           <div
             className="pointer-events-none absolute inset-0 opacity-50"
@@ -131,13 +134,13 @@ export function StationPod({
                 <Icon className="h-4 w-4" style={{ color: theme.ring }} />
               </div>
               <div className="min-w-0">
-                <div className="truncate font-display text-sm font-bold leading-none">{name}</div>
+                <div className="truncate font-display text-sm font-bold leading-none text-foreground">{name}</div>
                 <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
                   {type} · ₹{hourlyRate}/hr
                 </div>
               </div>
             </div>
-            <Glyph className="h-3.5 w-3.5 opacity-70" style={{ color: theme.ring }} />
+            <Glyph className="h-3.5 w-3.5 opacity-80" style={{ color: theme.ring }} />
           </div>
 
           {/* 3D Monitor */}
