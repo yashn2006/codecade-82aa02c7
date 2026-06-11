@@ -392,63 +392,42 @@ function Pricing() {
 }
 
 function Contact() {
-  const submit = useServerFn(submitContact);
-  const [loading, setLoading] = useState(false);
-
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    setLoading(true);
-    try {
-      await submit({
-        data: {
-          name: String(fd.get("name") ?? ""),
-          email: String(fd.get("email") ?? ""),
-          phone: String(fd.get("phone") ?? "") || null,
-          message: String(fd.get("message") ?? ""),
-        },
-      });
-      toast.success("Message sent — we'll get back within 24 hours.");
-      e.currentTarget.reset();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <section id="contact" className="relative px-4 py-28 sm:px-6">
-      <div className="mx-auto grid max-w-5xl gap-12 md:grid-cols-2">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-1/2 h-[480px] w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl opacity-30" style={{ background: "var(--gradient-brand-hot)" }} />
+      </div>
+      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
         <div>
-          <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl">Let's talk.</h2>
-          <p className="mt-4 text-muted-foreground">
-            Running a café? Thinking of opening one? Drop us a line — humans reply within 24 hours, IST.
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/5 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-emerald-300 backdrop-blur">
+            <Terminal className="h-3 w-3" /> direct line · encrypted
+          </div>
+          <h2 className="mt-5 font-display text-5xl font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-7xl">
+            Open a <span className="text-gradient-hot">socket</span> to us.
+          </h2>
+          <p className="mt-5 max-w-md text-muted-foreground sm:text-lg">
+            No forms. No funnels. A live shell straight to the team that builds CoreCade.
+            Type, hit <span className="font-mono text-emerald-300">[enter]</span>, then
+            <span className="font-mono text-emerald-300"> :send</span> to transmit.
           </p>
-          <div className="mt-8 space-y-3 text-sm">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-muted-foreground">Online · Mon–Sat 10am–8pm IST</span>
+          <div className="mt-8 space-y-3 font-mono text-xs">
+            <div className="flex items-center gap-3 text-emerald-300">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              </span>
+              ● connected · Mon–Sat · 10:00–20:00 IST
             </div>
+            <div className="text-muted-foreground">↳ avg first reply 4h 12m</div>
+            <div className="text-muted-foreground">↳ humans only, no autoresponders</div>
           </div>
         </div>
-        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur">
-          <Input name="name" placeholder="Your name" required maxLength={120} className="h-12" />
-          <Input name="email" type="email" placeholder="Email" required maxLength={200} className="h-12" />
-          <Input name="phone" placeholder="Phone (optional)" maxLength={20} className="h-12" />
-          <Textarea name="message" placeholder="What are you building?" rows={4} required maxLength={2000} />
-          <Button
-            type="submit" disabled={loading}
-            className="h-12 w-full text-base font-semibold text-primary-foreground glow-violet"
-            style={{ background: "var(--gradient-brand-hot)" }}
-          >
-            {loading ? "Sending…" : "Send message"}
-          </Button>
-        </form>
+        <TerminalContact />
       </div>
     </section>
   );
 }
+
 
 function Footer() {
   return (
