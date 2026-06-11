@@ -310,3 +310,56 @@ export const networkBroadcast = createServerFn({ method: "POST" })
   });
 
 
+
+// ============ Platform-wide revenue analytics ============
+export const platformRevenueAnalytics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const since = new Date(Date.now() - 30 * 86400_000).toISOString();
+
+    const [{ data: orders }, { data: sessions }, { data: topCafes }] = await Promise.all([
+      supabaseAdmin.from("orders").select("cafe_id, total_amount, subtotal, refund_amount, created_at, status").gte("created_at", since),
+      supabaseAdmin.from("sessions").select("cafe_id, amount, duration_minutes, ended_at").not("ended_at", "is", null).gte("ended_at", since),
+      supabaseAdmin.from("cafes").select("id, name, slug, city").order("created_at", { ascending: false }).limit(100),
+    ]);
+
+    const cafeMap = new Map((topCafes ?? []).map((c) => [c.id, c]));
+    const daily = new Map<string, { date: string; orders: number; sessions: number; revenue: number }>();
+    const byCafe = new Map<string, { cafe_id: string; name: string; city: string | null; orders: number; sessions: number; revenue: number }>();
+
+    for (const o of orders ?? []) {
+      if (o.status === "void") continue;
+      const day = new Date(o.created_at).toISOString().slice(0, 10);
+      const dd = daily.get(day) ?? { date: day, orders: 0, sessions: 0, revenue: 0 };
+      const rev = (o.total_amount || o.subtotal || 0) - (o.refund_amount || 0);
+      dd.orders++; dd.revenue += rev;
+      daily.set(day, dd);
+      const c = cafeMap.get(o.cafe_id);
+      if (c) {
+        const e = byCafe.get(o.cafe_id) ?? { cafe_id: o.cafe_id, name: c.name, city: c.city, orders: 0, sessions: 0, revenue: 0 };
+        e.orders++; e.revenue += rev; byCafe.set(o.cafe_id, e);
+      }
+    }
+    for (const s of sessions ?? []) {
+      const day = new Date(s.ended_at!).toISOString().slice(0, 10);
+      const dd = daily.get(day) ?? { date: day, orders: 0, sessions: 0, revenue: 0 };
+      dd.sessions++; dd.revenue += s.amount || 0;
+      daily.set(day, dd);
+      const c = cafeMap.get(s.cafe_id);
+      if (c) {
+        const e = byCafe.get(s.cafe_id) ?? { cafe_id: s.cafe_id, name: c.name, city: c.city, orders: 0, sessions: 0, revenue: 0 };
+        e.sessions++; e.revenue += s.amount || 0; byCafe.set(s.cafe_id, e);
+      }
+    }
+
+    const totalRevenue = Array.from(daily.values()).reduce((s, d) => s + d.revenue, 0);
+    return {
+      totalRevenue,
+      totalOrders: (orders ?? []).filter((o) => o.status !== "void").length,
+      totalSessions: (sessions ?? []).length,
+      daily: Array.from(daily.values()).sort((a, b) => a.date.localeCompare(b.date)),
+      topCafes: Array.from(byCafe.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 12),
+    };
+  });
