@@ -37,6 +37,7 @@ function WalletPage() {
   const lCus = useServerFn(listCustomers);
   const lTx = useServerFn(listWalletTransactions);
   const adj = useServerFn(adjustWallet);
+  const csvFn = useServerFn(exportWalletCSV);
 
   const customersQ = useQuery({ queryKey: ["customers", cafeId], queryFn: () => lCus({ data: { cafe_id: cafeId! } }), enabled: !!cafeId });
   const txQ = useQuery({ queryKey: ["wallet-tx", cafeId], queryFn: () => lTx({ data: { cafe_id: cafeId! } }), enabled: !!cafeId });
