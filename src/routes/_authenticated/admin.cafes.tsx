@@ -14,7 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { listAllCafes, setCafeRestriction, deleteCafe, cafeDeepStats } from "@/lib/admin.functions";
+import { listAllCafes, setCafeRestriction, deleteCafe, cafeDeepStats, exportDataset } from "@/lib/admin.functions";
+import { downloadCsv } from "@/lib/csv";
+import { Download } from "lucide-react";
 import { createCafe, toggleCafeActive } from "@/lib/cafes.functions";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { isMaintenanceActive } from "@/lib/maintenance";
@@ -417,4 +419,23 @@ function StatBox({ label, value, className = "" }: { label: string; value: numbe
     </div>
   );
 }
+
+export function ExportButton({ kind }: { kind: "cafes" | "users" | "orders" | "sessions" | "bookings" | "leads" }) {
+  const fn = useServerFn(exportDataset);
+  const m = useMutation({
+    mutationFn: fn,
+    onSuccess: (rows) => {
+      if (!rows || rows.length === 0) { toast.info("Nothing to export"); return; }
+      downloadCsv(`${kind}-${new Date().toISOString().slice(0, 10)}.csv`, rows as Record<string, unknown>[]);
+      toast.success(`Exported ${rows.length} rows`);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  return (
+    <Button variant="outline" className="gap-2" disabled={m.isPending} onClick={() => m.mutate({ data: { kind } })}>
+      <Download className="h-4 w-4" /> {m.isPending ? "Exporting…" : `Export ${kind}`}
+    </Button>
+  );
+}
+
 
