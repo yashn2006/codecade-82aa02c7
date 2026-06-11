@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
-  Shield, Users, Building2, FileText, Activity, Plus, Search, Check, X, TrendingUp, Power, PowerOff, ArrowUpRight,
+  Shield, Users, Building2, FileText, Activity, Plus, Search, Check, X, TrendingUp, Power, PowerOff, ArrowUpRight, Lock, Unlock,
 } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { StatCard } from "@/components/StatCard";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { adminOverview, listAllCafes, listContacts, setContactStatus, searchUsers, grantRole, revokeRole } from "@/lib/admin.functions";
+import { adminOverview, listAllCafes, listContacts, setContactStatus, searchUsers, grantRole, revokeRole, setCafeRestriction } from "@/lib/admin.functions";
 import { createCafe, toggleCafeActive } from "@/lib/cafes.functions";
 import { getNetworkAnalytics } from "@/lib/analytics.functions";
 
@@ -237,7 +237,7 @@ function CafesPanel() {
           />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {data.map((c, i) => <CafeAdminCard key={c.id} cafe={c} index={i} />)}
+            {data.map((c, i) => <CafeAdminCard key={c.id} cafe={c as Parameters<typeof CafeAdminCard>[0]["cafe"]} index={i} />)}
           </div>
         )}
       </div>
@@ -245,44 +245,125 @@ function CafesPanel() {
   );
 }
 
-function CafeAdminCard({ cafe, index }: { cafe: { id: string; slug: string; name: string; city: string | null; is_active: boolean; profiles: unknown }; index: number }) {
+function CafeAdminCard({ cafe, index }: { cafe: { id: string; slug: string; name: string; city: string | null; is_active: boolean; restricted_message?: string | null; profiles: unknown }; index: number }) {
   const owner = cafe.profiles as { email?: string } | null;
   const qc = useQueryClient();
   const toggle = useServerFn(toggleCafeActive);
+  const restrict = useServerFn(setCafeRestriction);
   const tM = useMutation({
     mutationFn: toggle,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-cafes"] }); qc.invalidateQueries({ queryKey: ["admin-overview"] }); },
   });
+  const rM = useMutation({
+    mutationFn: restrict,
+    onSuccess: () => {
+      toast.success("Restriction updated");
+      qc.invalidateQueries({ queryKey: ["admin-cafes"] });
+      setRestrictOpen(false);
+    },
+  });
+  const [restrictOpen, setRestrictOpen] = useState(false);
+  const isRestricted = !!cafe.restricted_message;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}
-      className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur hover-lift hover:border-primary/40"
+      className={`group relative overflow-hidden rounded-2xl border bg-card/40 p-5 backdrop-blur hover-lift ${
+        isRestricted
+          ? "border-destructive/50 hover:border-destructive"
+          : "border-border/60 hover:border-primary/40"
+      }`}
     >
-      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-violet/20 blur-2xl" />
-      <div className="relative flex items-start justify-between">
-        <Link to="/cafe/$slug" params={{ slug: cafe.slug }} className="block">
+      <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full blur-2xl ${isRestricted ? "bg-destructive/20" : "bg-violet/20"}`} />
+      <div className="relative flex items-start justify-between gap-3">
+        <Link to="/cafe/$slug" params={{ slug: cafe.slug }} className="block min-w-0">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{cafe.city ?? "—"}</div>
-          <h3 className="mt-1 font-display text-lg font-bold">{cafe.name}</h3>
+          <h3 className="mt-1 truncate font-display text-lg font-bold">{cafe.name}</h3>
           <div className="mt-1 font-mono text-xs text-azure">/{cafe.slug}</div>
         </Link>
-        <Badge variant={cafe.is_active ? "default" : "secondary"}>{cafe.is_active ? "Live" : "Off"}</Badge>
-      </div>
-      <div className="relative mt-4 flex items-end justify-between">
-        <div className="text-xs text-muted-foreground">
-          Owner: <span className="text-foreground">{owner?.email ?? "—"}</span>
+        <div className="flex flex-col items-end gap-1.5">
+          <Badge variant={cafe.is_active ? "default" : "secondary"}>{cafe.is_active ? "Live" : "Off"}</Badge>
+          {isRestricted && <Badge variant="destructive" className="gap-1"><Lock className="h-3 w-3" /> Restricted</Badge>}
         </div>
-        <Button
-          size="sm" variant="ghost"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); tM.mutate({ data: { id: cafe.id, is_active: !cafe.is_active } }); }}
-          className="gap-1.5"
-        >
-          {cafe.is_active ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
-          {cafe.is_active ? "Pause" : "Resume"}
-        </Button>
       </div>
+      {isRestricted && (
+        <p className="relative mt-3 line-clamp-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-foreground/80">
+          “{cafe.restricted_message}”
+        </p>
+      )}
+      <div className="relative mt-4 flex items-end justify-between gap-2">
+        <div className="min-w-0 text-xs text-muted-foreground">
+          Owner: <span className="truncate text-foreground">{owner?.email ?? "—"}</span>
+        </div>
+        <div className="flex shrink-0 gap-1">
+          <Button
+            size="sm" variant="ghost"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); tM.mutate({ data: { id: cafe.id, is_active: !cafe.is_active } }); }}
+            className="h-7 gap-1 text-xs"
+            title={cafe.is_active ? "Pause" : "Resume"}
+          >
+            {cafe.is_active ? <PowerOff className="h-3 w-3" /> : <Power className="h-3 w-3" />}
+            {cafe.is_active ? "Pause" : "Resume"}
+          </Button>
+          <Button
+            size="sm" variant="ghost"
+            onClick={(e) => {
+              e.preventDefault(); e.stopPropagation();
+              if (isRestricted) rM.mutate({ data: { id: cafe.id, restricted_message: null } });
+              else setRestrictOpen(true);
+            }}
+            className={`h-7 gap-1 text-xs ${isRestricted ? "text-emerald-400" : "text-destructive"}`}
+            title={isRestricted ? "Lift restriction" : "Restrict café"}
+          >
+            {isRestricted ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+            {isRestricted ? "Unlock" : "Restrict"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Restrict dialog */}
+      <Dialog open={restrictOpen} onOpenChange={setRestrictOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Lock className="h-4 w-4" /> Restrict {cafe.name}
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const message = String(fd.get("message") || "").trim();
+              if (!message) { toast.error("Add a reason — the owner will see it."); return; }
+              rM.mutate({ data: { id: cafe.id, restricted_message: message } });
+            }}
+            className="space-y-3"
+          >
+            <p className="text-xs text-muted-foreground">
+              The owner's portal will be locked and this message will be shown. Lift the restriction any time.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Reason / message</Label>
+              <Textarea
+                name="message"
+                rows={4}
+                required
+                placeholder="We have temporarily suspended your services due to…"
+                defaultValue={cafe.restricted_message ?? ""}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" variant="destructive" disabled={rM.isPending}>
+                {rM.isPending ? "Applying…" : "Restrict café"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
+
 
 function UsersPanel() {
   const [q, setQ] = useState("");

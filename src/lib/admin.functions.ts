@@ -36,11 +36,31 @@ export const listAllCafes = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("cafes")
-      .select("id, slug, name, city, state, is_active, owner_id, created_at, profiles:owner_id(email, full_name)")
+      .select("id, slug, name, city, state, is_active, restricted_message, owner_id, created_at, profiles:owner_id(email, full_name)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+export const setCafeRestriction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      restricted_message: z.string().max(500).nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("cafes")
+      .update({ restricted_message: data.restricted_message })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const listContacts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

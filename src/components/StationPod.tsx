@@ -29,6 +29,17 @@ const STATUS_GLYPH: Record<DeviceStatus, typeof Cpu> = {
   maintenance: Wrench,
 };
 
+/** Convert #rrggbb or shorthand to rgba string. Returns passed value if not a hex. */
+function hexToRgba(hex: string, alpha = 1): string {
+  if (!hex.startsWith("#")) return hex;
+  let h = hex.slice(1);
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const num = parseInt(h, 16);
+  const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+
 export type StationPodProps = {
   name: string;
   type: DeviceType;
@@ -38,6 +49,8 @@ export type StationPodProps = {
   caption?: React.ReactNode; // small line under chip
   index?: number;
   onClick?: () => void;
+  /** Optional zone color — re-tints decorative chrome (halo, grid floor, icon tile, base shadow). */
+  accent?: string | null;
 };
 
 /**
@@ -45,11 +58,18 @@ export type StationPodProps = {
  * scanlines, animated status ring, pointer-tilt parallax, ambient glow.
  */
 export function StationPod({
-  name, type, status, hourlyRate, overlay, caption, index = 0, onClick,
+  name, type, status, hourlyRate, overlay, caption, index = 0, onClick, accent,
 }: StationPodProps) {
   const Icon = TYPE_ICON[type] ?? Cpu;
   const Glyph = STATUS_GLYPH[status];
-  const theme = STATUS_THEME[status];
+  const statusTheme = STATUS_THEME[status];
+
+  // Zone color overrides the decorative chrome; the screen still reflects status.
+  const chromeRing = accent || statusTheme.ring;
+  const chromeGlow = accent
+    ? hexToRgba(accent, 0.55)
+    : statusTheme.glow;
+  const theme = { ...statusTheme, ring: chromeRing, glow: chromeGlow };
 
   const rotateX = useMotionValue(0);
   const rotateY = useMotionValue(0);
@@ -105,10 +125,15 @@ export function StationPod({
           style={{ boxShadow: `0 0 0 1px ${theme.ring}33, 0 30px 80px -28px ${theme.glow}` }}
         />
 
-        {/* Main pod body */}
+        {/* Main pod body — tinted by accent (zone) when provided */}
         <div
-          className="relative overflow-hidden rounded-[22px] border border-border bg-card p-4 shadow-soft"
-          style={{ backgroundImage: `linear-gradient(180deg, oklch(0.99 0.005 78) 0%, oklch(0.96 0.015 78) 100%)` }}
+          className="relative overflow-hidden rounded-[22px] border bg-card p-4 shadow-soft"
+          style={{
+            borderColor: accent ? `${accent}55` : "var(--color-border)",
+            backgroundImage: accent
+              ? `linear-gradient(180deg, ${hexToRgba(accent, 0.10)} 0%, var(--color-card) 65%)`
+              : `linear-gradient(180deg, var(--color-card) 0%, color-mix(in oklab, var(--color-card) 85%, black) 100%)`,
+          }}
         >
           {/* Grid floor (perspective) */}
           <div

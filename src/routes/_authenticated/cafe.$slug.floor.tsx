@@ -250,6 +250,7 @@ function FloorBuilder() {
                           type={dev.type as "pc" | "console" | "vr" | "racing" | "other"}
                           status={(dev.status as DeviceStatus) || "available"}
                           hourlyRate={dev.hourly_rate}
+                          accent={dev.zone_color}
                         />
                       </button>
                     </div>
@@ -514,6 +515,7 @@ function NewStationForm({
               type={type}
               status="available"
               hourlyRate={rate}
+              accent={color}
             />
           </motion.div>
           {zone && (

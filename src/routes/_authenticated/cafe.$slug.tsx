@@ -1,7 +1,8 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid } from "lucide-react";
+import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
+import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 
@@ -17,6 +18,8 @@ function CafeLayout() {
     queryKey: ["cafe", slug],
     queryFn: () => fn({ data: { slug } }),
   });
+
+  const restricted = !!(cafe as { restricted_message?: string | null } | undefined)?.restricted_message;
 
   return (
     <ConsoleShell
@@ -37,8 +40,43 @@ function CafeLayout() {
         { label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
       ]}
     >
-      <Outlet />
+      {restricted ? <RestrictedOverlay message={(cafe as { restricted_message?: string }).restricted_message ?? ""} /> : null}
+      <div className={restricted ? "pointer-events-none select-none opacity-30 blur-[2px]" : ""} aria-hidden={restricted}>
+        <Outlet />
+      </div>
     </ConsoleShell>
   );
 }
 
+function RestrictedOverlay({ message }: { message: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6 overflow-hidden rounded-3xl border border-destructive/40 bg-gradient-to-br from-destructive/20 via-card to-rose/10 p-6 shadow-pop"
+    >
+      <div className="flex items-start gap-4">
+        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-destructive/20 text-destructive">
+          <AlertOctagon className="h-6 w-6" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-destructive">
+            Service restricted by CoreCade admin
+          </div>
+          <h2 className="mt-1 font-display text-xl font-extrabold tracking-tight sm:text-2xl">
+            Your café console has been temporarily suspended
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-foreground/80">
+            {message}
+          </p>
+          <Link
+            to="/portal"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-3 py-1.5 text-xs text-foreground transition hover:border-primary/40"
+          >
+            <Mail className="h-3 w-3" /> Contact support to resolve
+          </Link>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
