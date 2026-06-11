@@ -278,8 +278,87 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
             {isRestricted ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
             {isRestricted ? "Unlock" : "Restrict"}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Jump into café console
+              </DropdownMenuLabel>
+              {consolePages.map((p) => (
+                <DropdownMenuItem key={p.to} asChild>
+                  <Link to={p.to} params={{ slug: cafe.slug }} className="flex items-center gap-2">
+                    <p.icon className="h-3.5 w-3.5" /> {p.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setStatsOpen(true)}>
+                <BarChart3 className="mr-2 h-3.5 w-3.5" /> Deep stats
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/c/${cafe.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                  <ExternalLink className="h-3.5 w-3.5" /> Open public page
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete café
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Deep stats dialog */}
+      <Dialog open={statsOpen} onOpenChange={setStatsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><BarChart3 className="h-4 w-4" /> {cafe.name} — live stats</DialogTitle>
+            <DialogDescription>Aggregated from the cafés database tables.</DialogDescription>
+          </DialogHeader>
+          {stats.isLoading || !stats.data ? (
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-card/60" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <StatBox label="Devices" value={stats.data.devices} />
+              <StatBox label="Customers" value={stats.data.customers} />
+              <StatBox label="Staff" value={stats.data.staff} />
+              <StatBox label="Sessions (all-time)" value={stats.data.sessionsTotal} />
+              <StatBox label="Sessions today" value={stats.data.sessionsToday} />
+              <StatBox label="Revenue today" value={`₹${stats.data.revenueToday.toLocaleString("en-IN")}`} />
+              <StatBox label="Revenue (all)" value={`₹${stats.data.revenueAll.toLocaleString("en-IN")}`} className="col-span-2" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive"><Trash2 className="h-4 w-4" /> Delete {cafe.name}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the café, all its devices, customers, sessions and history. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            <Button variant="destructive" disabled={dM.isPending} onClick={() => dM.mutate({ data: { id: cafe.id } })}>
+              {dM.isPending ? "Deleting…" : "Delete forever"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={restrictOpen} onOpenChange={setRestrictOpen}>
         <DialogContent className="sm:max-w-md">
