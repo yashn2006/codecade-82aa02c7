@@ -204,10 +204,12 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
   const [pwOpen, setPwOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [actOpen, setActOpen] = useState(false);
   const [recovery, setRecovery] = useState<string | null>(null);
   const delFn = useServerFn(deleteUser);
   const pwFn = useServerFn(setUserPassword);
   const recFn = useServerFn(generateRecoveryLink);
+  const actFn = useServerFn(userActivity);
 
   const dM = useMutation({
     mutationFn: delFn,
@@ -223,6 +225,11 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
     mutationFn: recFn,
     onSuccess: (res) => { setRecovery(res?.url ?? null); setLinkOpen(true); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const aQ = useQuery({
+    queryKey: ["user-activity", user.id],
+    queryFn: () => actFn({ data: { user_id: user.id } }),
+    enabled: actOpen,
   });
 
   return (
