@@ -452,3 +452,174 @@ function FloorBuilder() {
     </div>
   );
 }
+
+// ---------------------------------------------------------------
+// New Station form with live preview pane
+// ---------------------------------------------------------------
+
+const TYPE_OPTIONS: { value: typeof TYPES[number]; label: string; icon: typeof Cpu }[] = [
+  { value: "pc",      label: "PC",       icon: MonitorPlay },
+  { value: "console", label: "Console",  icon: Gamepad2 },
+  { value: "vr",      label: "VR",       icon: Headset },
+  { value: "racing",  label: "Racing",   icon: Car },
+  { value: "other",   label: "Other",    icon: Cpu },
+];
+
+type NewStationValues = {
+  name: string;
+  type: typeof TYPES[number];
+  hourly_rate: number;
+  zone: string | null;
+  zone_color: string | null;
+};
+
+function NewStationForm({
+  adding, defaultName, isPending, onSubmit,
+}: {
+  adding: { x: number; y: number } | null;
+  defaultName: string;
+  isPending: boolean;
+  onSubmit: (v: NewStationValues) => void;
+}) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState<typeof TYPES[number]>("pc");
+  const [rate, setRate] = useState(100);
+  const [zone, setZone] = useState("");
+  const [color, setColor] = useState<string>(ZONE_COLORS[0].value);
+
+  const finalName = name.trim() || defaultName;
+
+  return (
+    <div className="grid gap-0 sm:grid-cols-[260px_1fr]">
+      {/* Left: live preview */}
+      <div className="relative overflow-hidden border-b border-border bg-gradient-to-br from-secondary/60 to-card p-6 sm:border-b-0 sm:border-r">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{ background: `radial-gradient(80% 60% at 50% 0%, ${color}33, transparent 70%)` }}
+          aria-hidden
+        />
+        <div className="relative">
+          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            Live preview {adding && `· cell ${adding.x},${adding.y}`}
+          </div>
+          <motion.div
+            key={`${type}-${color}-${finalName}-${rate}`}
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.25 }}
+            className="mt-4"
+          >
+            <StationPod
+              name={finalName}
+              type={type}
+              status="available"
+              hourlyRate={rate}
+            />
+          </motion.div>
+          {zone && (
+            <div
+              className="mt-3 inline-block rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em]"
+              style={{ background: `${color}1a`, color, borderColor: `${color}55` }}
+            >{zone}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Right: form */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit({
+            name: finalName,
+            type,
+            hourly_rate: rate,
+            zone: zone.trim() || null,
+            zone_color: color || null,
+          });
+        }}
+        className="space-y-4 p-6"
+      >
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="h-4 w-4 text-primary" /> New station
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground">Configure once — your customers and floor will reflect it instantly.</p>
+        </DialogHeader>
+
+        {/* Type picker */}
+        <div className="space-y-2">
+          <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Type</Label>
+          <div className="grid grid-cols-5 gap-1.5">
+            {TYPE_OPTIONS.map((t) => {
+              const active = type === t.value;
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setType(t.value)}
+                  className={`group flex flex-col items-center gap-1 rounded-xl border p-2 transition-all ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary shadow-soft scale-[1.03]"
+                      : "border-border bg-card hover:border-primary/40 hover:bg-secondary"
+                  }`}
+                >
+                  <t.icon className="h-4 w-4 transition-transform group-hover:scale-110" />
+                  <span className="text-[10px] font-medium">{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={defaultName} autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Hourly rate ₹</Label>
+            <Input type="number" min={0} value={rate} onChange={(e) => setRate(Number(e.target.value) || 0)} />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Zone label <span className="opacity-50">(optional)</span></Label>
+          <Input value={zone} onChange={(e) => setZone(e.target.value)} placeholder="e.g. PC Zone, VR Pit, Console Lounge" />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Zone color</Label>
+          <div className="flex flex-wrap gap-2">
+            {ZONE_COLORS.map((c) => {
+              const active = color === c.value;
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setColor(c.value)}
+                  className="relative grid h-9 w-9 place-items-center rounded-full transition-transform hover:scale-110"
+                  title={c.name}
+                  aria-label={c.name}
+                >
+                  <span className="block h-7 w-7 rounded-full" style={{ background: c.value, boxShadow: active ? `0 0 0 3px var(--background), 0 0 0 5px ${c.value}` : "none" }} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <DialogFooter className="pt-2">
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="gap-1.5 text-primary-foreground"
+            style={{ background: "var(--gradient-brand)" }}
+          >
+            <Save className="h-3.5 w-3.5" /> {isPending ? "Adding…" : "Add station"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </div>
+  );
+}
+
