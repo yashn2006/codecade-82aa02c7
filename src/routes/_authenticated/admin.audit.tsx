@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ScrollText, Search, RefreshCw } from "lucide-react";
 import { adminListAuditLogs, adminCafeOptions } from "@/lib/admin.functions";
+import { downloadCsv } from "@/lib/csv";
+import { Download } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -74,6 +76,13 @@ function AuditPanel() {
         </div>
         <Button variant="outline" onClick={() => logs.refetch()} className="gap-2">
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        </Button>
+        <Button
+          variant="outline" className="gap-2"
+          disabled={rows.length === 0}
+          onClick={() => downloadCsv(`audit-${new Date().toISOString().slice(0, 10)}.csv`, rows as unknown as Record<string, unknown>[])}
+        >
+          <Download className="h-3.5 w-3.5" /> Export
         </Button>
       </div>
 

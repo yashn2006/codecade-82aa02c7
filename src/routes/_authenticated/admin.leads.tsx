@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { listContacts, setContactStatus } from "@/lib/admin.functions";
+import { ExportButton } from "./admin.cafes";
 
 export const Route = createFileRoute("/_authenticated/admin/leads")({
   component: LeadsPanel,
@@ -60,11 +61,14 @@ function LeadsPanel() {
 
   return (
     <Tabs defaultValue="new">
-      <TabsList className="glass-strong rounded-2xl p-1">
-        <TabsTrigger value="new">New <Badge variant="secondary" className="ml-2">{buckets.new.length}</Badge></TabsTrigger>
-        <TabsTrigger value="resolved">Resolved <Badge variant="secondary" className="ml-2">{buckets.resolved.length}</Badge></TabsTrigger>
-        <TabsTrigger value="all">All <Badge variant="secondary" className="ml-2">{buckets.all.length}</Badge></TabsTrigger>
-      </TabsList>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <TabsList className="glass-strong rounded-2xl p-1">
+          <TabsTrigger value="new">New <Badge variant="secondary" className="ml-2">{buckets.new.length}</Badge></TabsTrigger>
+          <TabsTrigger value="resolved">Resolved <Badge variant="secondary" className="ml-2">{buckets.resolved.length}</Badge></TabsTrigger>
+          <TabsTrigger value="all">All <Badge variant="secondary" className="ml-2">{buckets.all.length}</Badge></TabsTrigger>
+        </TabsList>
+        <ExportButton kind="leads" />
+      </div>
       <TabsContent value="new" className="mt-4">{render(buckets.new)}</TabsContent>
       <TabsContent value="resolved" className="mt-4">{render(buckets.resolved)}</TabsContent>
       <TabsContent value="all" className="mt-4">{render(buckets.all)}</TabsContent>
