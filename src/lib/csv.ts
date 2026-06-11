@@ -5,8 +5,9 @@ export function downloadCsv<T extends Record<string, unknown>>(
   columns?: Array<{ key: keyof T; label?: string }>,
 ) {
   if (!rows.length) return;
-  const cols = columns ?? Object.keys(rows[0]).map((k) => ({ key: k as keyof T }));
-  const header = cols.map((c) => esc(String(c.label ?? c.key))).join(",");
+  const cols: Array<{ key: keyof T; label?: string }> =
+    columns ?? Object.keys(rows[0]).map((k) => ({ key: k as keyof T }));
+  const header = cols.map((c) => esc(String(c.label ?? String(c.key)))).join(",");
   const body = rows.map((r) => cols.map((c) => esc(format(r[c.key]))).join(",")).join("\n");
   const csv = header + "\n" + body;
   const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
