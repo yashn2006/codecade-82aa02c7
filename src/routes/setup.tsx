@@ -7,7 +7,7 @@ import { Shield, Check } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/setup")({
-  head: () => ({ meta: [{ title: "Setup — Giganexa" }] }),
+  head: () => ({ meta: [{ title: "Setup — CoreCade" }] }),
   component: SetupPage,
 });
 
@@ -43,7 +43,7 @@ function SetupPage() {
           <li>2. Click the button below.</li>
           <li>3. Sign in at <code className="font-mono text-foreground">/auth</code>.</li>
         </ol>
-        <Button onClick={run} disabled={loading || done} className="mt-8 w-full h-12 bg-gradient-to-r from-cyan to-magenta text-primary-foreground glow-cyan font-semibold">
+        <Button onClick={run} disabled={loading || done} className="mt-8 w-full h-12 bg-gradient-to-r from-violet via-primary to-azure text-primary-foreground glow-violet font-semibold">
           {done ? <><Check className="mr-2 h-4 w-4" /> Done — go to /auth</> : loading ? "Seeding…" : "Seed super admin"}
         </Button>
       </div>
