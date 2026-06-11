@@ -426,7 +426,7 @@ export function ExportButton({ kind }: { kind: "cafes" | "users" | "orders" | "s
     mutationFn: fn,
     onSuccess: (rows) => {
       if (!rows || rows.length === 0) { toast.info("Nothing to export"); return; }
-      downloadCsv(`${kind}-${new Date().toISOString().slice(0, 10)}.csv`, rows as Record<string, unknown>[]);
+      downloadCsv(`${kind}-${new Date().toISOString().slice(0, 10)}.csv`, rows as unknown as Record<string, unknown>[]);
       toast.success(`Exported ${rows.length} rows`);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
