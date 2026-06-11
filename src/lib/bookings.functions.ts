@@ -44,7 +44,14 @@ export const createBookingForCustomer = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    // authorize: owner/staff/super_admin
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
+    const { data: cafe } = await context.supabase.from("cafes").select("owner_id").eq("id", data.cafe_id).single();
+    const { data: staff } = await context.supabase.from("staff_permissions").select("id").eq("cafe_id", data.cafe_id).eq("staff_user_id", context.userId).maybeSingle();
+    if (!isAdmin && cafe?.owner_id !== context.userId && !staff) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
       .from("bookings")
       .insert({
         cafe_id: data.cafe_id,

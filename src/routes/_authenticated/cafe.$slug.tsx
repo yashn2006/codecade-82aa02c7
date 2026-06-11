@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Activity, Cpu, CalendarRange, Users, Settings } from "lucide-react";
+import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -28,6 +28,9 @@ function CafeLayout() {
         { label: "Devices", icon: Cpu, to: "/cafe/$slug/devices", params: { slug } },
         { label: "Bookings", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug } },
         { label: "Customers", icon: Users, to: "/cafe/$slug/customers", params: { slug } },
+        { label: "Wallet", icon: Wallet, to: "/cafe/$slug/wallet", params: { slug } },
+        { label: "Memberships", icon: Crown, to: "/cafe/$slug/memberships", params: { slug } },
+        { label: "Ledger", icon: ScrollText, to: "/cafe/$slug/ledger", params: { slug } },
         { label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
       ]}
     >
@@ -35,3 +38,4 @@ function CafeLayout() {
     </ConsoleShell>
   );
 }
+

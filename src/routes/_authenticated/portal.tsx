@@ -17,6 +17,7 @@ import {
 import { listPublicCafes, cafeDeviceTypes } from "@/lib/discover.functions";
 import { listMyBookings, customerCreateBooking } from "@/lib/bookings.functions";
 import { getMyRoles } from "@/lib/me.functions";
+import { getMyOwnedCafes } from "@/lib/cafes.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/portal")({
@@ -26,10 +27,12 @@ export const Route = createFileRoute("/_authenticated/portal")({
 
 function Portal() {
   const fetchRoles = useServerFn(getMyRoles);
+  const fetchOwned = useServerFn(getMyOwnedCafes);
   const { data: roleData } = useQuery({ queryKey: ["my-roles"], queryFn: () => fetchRoles() });
+  const { data: ownedCafes } = useQuery({ queryKey: ["my-owned-cafes"], queryFn: () => fetchOwned() });
   const roles = roleData?.roles ?? [];
   const isSuper = roles.some((r) => r.role === "super_admin");
-  const isOwner = roles.some((r) => r.role === "cafe_owner");
+  const ownerCafe = (ownedCafes ?? [])[0];
 
   return (
     <ConsoleShell
@@ -40,10 +43,10 @@ function Portal() {
         { label: "Discover", icon: Compass, to: "/portal", exact: true },
       ]}
     >
-      {(isSuper || isOwner) && (
+      {(isSuper || ownerCafe) && (
         <div className="mb-6 flex flex-wrap gap-2">
           {isSuper && <Link to="/admin"><Button variant="outline" size="sm">Open Super Admin →</Button></Link>}
-          {isOwner && <Link to="/cafe/$slug" params={{ slug: "my-cafe" }}><Button variant="outline" size="sm">Open Café Console →</Button></Link>}
+          {ownerCafe && <Link to="/cafe/$slug" params={{ slug: ownerCafe.slug }}><Button variant="outline" size="sm">Open {ownerCafe.name} console →</Button></Link>}
         </div>
       )}
 

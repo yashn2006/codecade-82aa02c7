@@ -18,7 +18,10 @@ import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedCafeSlugRouteImport } from './routes/_authenticated/cafe.$slug'
 import { Route as AuthenticatedCafeSlugIndexRouteImport } from './routes/_authenticated/cafe.$slug.index'
+import { Route as AuthenticatedCafeSlugWalletRouteImport } from './routes/_authenticated/cafe.$slug.wallet'
 import { Route as AuthenticatedCafeSlugStaffRouteImport } from './routes/_authenticated/cafe.$slug.staff'
+import { Route as AuthenticatedCafeSlugMembershipsRouteImport } from './routes/_authenticated/cafe.$slug.memberships'
+import { Route as AuthenticatedCafeSlugLedgerRouteImport } from './routes/_authenticated/cafe.$slug.ledger'
 import { Route as AuthenticatedCafeSlugDevicesRouteImport } from './routes/_authenticated/cafe.$slug.devices'
 import { Route as AuthenticatedCafeSlugCustomersRouteImport } from './routes/_authenticated/cafe.$slug.customers'
 import { Route as AuthenticatedCafeSlugBookingsRouteImport } from './routes/_authenticated/cafe.$slug.bookings'
@@ -68,10 +71,28 @@ const AuthenticatedCafeSlugIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedCafeSlugRoute,
   } as any)
+const AuthenticatedCafeSlugWalletRoute =
+  AuthenticatedCafeSlugWalletRouteImport.update({
+    id: '/wallet',
+    path: '/wallet',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
 const AuthenticatedCafeSlugStaffRoute =
   AuthenticatedCafeSlugStaffRouteImport.update({
     id: '/staff',
     path: '/staff',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugMembershipsRoute =
+  AuthenticatedCafeSlugMembershipsRouteImport.update({
+    id: '/memberships',
+    path: '/memberships',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugLedgerRoute =
+  AuthenticatedCafeSlugLedgerRouteImport.update({
+    id: '/ledger',
+    path: '/ledger',
     getParentRoute: () => AuthenticatedCafeSlugRoute,
   } as any)
 const AuthenticatedCafeSlugDevicesRoute =
@@ -104,7 +125,10 @@ export interface FileRoutesByFullPath {
   '/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
+  '/cafe/$slug/ledger': typeof AuthenticatedCafeSlugLedgerRoute
+  '/cafe/$slug/memberships': typeof AuthenticatedCafeSlugMembershipsRoute
   '/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
+  '/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
   '/cafe/$slug/': typeof AuthenticatedCafeSlugIndexRoute
 }
 export interface FileRoutesByTo {
@@ -117,7 +141,10 @@ export interface FileRoutesByTo {
   '/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
+  '/cafe/$slug/ledger': typeof AuthenticatedCafeSlugLedgerRoute
+  '/cafe/$slug/memberships': typeof AuthenticatedCafeSlugMembershipsRoute
   '/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
+  '/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
   '/cafe/$slug': typeof AuthenticatedCafeSlugIndexRoute
 }
 export interface FileRoutesById {
@@ -133,7 +160,10 @@ export interface FileRoutesById {
   '/_authenticated/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/_authenticated/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/_authenticated/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
+  '/_authenticated/cafe/$slug/ledger': typeof AuthenticatedCafeSlugLedgerRoute
+  '/_authenticated/cafe/$slug/memberships': typeof AuthenticatedCafeSlugMembershipsRoute
   '/_authenticated/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
+  '/_authenticated/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
   '/_authenticated/cafe/$slug/': typeof AuthenticatedCafeSlugIndexRoute
 }
 export interface FileRouteTypes {
@@ -149,7 +179,10 @@ export interface FileRouteTypes {
     | '/cafe/$slug/bookings'
     | '/cafe/$slug/customers'
     | '/cafe/$slug/devices'
+    | '/cafe/$slug/ledger'
+    | '/cafe/$slug/memberships'
     | '/cafe/$slug/staff'
+    | '/cafe/$slug/wallet'
     | '/cafe/$slug/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -162,7 +195,10 @@ export interface FileRouteTypes {
     | '/cafe/$slug/bookings'
     | '/cafe/$slug/customers'
     | '/cafe/$slug/devices'
+    | '/cafe/$slug/ledger'
+    | '/cafe/$slug/memberships'
     | '/cafe/$slug/staff'
+    | '/cafe/$slug/wallet'
     | '/cafe/$slug'
   id:
     | '__root__'
@@ -177,7 +213,10 @@ export interface FileRouteTypes {
     | '/_authenticated/cafe/$slug/bookings'
     | '/_authenticated/cafe/$slug/customers'
     | '/_authenticated/cafe/$slug/devices'
+    | '/_authenticated/cafe/$slug/ledger'
+    | '/_authenticated/cafe/$slug/memberships'
     | '/_authenticated/cafe/$slug/staff'
+    | '/_authenticated/cafe/$slug/wallet'
     | '/_authenticated/cafe/$slug/'
   fileRoutesById: FileRoutesById
 }
@@ -254,11 +293,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCafeSlugIndexRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
     }
+    '/_authenticated/cafe/$slug/wallet': {
+      id: '/_authenticated/cafe/$slug/wallet'
+      path: '/wallet'
+      fullPath: '/cafe/$slug/wallet'
+      preLoaderRoute: typeof AuthenticatedCafeSlugWalletRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
     '/_authenticated/cafe/$slug/staff': {
       id: '/_authenticated/cafe/$slug/staff'
       path: '/staff'
       fullPath: '/cafe/$slug/staff'
       preLoaderRoute: typeof AuthenticatedCafeSlugStaffRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/memberships': {
+      id: '/_authenticated/cafe/$slug/memberships'
+      path: '/memberships'
+      fullPath: '/cafe/$slug/memberships'
+      preLoaderRoute: typeof AuthenticatedCafeSlugMembershipsRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/ledger': {
+      id: '/_authenticated/cafe/$slug/ledger'
+      path: '/ledger'
+      fullPath: '/cafe/$slug/ledger'
+      preLoaderRoute: typeof AuthenticatedCafeSlugLedgerRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
     }
     '/_authenticated/cafe/$slug/devices': {
@@ -289,7 +349,10 @@ interface AuthenticatedCafeSlugRouteChildren {
   AuthenticatedCafeSlugBookingsRoute: typeof AuthenticatedCafeSlugBookingsRoute
   AuthenticatedCafeSlugCustomersRoute: typeof AuthenticatedCafeSlugCustomersRoute
   AuthenticatedCafeSlugDevicesRoute: typeof AuthenticatedCafeSlugDevicesRoute
+  AuthenticatedCafeSlugLedgerRoute: typeof AuthenticatedCafeSlugLedgerRoute
+  AuthenticatedCafeSlugMembershipsRoute: typeof AuthenticatedCafeSlugMembershipsRoute
   AuthenticatedCafeSlugStaffRoute: typeof AuthenticatedCafeSlugStaffRoute
+  AuthenticatedCafeSlugWalletRoute: typeof AuthenticatedCafeSlugWalletRoute
   AuthenticatedCafeSlugIndexRoute: typeof AuthenticatedCafeSlugIndexRoute
 }
 
@@ -297,7 +360,10 @@ const AuthenticatedCafeSlugRouteChildren: AuthenticatedCafeSlugRouteChildren = {
   AuthenticatedCafeSlugBookingsRoute: AuthenticatedCafeSlugBookingsRoute,
   AuthenticatedCafeSlugCustomersRoute: AuthenticatedCafeSlugCustomersRoute,
   AuthenticatedCafeSlugDevicesRoute: AuthenticatedCafeSlugDevicesRoute,
+  AuthenticatedCafeSlugLedgerRoute: AuthenticatedCafeSlugLedgerRoute,
+  AuthenticatedCafeSlugMembershipsRoute: AuthenticatedCafeSlugMembershipsRoute,
   AuthenticatedCafeSlugStaffRoute: AuthenticatedCafeSlugStaffRoute,
+  AuthenticatedCafeSlugWalletRoute: AuthenticatedCafeSlugWalletRoute,
   AuthenticatedCafeSlugIndexRoute: AuthenticatedCafeSlugIndexRoute,
 }
 
