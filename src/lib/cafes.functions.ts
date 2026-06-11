@@ -47,6 +47,45 @@ export const toggleCafeActive = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Owner OR super admin can schedule maintenance for a cafe.
+// Pass nulls to clear the maintenance window.
+export const setCafeMaintenance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      starts_at: z.string().datetime().nullable(),
+      ends_at: z.string().datetime().nullable(),
+      message: z.string().max(500).nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    // RLS on cafes already restricts to owner; super admin bypasses via has_role policy.
+    const { error } = await context.supabase
+      .from("cafes")
+      .update({
+        maintenance_starts_at: data.starts_at,
+        maintenance_ends_at: data.ends_at,
+        maintenance_message: data.message,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getCafeMaintenance = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("cafes")
+      .select("maintenance_starts_at, maintenance_ends_at, maintenance_message")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 export const getCafeBySlug = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ slug: z.string() }).parse(d))
