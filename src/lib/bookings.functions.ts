@@ -20,13 +20,33 @@ export const updateBookingStatus = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       id: z.string().uuid(),
-      status: z.enum(["pending", "confirmed", "cancelled", "completed"]),
+      status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: Record<string, unknown> = { status: data.status };
+    if (data.status === "no_show") patch.no_show_at = new Date().toISOString();
+    const { error } = await context.supabase
+      .from("bookings")
+      .update(patch)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const markBookingDeposit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      deposit_amount: z.number().int().min(0),
+      deposit_paid: z.boolean(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("bookings")
-      .update({ status: data.status })
+      .update({ deposit_amount: data.deposit_amount, deposit_paid: data.deposit_paid })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
