@@ -12,7 +12,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { searchUsers, grantRole, revokeRole, adminCreateUser, deleteUser, setUserPassword, generateRecoveryLink } from "@/lib/admin.functions";
+import { searchUsers, grantRole, revokeRole, adminCreateUser, deleteUser, setUserPassword, generateRecoveryLink, userActivity } from "@/lib/admin.functions";
+import { ExportButton } from "./admin.cafes";
+import { Activity as ActivityIcon } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
@@ -66,6 +68,7 @@ function UsersPanel() {
           />
         </div>
         <Button variant="outline" onClick={() => refetch()}>{isFetching ? "…" : "Search"}</Button>
+        <ExportButton kind="users" />
         <CreateUserButton onCreated={refresh} />
       </div>
 
