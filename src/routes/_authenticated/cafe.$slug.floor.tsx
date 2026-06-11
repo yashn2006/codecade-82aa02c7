@@ -354,8 +354,7 @@ function FloorBuilder() {
           />
         </DialogContent>
       </Dialog>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Edit sheet */}
       <Sheet open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
