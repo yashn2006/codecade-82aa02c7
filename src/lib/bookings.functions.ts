@@ -8,7 +8,7 @@ export const listBookings = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("bookings")
-      .select("id, scheduled_at, duration_minutes, status, device_id, customer_id, customers(full_name, phone), devices(name, type)")
+      .select("id, scheduled_at, duration_minutes, status, device_id, customer_id, deposit_amount, deposit_paid, no_show_at, customers(full_name, phone), devices(name, type)")
       .eq("cafe_id", data.cafe_id)
       .order("scheduled_at", { ascending: true });
     if (error) throw new Error(error.message);
