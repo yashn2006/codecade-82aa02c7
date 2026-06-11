@@ -486,4 +486,88 @@ export const platformRevenueAnalytics = createServerFn({ method: "GET" })
       daily: Array.from(daily.values()).sort((a, b) => a.date.localeCompare(b.date)),
       topCafes: Array.from(byCafe.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 12),
     };
+
+// ─── Platform config (fees, tax, branding, signup) ───
+export const getPlatformConfig = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("platform_settings")
+      .select("platform_fee_pct, default_tax_pct, currency, support_email, support_phone, brand_name, brand_tagline, signup_enabled, new_cafes_require_approval")
+      .eq("id", true).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ?? {};
   });
+
+export const savePlatformConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      platform_fee_pct: z.number().min(0).max(100),
+      default_tax_pct: z.number().min(0).max(100),
+      currency: z.string().min(2).max(8),
+      support_email: z.string().email().max(200).nullable().optional(),
+      support_phone: z.string().max(40).nullable().optional(),
+      brand_name: z.string().max(80).nullable().optional(),
+      brand_tagline: z.string().max(160).nullable().optional(),
+      signup_enabled: z.boolean(),
+      new_cafes_require_approval: z.boolean(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("platform_settings")
+      .update({ ...data, updated_at: new Date().toISOString(), updated_by: context.userId })
+      .eq("id", true);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ─── Per-user activity summary ───
+export const userActivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: summary, error } = await supabaseAdmin
+      .rpc("user_activity_summary", { _user_id: data.user_id });
+    if (error) throw new Error(error.message);
+    // Recent audit (as actor)
+    const { data: audit } = await supabaseAdmin
+      .from("audit_logs")
+      .select("id, created_at, action, resource_type, cafes(name, slug)")
+      .eq("actor_id", data.user_id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    return { summary: summary ?? {}, audit: audit ?? [] };
+  });
+
+// ─── Export full dataset (super-admin only) ───
+export const exportDataset = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ kind: z.enum(["cafes", "users", "orders", "sessions", "bookings", "leads"]) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const cfg: Record<string, { table: string; select: string; order: string }> = {
+      cafes:    { table: "cafes",    select: "id, name, slug, city, state, owner_id, is_active, restricted_message, created_at", order: "created_at" },
+      users:    { table: "profiles", select: "id, email, full_name, created_at",                                                   order: "created_at" },
+      orders:   { table: "orders",   select: "id, cafe_id, customer_id, subtotal, total_amount, refund_amount, status, payment_method, created_at", order: "created_at" },
+      sessions: { table: "sessions", select: "id, cafe_id, device_id, customer_id, started_at, ended_at, duration_minutes, amount, status", order: "started_at" },
+      bookings: { table: "bookings", select: "id, cafe_id, customer_id, start_at, end_at, deposit_amount, status, created_at",     order: "start_at" },
+      leads:    { table: "contacts", select: "id, name, email, phone, message, status, created_at",                                 order: "created_at" },
+    };
+    const c = cfg[data.kind];
+    const { data: rows, error } = await supabaseAdmin
+      .from(c.table).select(c.select).order(c.order, { ascending: false }).limit(10000);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
