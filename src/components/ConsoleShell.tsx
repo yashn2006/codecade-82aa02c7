@@ -134,13 +134,16 @@ export function ConsoleShell({
               </button>
               <BrandLockup size={24} badge={badge} />
             </div>
-            <button
-              onClick={signOut}
-              className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <button
+                onClick={signOut}
+                className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                aria-label="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </header>
 
           {/* Main content */}
