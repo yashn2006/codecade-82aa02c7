@@ -4,11 +4,11 @@ import markAsset from "@/assets/corecade-mark.png.asset.json";
 export function BrandMark({ size = 36, className = "" }: { size?: number; className?: string }) {
   return (
     <div
-      className={`relative shrink-0 ${className}`}
+      className={`relative inline-flex shrink-0 items-center justify-center ${className}`}
       style={{ width: size, height: size }}
     >
       <div
-        className="absolute inset-0 rounded-xl blur-md opacity-70"
+        className="pointer-events-none absolute inset-[18%] rounded-full opacity-50 blur-lg"
         style={{ background: "var(--gradient-brand)" }}
         aria-hidden
       />
@@ -17,18 +17,21 @@ export function BrandMark({ size = 36, className = "" }: { size?: number; classN
         alt="CoreCade"
         width={size}
         height={size}
-        className="relative h-full w-full object-contain drop-shadow-[0_0_18px_oklch(0.62_0.27_295/0.6)]"
+        className="relative block h-full w-full object-contain"
       />
     </div>
   );
 }
 
-export function BrandLockup({ size = 36, badge, to = "/" }: { size?: number; badge?: string; to?: string }) {
+export function BrandLockup({ size = 32, badge, to = "/" }: { size?: number; badge?: string; to?: string }) {
   return (
-    <Link to={to} className="group flex items-center gap-2.5">
+    <Link to={to} className="group inline-flex items-center gap-2.5 leading-none">
       <BrandMark size={size} className="transition-transform group-hover:scale-105" />
-      <div className="flex items-baseline gap-2">
-        <span className="font-display text-[1.05rem] font-extrabold tracking-tight">
+      <span className="inline-flex items-baseline gap-2 leading-none">
+        <span
+          className="font-display font-extrabold tracking-tight leading-none"
+          style={{ fontSize: `${Math.round(size * 0.58)}px` }}
+        >
           <span className="text-foreground">core</span>
           <span className="text-gradient">cade</span>
         </span>
@@ -37,7 +40,7 @@ export function BrandLockup({ size = 36, badge, to = "/" }: { size?: number; bad
             {badge}
           </span>
         )}
-      </div>
+      </span>
     </Link>
   );
 }
