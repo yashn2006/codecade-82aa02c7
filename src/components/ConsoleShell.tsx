@@ -16,13 +16,14 @@ export type NavItem = {
 };
 
 export function ConsoleShell({
-  badge, title, subtitle, nav, children,
+  badge, title, subtitle, nav, children, intensity = "default",
 }: {
   badge: string;
   title: string;
   subtitle?: string;
   nav: NavItem[];
   children: ReactNode;
+  intensity?: "default" | "hero" | "immersive";
 }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -54,7 +55,7 @@ export function ConsoleShell({
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      <AuroraBackground />
+      <AuroraBackground intensity={intensity} />
 
       <div className="flex min-h-screen">
         {/* === Desktop sidebar === */}
