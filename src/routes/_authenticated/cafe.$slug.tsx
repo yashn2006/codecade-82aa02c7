@@ -41,6 +41,7 @@ function CafeLayout() {
       badge="Café Console"
       title={cafe?.name ?? "Café"}
       subtitle={cafe ? `${cafe.city ?? ""}${cafe.city ? " · " : ""}/${cafe.slug}` : "Loading workspace…"}
+      intensity="immersive"
       nav={[
         { label: "Live floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
         { label: "Floor builder", icon: LayoutGrid, to: "/cafe/$slug/floor", params: { slug } },
