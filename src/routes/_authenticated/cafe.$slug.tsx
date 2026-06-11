@@ -1,10 +1,15 @@
 import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
-import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed } from "lucide-react";
+import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed, Wrench } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { getCafeBySlug } from "@/lib/cafes.functions";
+import { getPlatformMaintenance } from "@/lib/platform.functions";
+import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
+import { isMaintenanceActive } from "@/lib/maintenance";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug")({
   head: () => ({ meta: [{ title: "Café Console — CoreCade" }] }),
@@ -14,12 +19,22 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug")({
 function CafeLayout() {
   const { slug } = Route.useParams();
   const fn = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({
+  const platFn = useServerFn(getPlatformMaintenance);
+  const { data: cafe, refetch } = useQuery({
     queryKey: ["cafe", slug],
     queryFn: () => fn({ data: { slug } }),
   });
+  const { data: platform } = useQuery({
+    queryKey: ["platform-maintenance"], queryFn: () => platFn(), refetchInterval: 60_000,
+  });
 
   const restricted = !!(cafe as { restricted_message?: string | null } | undefined)?.restricted_message;
+  const cafeMaint = cafe ? {
+    starts_at: (cafe as { maintenance_starts_at?: string | null }).maintenance_starts_at ?? null,
+    ends_at: (cafe as { maintenance_ends_at?: string | null }).maintenance_ends_at ?? null,
+    message: (cafe as { maintenance_message?: string | null }).maintenance_message ?? null,
+  } : null;
+  const cafeInMaint = isMaintenanceActive(cafeMaint);
 
   return (
     <ConsoleShell
@@ -41,6 +56,30 @@ function CafeLayout() {
         { label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
       ]}
     >
+      <div className="mb-4 space-y-3">
+        <MaintenanceBanner window={platform} title="CoreCade network maintenance" />
+        {cafe && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/30 px-4 py-2.5 backdrop-blur">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Wrench className={`h-3.5 w-3.5 ${cafeInMaint ? "text-amber-300" : ""}`} />
+              {cafeInMaint
+                ? <span className="text-amber-200">Maintenance active — public bookings paused.</span>
+                : <span>Need to pause for an hour? Schedule maintenance so customers see why.</span>}
+            </div>
+            <MaintenanceScheduler
+              scope={{ kind: "cafe", cafeId: (cafe as { id: string }).id, cafeName: cafe.name }}
+              current={cafeMaint}
+              onSaved={() => refetch()}
+              trigger={
+                <Button size="sm" variant={cafeInMaint ? "destructive" : "outline"} className="gap-1.5">
+                  <Wrench className="h-3.5 w-3.5" />
+                  {cafeInMaint ? "Edit maintenance" : "Schedule maintenance"}
+                </Button>
+              }
+            />
+          </div>
+        )}
+      </div>
       {restricted ? <RestrictedOverlay message={(cafe as { restricted_message?: string }).restricted_message ?? ""} /> : null}
       <div className={restricted ? "pointer-events-none select-none opacity-30 blur-[2px]" : ""} aria-hidden={restricted}>
         <Outlet />
