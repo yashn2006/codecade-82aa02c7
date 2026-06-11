@@ -138,7 +138,8 @@ function FloorBuilder() {
 
   const sendToTray = (id: string) => placeM.mutate({ data: { id, pos_x: null, pos_y: null } });
 
-  if (!cafe) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isLoading) return <Skeleton className="h-96" />;
+  if (cafeQ.isError || !cafe) return <ErrorState description="Could not load this café." onRetry={() => cafeQ.refetch()} />;
 
   return (
     <div className="space-y-5">
