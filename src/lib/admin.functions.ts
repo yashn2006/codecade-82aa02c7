@@ -205,3 +205,108 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     }
     return { ok: true, user_id: userId };
   });
+
+// ───────────────────────────────────────────────────────────────────
+// Phase 6 — Super-admin command center expansions
+// ───────────────────────────────────────────────────────────────────
+
+export const deleteCafe = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { error } = await supabaseAdmin.from("cafes").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    if (data.user_id === context.userId) throw new Error("You cannot delete your own account here.");
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setUserPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ user_id: z.string().uuid(), password: z.string().min(8).max(120) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      password: data.password,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const generateRecoveryLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ email: z.string().email() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: link, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: "recovery",
+      email: data.email,
+    });
+    if (error) throw new Error(error.message);
+    return { url: link?.properties?.action_link ?? null };
+  });
+
+export const cafeDeepStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    const [devices, customers, staff, sessTotal, sessToday, revAll] = await Promise.all([
+      supabaseAdmin.from("devices").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
+      supabaseAdmin.from("customers").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
+      supabaseAdmin.from("user_roles").select("user_id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id).eq("role", "cafe_staff"),
+      supabaseAdmin.from("sessions").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
+      supabaseAdmin.from("sessions").select("amount").eq("cafe_id", data.cafe_id).gte("started_at", startOfDay.toISOString()),
+      supabaseAdmin.from("sessions").select("amount").eq("cafe_id", data.cafe_id).not("amount", "is", null),
+    ]);
+    const revenueToday = (sessToday.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+    const revenueAll = (revAll.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
+    return {
+      devices: devices.count ?? 0,
+      customers: customers.count ?? 0,
+      staff: staff.count ?? 0,
+      sessionsTotal: sessTotal.count ?? 0,
+      sessionsToday: sessToday.data?.length ?? 0,
+      revenueToday,
+      revenueAll,
+    };
+  });
+
+export const networkBroadcast = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ title: z.string().max(120).nullable(), message: z.string().max(500).nullable() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { error } = await supabaseAdmin.from("platform_settings").upsert({
+      id: true,
+      maintenance_title: data.title,
+      maintenance_message: data.message,
+      updated_at: new Date().toISOString(),
+      updated_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
