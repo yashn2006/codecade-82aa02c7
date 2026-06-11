@@ -404,3 +404,13 @@ function Field({ name, label, placeholder, type = "text", required }: { name: st
     </div>
   );
 }
+
+function StatBox({ label, value, className = "" }: { label: string; value: number | string; className?: string }) {
+  return (
+    <div className={`rounded-xl border border-border/60 bg-card/40 p-3 ${className}`}>
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</div>
+      <div className="mt-1 font-display text-xl font-bold">{value}</div>
+    </div>
+  );
+}
+
