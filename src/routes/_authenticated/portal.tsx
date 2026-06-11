@@ -18,6 +18,8 @@ import { listPublicCafes, cafeDeviceTypes } from "@/lib/discover.functions";
 import { listMyBookings, customerCreateBooking } from "@/lib/bookings.functions";
 import { getMyRoles } from "@/lib/me.functions";
 import { getMyOwnedCafes } from "@/lib/cafes.functions";
+import { getPlatformMaintenance } from "@/lib/platform.functions";
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/portal")({
@@ -28,8 +30,10 @@ export const Route = createFileRoute("/_authenticated/portal")({
 function Portal() {
   const fetchRoles = useServerFn(getMyRoles);
   const fetchOwned = useServerFn(getMyOwnedCafes);
+  const fetchPlat = useServerFn(getPlatformMaintenance);
   const { data: roleData } = useQuery({ queryKey: ["my-roles"], queryFn: () => fetchRoles() });
   const { data: ownedCafes } = useQuery({ queryKey: ["my-owned-cafes"], queryFn: () => fetchOwned() });
+  const { data: platform } = useQuery({ queryKey: ["platform-maintenance"], queryFn: () => fetchPlat(), refetchInterval: 60_000 });
   const roles = roleData?.roles ?? [];
   const isSuper = roles.some((r) => r.role === "super_admin");
   const ownerCafe = (ownedCafes ?? [])[0];
@@ -43,6 +47,7 @@ function Portal() {
         { label: "Discover", icon: Compass, to: "/portal", exact: true },
       ]}
     >
+      <div className="mb-4"><MaintenanceBanner window={platform} title="CoreCade network maintenance" /></div>
       {(isSuper || ownerCafe) && (
         <div className="mb-6 flex flex-wrap gap-2">
           {isSuper && <Link to="/admin"><Button variant="outline" size="sm">Open Super Admin →</Button></Link>}
