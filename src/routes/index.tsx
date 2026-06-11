@@ -53,27 +53,103 @@ function Landing() {
 
 
 function Header() {
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 200], [0, -2]);
+  const blur = useTransform(scrollY, [0, 200], [12, 22]);
+  const filter = useTransform(blur, (v) => `blur(${v}px) saturate(1.2)`);
+
   return (
-    <header className="sticky top-0 z-50">
-      <div className="mx-auto mt-3 max-w-7xl px-3 sm:px-6">
-        <nav className="glass-strong flex items-center justify-between rounded-2xl px-3 py-2.5 sm:px-5">
-          <BrandLockup size={32} />
-          <div className="hidden gap-7 md:flex">
-            {["Features", "Pricing", "Contact"].map((l) => (
-              <a key={l} href={`#${l.toLowerCase()}`} className="text-sm text-muted-foreground transition hover:text-foreground">
-                {l}
-              </a>
-            ))}
+    <motion.header style={{ y }} className="sticky top-0 z-50">
+      <div className="mx-auto mt-4 max-w-7xl px-3 sm:px-6">
+        <div className="relative">
+          {/* Outer glow halo */}
+          <div
+            className="pointer-events-none absolute -inset-px rounded-[1.25rem] opacity-70 blur-xl"
+            style={{ background: "conic-gradient(from 90deg at 50% 50%, oklch(0.7 0.26 335 / 0.35), oklch(0.65 0.25 295 / 0.25), oklch(0.74 0.21 15 / 0.35), oklch(0.7 0.26 335 / 0.35))" }}
+            aria-hidden
+          />
+          {/* Animated conic border */}
+          <div className="relative rounded-2xl p-px overflow-hidden">
+            <div
+              className="absolute inset-[-100%] animate-spin-slow"
+              style={{ background: "conic-gradient(from 0deg, transparent 0%, oklch(0.74 0.21 15 / 0.9) 20%, transparent 30%, transparent 60%, oklch(0.7 0.26 335 / 0.9) 75%, transparent 90%)" }}
+              aria-hidden
+            />
+            <motion.nav
+              style={{ backdropFilter: filter, WebkitBackdropFilter: filter as unknown as string }}
+              className="relative flex items-center justify-between rounded-2xl bg-background/55 px-3 py-2.5 sm:px-5"
+            >
+              <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,oklch(0.18_0.04_300_/_0.55),oklch(0.1_0.02_300_/_0.7))]" aria-hidden />
+              <div className="absolute inset-x-8 -top-px h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" aria-hidden />
+
+              <div className="relative">
+                <BrandLockup size={32} />
+              </div>
+
+              <div className="relative hidden items-center gap-1 md:flex">
+                {["Features", "Pricing", "Contact"].map((l) => (
+                  <a
+                    key={l}
+                    href={`#${l.toLowerCase()}`}
+                    className="group relative rounded-lg px-3.5 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+                  >
+                    <span className="absolute inset-0 rounded-lg bg-gradient-to-b from-white/5 to-transparent opacity-0 transition group-hover:opacity-100" aria-hidden />
+                    <span className="absolute inset-x-3 -bottom-px h-px scale-x-0 bg-gradient-to-r from-transparent via-primary to-transparent transition-transform duration-300 group-hover:scale-x-100" aria-hidden />
+                    <span className="relative">{l}</span>
+                  </a>
+                ))}
+              </div>
+
+              <MagneticSignIn />
+            </motion.nav>
           </div>
-          <Link
-            to="/auth"
-            className="group inline-flex items-center gap-1.5 rounded-xl bg-foreground px-4 py-2 text-sm font-semibold text-background transition hover:bg-foreground/90"
-          >
-            Sign in <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-          </Link>
-        </nav>
+        </div>
       </div>
-    </header>
+    </motion.header>
+  );
+}
+
+function MagneticSignIn() {
+  const ref = useRef<HTMLAnchorElement>(null);
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const x = useSpring(mx, { stiffness: 200, damping: 15 });
+  const y = useSpring(my, { stiffness: 200, damping: 15 });
+
+  return (
+    <Link
+      ref={ref}
+      to="/auth"
+      onMouseMove={(e) => {
+        const r = ref.current?.getBoundingClientRect();
+        if (!r) return;
+        mx.set(((e.clientX - (r.left + r.width / 2)) / r.width) * 18);
+        my.set(((e.clientY - (r.top + r.height / 2)) / r.height) * 14);
+      }}
+      onMouseLeave={() => { mx.set(0); my.set(0); }}
+      className="group relative"
+    >
+      <motion.span
+        style={{ x, y }}
+        className="relative inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground"
+      >
+        <span
+          className="absolute inset-0 rounded-xl opacity-90 transition group-hover:opacity-100"
+          style={{ background: "var(--gradient-brand-hot, linear-gradient(135deg, oklch(0.74 0.21 15), oklch(0.7 0.26 335)))" }}
+          aria-hidden
+        />
+        <span
+          className="absolute -inset-2 rounded-2xl opacity-60 blur-xl transition group-hover:opacity-90"
+          style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.7), transparent 70%)" }}
+          aria-hidden
+        />
+        <span className="absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
+          <span className="absolute -inset-y-2 -left-1/2 w-1/2 rotate-12 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 transition-all duration-700 group-hover:left-[120%] group-hover:opacity-100" />
+        </span>
+        <span className="relative">Sign in</span>
+        <ArrowRight className="relative h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+      </motion.span>
+    </Link>
   );
 }
 
