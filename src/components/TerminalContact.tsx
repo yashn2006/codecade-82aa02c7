@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useServerFn } from "@tanstack/react-start";
 import { submitContact } from "@/lib/contact.functions";
 import { toast } from "sonner";
+import { Loader2, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 
 type Field = "name" | "email" | "phone" | "message";
 const FIELDS: { key: Field; label: string; type: string; required: boolean; placeholder: string }[] = [
@@ -23,6 +24,7 @@ export function TerminalContact() {
   const [values, setValues] = useState<Record<Field, string>>({ name: "", email: "", phone: "", message: "" });
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [boot, setBoot] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -55,6 +57,7 @@ export function TerminalContact() {
       return;
     }
     setSending(true);
+    setError(null);
     try {
       await submit({
         data: {
@@ -67,10 +70,17 @@ export function TerminalContact() {
       setDone(true);
       toast.success("Transmission successful.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Transmission failed.");
+      const msg = e instanceof Error ? e.message : "Transmission failed.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSending(false);
     }
+  }
+
+  function retry() {
+    setError(null);
+    transmit();
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -167,18 +177,78 @@ export function TerminalContact() {
             </div>
           )}
 
-          {done && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-4 rounded-md border border-emerald-400/30 bg-emerald-400/5 p-3"
-            >
-              <div className="text-emerald-300">
-                <span className="text-emerald-400">✓</span> transmission complete · we reply within 24h IST
-              </div>
-              <div className="mt-1 text-white/40">connection closed. you can close this window.</div>
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {sending && (
+              <motion.div
+                key="sending"
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="mt-4 flex items-center gap-3 rounded-md border border-sky-400/30 bg-sky-400/5 p-3"
+              >
+                <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
+                <div>
+                  <div className="text-sky-200">transmitting packet · TLS handshake → relay → inbox</div>
+                  <div className="mt-0.5 flex gap-1 text-[11px] text-white/40">
+                    {["dns", "tcp", "tls", "auth", "send"].map((s, i) => (
+                      <motion.span
+                        key={s}
+                        initial={{ opacity: 0.2 }}
+                        animate={{ opacity: [0.2, 1, 0.2] }}
+                        transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.2 }}
+                      >
+                        ▸{s}
+                      </motion.span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {error && !sending && (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="mt-4 rounded-md border border-rose-400/40 bg-rose-400/5 p-3"
+              >
+                <div className="flex items-center gap-2 text-rose-300">
+                  <AlertTriangle className="h-4 w-4" /> transmission failed · {error}
+                </div>
+                <div className="mt-1 text-white/40">stderr: connection reset · no data persisted</div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={retry}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-rose-400/40 bg-rose-400/10 px-3 py-1 font-mono text-[11px] text-rose-200 transition hover:bg-rose-400/20"
+                  >
+                    <RefreshCw className="h-3 w-3" /> retry :send
+                  </button>
+                  <button
+                    onClick={() => { setError(null); setStep(0); setValues({ name: "", email: "", phone: "", message: "" }); }}
+                    className="rounded-md border border-white/10 bg-white/5 px-3 py-1 font-mono text-[11px] text-white/60 transition hover:bg-white/10"
+                  >
+                    :clear &amp; restart
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {done && (
+              <motion.div
+                key="done"
+                initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 18 }}
+                className="mt-4 overflow-hidden rounded-md border border-emerald-400/40 bg-emerald-400/5 p-3"
+              >
+                <div className="flex items-center gap-2 text-emerald-300">
+                  <CheckCircle2 className="h-4 w-4" /> transmission complete · we reply within 24h IST
+                </div>
+                <div className="mt-1 text-white/40">connection closed. socket released.</div>
+                <motion.div
+                  initial={{ width: 0 }} animate={{ width: "100%" }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                  className="mt-2 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 via-sky-300 to-fuchsia-400"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Footer / fallback button */}
@@ -191,9 +261,10 @@ export function TerminalContact() {
             type="button"
             onClick={transmit}
             disabled={sending || done || !allFilled}
-            className="rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 font-mono text-[11px] text-emerald-200 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 font-mono text-[11px] text-emerald-200 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {sending ? "transmitting…" : done ? "sent ✓" : "▸ :send"}
+            {sending && <Loader2 className="h-3 w-3 animate-spin" />}
+            {sending ? "transmitting…" : done ? "sent ✓" : error ? "retry :send" : "▸ :send"}
           </button>
         </div>
       </div>
