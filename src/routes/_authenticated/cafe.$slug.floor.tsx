@@ -29,6 +29,14 @@ import {
 } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/floor")({
+  head: () => ({
+    meta: [
+      { title: "Live Floor — CoreCade" },
+      { name: "description", content: "Real-time station status, active sessions and check-ins." },
+      { property: "og:title", content: "Live Floor — CoreCade" },
+      { property: "og:description", content: "Real-time station status, active sessions and check-ins." },
+    ],
+  }),
   component: FloorBuilder,
 });
 

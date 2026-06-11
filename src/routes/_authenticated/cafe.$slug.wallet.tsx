@@ -17,6 +17,14 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/wallet")({
+  head: () => ({
+    meta: [
+      { title: "Wallet — CoreCade" },
+      { name: "description", content: "Top-ups, refunds and customer wallet ledgers." },
+      { property: "og:title", content: "Wallet — CoreCade" },
+      { property: "og:description", content: "Top-ups, refunds and customer wallet ledgers." },
+    ],
+  }),
   component: WalletPage,
 });
 

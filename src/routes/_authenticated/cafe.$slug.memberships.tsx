@@ -17,6 +17,14 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/memberships")({
+  head: () => ({
+    meta: [
+      { title: "Memberships — CoreCade" },
+      { name: "description", content: "Create and manage prepaid and subscription plans." },
+      { property: "og:title", content: "Memberships — CoreCade" },
+      { property: "og:description", content: "Create and manage prepaid and subscription plans." },
+    ],
+  }),
   component: MembershipsPage,
 });
 

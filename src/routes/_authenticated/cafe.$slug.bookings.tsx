@@ -18,6 +18,14 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/bookings")({
+  head: () => ({
+    meta: [
+      { title: "Bookings — CoreCade" },
+      { name: "description", content: "Confirm, reschedule and track every reservation." },
+      { property: "og:title", content: "Bookings — CoreCade" },
+      { property: "og:description", content: "Confirm, reschedule and track every reservation." },
+    ],
+  }),
   component: BookingsPage,
 });
 

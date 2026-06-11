@@ -27,6 +27,14 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/")({
+  head: () => ({
+    meta: [
+      { title: "Café Overview — CoreCade" },
+      { name: "description", content: "Live floor pulse, today's revenue, and quick actions for your café." },
+      { property: "og:title", content: "Café Overview — CoreCade" },
+      { property: "og:description", content: "Live floor pulse, today's revenue, and quick actions for your café." },
+    ],
+  }),
   component: LiveFloor,
 });
 

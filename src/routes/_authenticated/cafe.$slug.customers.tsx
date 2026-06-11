@@ -15,6 +15,14 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/customers")({
+  head: () => ({
+    meta: [
+      { title: "Customers — CoreCade" },
+      { name: "description", content: "Search regulars, view wallet balance and visit history." },
+      { property: "og:title", content: "Customers — CoreCade" },
+      { property: "og:description", content: "Search regulars, view wallet balance and visit history." },
+    ],
+  }),
   component: CustomersPage,
 });
 

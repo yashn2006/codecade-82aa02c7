@@ -12,6 +12,14 @@ import { isMaintenanceActive } from "@/lib/maintenance";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug")({
+  head: () => ({
+    meta: [
+      { title: "Café Console — CoreCade" },
+      { name: "description", content: "Your CoreCade café command center." },
+      { property: "og:title", content: "Café Console — CoreCade" },
+      { property: "og:description", content: "Your CoreCade café command center." },
+    ],
+  }),
   head: () => ({ meta: [{ title: "Café Console — CoreCade" }] }),
   component: CafeLayout,
 });
