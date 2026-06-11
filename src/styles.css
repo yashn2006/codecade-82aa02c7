@@ -36,6 +36,9 @@
   --color-azure-foreground: var(--azure-foreground);
   --color-magenta: var(--magenta);
   --color-magenta-foreground: var(--magenta-foreground);
+  --color-coral: var(--coral);
+  --color-coral-foreground: var(--coral-foreground);
+  --color-ink: var(--ink);
   --font-display: var(--font-display);
   --font-heading: var(--font-heading);
   --font-sans: var(--font-sans);
@@ -45,65 +48,72 @@
 :root {
   --radius: 0.875rem;
 
-  /* Onyx — near-black with a faint violet undertone, matching the logo backdrop */
-  --background: oklch(0.09 0.02 285);
-  --foreground: oklch(0.98 0.005 280);
+  /* === Arcade Daylight — warm cream base, deep ink text === */
+  --background: oklch(0.97 0.012 78);     /* #f7f3ec cream */
+  --foreground: oklch(0.20 0.04 285);     /* deep ink */
+  --ink: oklch(0.16 0.04 285);
 
-  --card: oklch(0.13 0.025 285);
-  --card-foreground: oklch(0.98 0.005 280);
+  --card: oklch(0.99 0.008 78);           /* near-white card */
+  --card-foreground: oklch(0.20 0.04 285);
 
-  --popover: oklch(0.13 0.025 285);
-  --popover-foreground: oklch(0.98 0.005 280);
+  --popover: oklch(0.99 0.008 78);
+  --popover-foreground: oklch(0.20 0.04 285);
 
   /* Electric violet — the CoreCade signature */
-  --primary: oklch(0.62 0.27 295);
-  --primary-foreground: oklch(0.98 0.005 280);
+  --primary: oklch(0.55 0.26 292);
+  --primary-foreground: oklch(0.99 0.005 78);
 
-  --secondary: oklch(0.19 0.03 285);
-  --secondary-foreground: oklch(0.98 0.005 280);
+  --secondary: oklch(0.92 0.025 78);      /* warm sand */
+  --secondary-foreground: oklch(0.20 0.04 285);
 
-  --muted: oklch(0.16 0.025 285);
-  --muted-foreground: oklch(0.68 0.02 280);
+  --muted: oklch(0.93 0.018 78);
+  --muted-foreground: oklch(0.42 0.04 285);
 
-  --accent: oklch(0.65 0.24 265);
-  --accent-foreground: oklch(0.1 0.02 285);
+  --accent: oklch(0.7 0.22 25);           /* warm coral */
+  --accent-foreground: oklch(0.99 0.005 78);
 
   /* Brand accents */
-  --violet: oklch(0.62 0.27 295);
-  --violet-foreground: oklch(0.98 0.005 280);
-  --azure: oklch(0.65 0.24 255);
-  --azure-foreground: oklch(0.1 0.02 285);
-  --magenta: oklch(0.68 0.29 330);
-  --magenta-foreground: oklch(0.1 0.02 285);
+  --violet: oklch(0.55 0.26 292);
+  --violet-foreground: oklch(0.99 0.005 78);
+  --azure: oklch(0.62 0.18 250);
+  --azure-foreground: oklch(0.99 0.005 78);
+  --magenta: oklch(0.62 0.26 335);
+  --magenta-foreground: oklch(0.99 0.005 78);
+  --coral: oklch(0.7 0.22 25);
+  --coral-foreground: oklch(0.99 0.005 78);
 
-  --destructive: oklch(0.62 0.24 22);
-  --destructive-foreground: oklch(0.98 0.005 280);
+  --destructive: oklch(0.58 0.24 22);
+  --destructive-foreground: oklch(0.99 0.005 78);
 
-  --border: oklch(0.32 0.04 285 / 45%);
-  --input: oklch(0.2 0.03 285);
-  --ring: oklch(0.62 0.27 295);
+  --border: oklch(0.28 0.04 285 / 12%);
+  --input: oklch(0.99 0.008 78);
+  --ring: oklch(0.55 0.26 292);
 
   --font-display: "Sora", system-ui, sans-serif;
   --font-heading: "Sora", system-ui, sans-serif;
   --font-sans: "Inter Tight", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --gradient-brand: linear-gradient(135deg, oklch(0.62 0.27 295) 0%, oklch(0.6 0.27 280) 45%, oklch(0.65 0.24 255) 100%);
-  --gradient-brand-hot: linear-gradient(135deg, oklch(0.68 0.29 330) 0%, oklch(0.62 0.27 295) 50%, oklch(0.65 0.24 255) 100%);
-  --gradient-aurora: radial-gradient(900px circle at 18% 12%, oklch(0.62 0.27 295 / 0.35), transparent 55%),
-    radial-gradient(700px circle at 82% 8%, oklch(0.65 0.24 255 / 0.32), transparent 55%),
-    radial-gradient(800px circle at 50% 95%, oklch(0.68 0.29 330 / 0.28), transparent 55%);
+  --gradient-brand: linear-gradient(135deg, oklch(0.55 0.26 292) 0%, oklch(0.6 0.22 320) 55%, oklch(0.7 0.22 25) 100%);
+  --gradient-brand-hot: linear-gradient(135deg, oklch(0.62 0.26 335) 0%, oklch(0.55 0.26 292) 50%, oklch(0.7 0.22 25) 100%);
+  --gradient-aurora:
+    radial-gradient(900px circle at 12% 8%, oklch(0.55 0.26 292 / 0.18), transparent 55%),
+    radial-gradient(700px circle at 88% 6%, oklch(0.7 0.22 25 / 0.18), transparent 55%),
+    radial-gradient(800px circle at 50% 100%, oklch(0.62 0.26 335 / 0.14), transparent 55%);
 
-  --shadow-violet: 0 0 0 1px oklch(0.62 0.27 295 / 0.25), 0 20px 60px -20px oklch(0.62 0.27 295 / 0.6);
-  --shadow-azure: 0 0 0 1px oklch(0.65 0.24 255 / 0.25), 0 20px 60px -20px oklch(0.65 0.24 255 / 0.55);
-  --shadow-magenta: 0 0 0 1px oklch(0.68 0.29 330 / 0.25), 0 20px 60px -20px oklch(0.68 0.29 330 / 0.55);
+  --shadow-soft: 0 1px 2px oklch(0.16 0.04 285 / 0.04), 0 8px 24px -10px oklch(0.16 0.04 285 / 0.10);
+  --shadow-pop:  0 2px 6px oklch(0.16 0.04 285 / 0.06), 0 24px 60px -20px oklch(0.55 0.26 292 / 0.25);
+  --shadow-violet: 0 0 0 1px oklch(0.55 0.26 292 / 0.18), 0 20px 60px -22px oklch(0.55 0.26 292 / 0.45);
+  --shadow-azure:  0 0 0 1px oklch(0.62 0.18 250 / 0.18), 0 20px 60px -22px oklch(0.62 0.18 250 / 0.45);
+  --shadow-magenta:0 0 0 1px oklch(0.62 0.26 335 / 0.18), 0 20px 60px -22px oklch(0.62 0.26 335 / 0.45);
+  --shadow-coral:  0 0 0 1px oklch(0.7 0.22 25 / 0.18),  0 20px 60px -22px oklch(0.7 0.22 25 / 0.45);
 }
 
 @layer base {
   * { border-color: var(--color-border); }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -120,17 +130,18 @@
     font-family: var(--font-heading);
     letter-spacing: -0.035em;
     font-weight: 700;
+    color: var(--color-ink);
   }
 
   ::selection {
-    background: oklch(0.62 0.27 295 / 0.45);
-    color: oklch(0.98 0.005 280);
+    background: oklch(0.55 0.26 292 / 0.22);
+    color: var(--color-ink);
   }
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: oklch(0.11 0.025 285); }
+  ::-webkit-scrollbar-track { background: oklch(0.94 0.012 78); }
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, oklch(0.62 0.27 295 / 0.6), oklch(0.65 0.24 255 / 0.6));
+    background: linear-gradient(180deg, oklch(0.55 0.26 292 / 0.55), oklch(0.7 0.22 25 / 0.55));
     border-radius: 10px;
   }
 }
@@ -150,23 +161,34 @@
     color: transparent;
   }
 
+  /* Frosted card on cream */
   .glass {
-    background: oklch(0.13 0.025 285 / 0.55);
-    backdrop-filter: blur(24px) saturate(160%);
-    -webkit-backdrop-filter: blur(24px) saturate(160%);
-    border: 1px solid oklch(0.4 0.06 285 / 0.22);
+    background: oklch(1 0 0 / 0.65);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid oklch(0.28 0.04 285 / 0.10);
   }
 
   .glass-strong {
-    background: oklch(0.13 0.025 285 / 0.78);
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid oklch(0.4 0.06 285 / 0.3);
+    background: oklch(1 0 0 / 0.82);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid oklch(0.28 0.04 285 / 0.12);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .surface {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-soft);
   }
 
   .glow-violet { box-shadow: var(--shadow-violet); }
   .glow-azure { box-shadow: var(--shadow-azure); }
   .glow-magenta { box-shadow: var(--shadow-magenta); }
+  .glow-coral { box-shadow: var(--shadow-coral); }
+  .shadow-pop { box-shadow: var(--shadow-pop); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
 
   .font-display { font-family: var(--font-display); }
   .font-heading { font-family: var(--font-heading); }
@@ -184,16 +206,16 @@
     border-radius: inherit;
     padding: 1px;
     background: conic-gradient(from var(--angle, 0deg),
-      oklch(0.62 0.27 295) 0deg,
-      oklch(0.65 0.24 255) 120deg,
-      oklch(0.68 0.29 330) 240deg,
-      oklch(0.62 0.27 295) 360deg);
+      oklch(0.55 0.26 292) 0deg,
+      oklch(0.7 0.22 25) 120deg,
+      oklch(0.62 0.26 335) 240deg,
+      oklch(0.55 0.26 292) 360deg);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
             mask-composite: exclude;
     animation: spin-slow 8s linear infinite;
     pointer-events: none;
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   @property --angle {
@@ -206,30 +228,27 @@
     to { --angle: 360deg; transform: none; }
   }
 
-  /* Aurora animated mesh */
   .bg-aurora {
     background: var(--gradient-aurora);
     background-attachment: fixed;
   }
 
-  /* Arcade grid with vignette */
   .grid-arcade {
     background-image:
-      linear-gradient(oklch(0.62 0.27 295 / 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.65 0.24 255 / 0.06) 1px, transparent 1px);
-    background-size: 56px 56px;
+      linear-gradient(oklch(0.20 0.04 285 / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.20 0.04 285 / 0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
     mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, #000 40%, transparent 100%);
     -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, #000 40%, transparent 100%);
   }
 
-  /* Subtle film grain via SVG noise — purely decorative */
   .grain::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.035;
-    mix-blend-mode: overlay;
+    opacity: 0.025;
+    mix-blend-mode: multiply;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/></svg>");
   }
 
@@ -250,9 +269,25 @@
     100% { background-position: 200% 0 }
   }
   .animate-shimmer {
-    background: linear-gradient(110deg, transparent 30%, oklch(1 0 0 / 0.08) 50%, transparent 70%);
+    background: linear-gradient(110deg, transparent 30%, oklch(0.20 0.04 285 / 0.06) 50%, transparent 70%);
     background-size: 200% 100%;
-    animation: shimmer-x 3.5s linear infinite;
+    animation: shimmer-x 2.2s linear infinite;
+  }
+
+  /* Skeleton shimmer for cream theme */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: oklch(0.93 0.02 78);
+    border-radius: 0.75rem;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, oklch(1 0 0 / 0.65) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: shimmer-x 1.6s linear infinite;
   }
 
   @keyframes scan-down {
@@ -268,14 +303,12 @@
   }
   .animate-blob { animation: blob 18s ease-in-out infinite; }
 
-  /* Marquee */
   @keyframes marquee {
     0% { transform: translateX(0) }
     100% { transform: translateX(-50%) }
   }
   .animate-marquee { animation: marquee 28s linear infinite; }
 
-  /* Hover lift */
   .hover-lift { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
-  .hover-lift:hover { transform: translateY(-3px); }
+  .hover-lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-pop); }
 }
