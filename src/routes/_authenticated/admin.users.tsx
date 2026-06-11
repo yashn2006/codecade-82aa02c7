@@ -239,6 +239,9 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onSelect={() => setActOpen(true)}>
+            <ActivityIcon className="mr-2 h-3.5 w-3.5" /> View activity
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setPwOpen(true)}>
             <KeyRound className="mr-2 h-3.5 w-3.5" /> Set password
           </DropdownMenuItem>
