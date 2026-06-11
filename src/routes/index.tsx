@@ -3,14 +3,14 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import {
   Zap, Shield, BarChart3, Users, Cpu, ArrowRight, Check,
-  Wifi, Activity, Clock, Sparkles, IndianRupee, Terminal,
+  Activity, Sparkles, Terminal,
 } from "lucide-react";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandMark } from "@/components/Brand";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { ConsoleMockup } from "@/components/ConsoleMockup";
 import { TerminalContact } from "@/components/TerminalContact";
-import { Button } from "@/components/ui/button";
+
 
 
 export const Route = createFileRoute("/")({
