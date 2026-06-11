@@ -168,6 +168,9 @@ function LiveFloor() {
             {counts.available === 0 ? "No stations free" : "New walk-in"}
           </Button>
         </div>
+      </motion.div>
+
+
 
       {/* Filter ribbon */}
       <div className="flex flex-wrap items-center gap-2">
