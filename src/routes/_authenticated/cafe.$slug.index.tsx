@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
-  Gamepad2, Play, Square, Plus, Filter, Activity, Sparkles, Lock, Pause, Wrench, Check,
+  Gamepad2, Play, Square, Plus, Filter, Activity, Sparkles, Lock, Pause, Wrench, Check, UserPlus, Zap,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listDevices, setDeviceStatus, type DeviceStatus } from "@/lib/devices.functions";
@@ -94,6 +94,7 @@ function LiveFloor() {
 
   const [picker, setPicker] = useState<null | { deviceId: string }>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [walkInOpen, setWalkInOpen] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
 
   const devices = devicesQ.data ?? [];
@@ -143,7 +144,30 @@ function LiveFloor() {
           <FloorStat tone="#f5b042" label="Reserved"  value={counts.reserved} icon={Lock} />
           <FloorStat tone="#94a3b8" label="Today"     value={revenueToday} icon={Activity} prefix="₹" />
         </div>
-      </motion.div>
+
+        {/* Walk-in mega-CTA */}
+        <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-background/30 p-3 backdrop-blur">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-magenta to-rose text-primary-foreground shadow-magenta">
+              <Zap className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="font-display text-sm font-bold leading-tight">Customer walked in?</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                Capture them &amp; allot a station in one tap
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={() => setWalkInOpen(true)}
+            disabled={counts.available === 0}
+            className="gap-1.5 text-primary-foreground glow-magenta"
+            style={{ background: "var(--gradient-brand-hot)" }}
+          >
+            <UserPlus className="h-4 w-4" />
+            {counts.available === 0 ? "No stations free" : "New walk-in"}
+          </Button>
+        </div>
 
       {/* Filter ribbon */}
       <div className="flex flex-wrap items-center gap-2">
