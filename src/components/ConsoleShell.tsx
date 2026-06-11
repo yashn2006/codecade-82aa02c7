@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { HeroBackdrop3D } from "@/components/HeroBackdrop3D";
 import { BrandLockup } from "@/components/Brand";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export type NavItem = {
   label: string;
