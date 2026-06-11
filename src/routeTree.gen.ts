@@ -36,6 +36,7 @@ import { Route as AuthenticatedCafeSlugFloorRouteImport } from './routes/_authen
 import { Route as AuthenticatedCafeSlugDevicesRouteImport } from './routes/_authenticated/cafe.$slug.devices'
 import { Route as AuthenticatedCafeSlugCustomersRouteImport } from './routes/_authenticated/cafe.$slug.customers'
 import { Route as AuthenticatedCafeSlugBookingsRouteImport } from './routes/_authenticated/cafe.$slug.bookings'
+import { Route as AuthenticatedCafeSlugAnalyticsRouteImport } from './routes/_authenticated/cafe.$slug.analytics'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -185,6 +186,12 @@ const AuthenticatedCafeSlugBookingsRoute =
     path: '/bookings',
     getParentRoute: () => AuthenticatedCafeSlugRoute,
   } as any)
+const AuthenticatedCafeSlugAnalyticsRoute =
+  AuthenticatedCafeSlugAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/cafe/$slug': typeof AuthenticatedCafeSlugRouteWithChildren
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/cafe/$slug/analytics': typeof AuthenticatedCafeSlugAnalyticsRoute
   '/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
@@ -226,6 +234,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/cafe/$slug/analytics': typeof AuthenticatedCafeSlugAnalyticsRoute
   '/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
@@ -256,6 +265,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/cafe/$slug': typeof AuthenticatedCafeSlugRouteWithChildren
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/cafe/$slug/analytics': typeof AuthenticatedCafeSlugAnalyticsRoute
   '/_authenticated/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/_authenticated/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/_authenticated/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/cafe/$slug'
     | '/admin/'
+    | '/cafe/$slug/analytics'
     | '/cafe/$slug/bookings'
     | '/cafe/$slug/customers'
     | '/cafe/$slug/devices'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/admin'
+    | '/cafe/$slug/analytics'
     | '/cafe/$slug/bookings'
     | '/cafe/$slug/customers'
     | '/cafe/$slug/devices'
@@ -341,6 +353,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/cafe/$slug'
     | '/_authenticated/admin/'
+    | '/_authenticated/cafe/$slug/analytics'
     | '/_authenticated/cafe/$slug/bookings'
     | '/_authenticated/cafe/$slug/customers'
     | '/_authenticated/cafe/$slug/devices'
@@ -556,6 +569,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCafeSlugBookingsRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
     }
+    '/_authenticated/cafe/$slug/analytics': {
+      id: '/_authenticated/cafe/$slug/analytics'
+      path: '/analytics'
+      fullPath: '/cafe/$slug/analytics'
+      preLoaderRoute: typeof AuthenticatedCafeSlugAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
   }
 }
 
@@ -579,6 +599,7 @@ const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
 interface AuthenticatedCafeSlugRouteChildren {
+  AuthenticatedCafeSlugAnalyticsRoute: typeof AuthenticatedCafeSlugAnalyticsRoute
   AuthenticatedCafeSlugBookingsRoute: typeof AuthenticatedCafeSlugBookingsRoute
   AuthenticatedCafeSlugCustomersRoute: typeof AuthenticatedCafeSlugCustomersRoute
   AuthenticatedCafeSlugDevicesRoute: typeof AuthenticatedCafeSlugDevicesRoute
@@ -595,6 +616,7 @@ interface AuthenticatedCafeSlugRouteChildren {
 }
 
 const AuthenticatedCafeSlugRouteChildren: AuthenticatedCafeSlugRouteChildren = {
+  AuthenticatedCafeSlugAnalyticsRoute: AuthenticatedCafeSlugAnalyticsRoute,
   AuthenticatedCafeSlugBookingsRoute: AuthenticatedCafeSlugBookingsRoute,
   AuthenticatedCafeSlugCustomersRoute: AuthenticatedCafeSlugCustomersRoute,
   AuthenticatedCafeSlugDevicesRoute: AuthenticatedCafeSlugDevicesRoute,
