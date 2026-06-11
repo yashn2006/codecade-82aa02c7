@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
-import { Plus, Building2, Power, PowerOff, Lock, Unlock } from "lucide-react";
+import { Plus, Building2, Power, PowerOff, Lock, Unlock, Wrench } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
