@@ -228,7 +228,7 @@ function LiveFloor() {
                         type={d.type as "pc" | "console" | "vr" | "racing" | "other"}
                         status={status}
                         hourlyRate={d.hourly_rate}
-                        caption={caption ? <>{caption}</> as unknown as string : undefined}
+                        caption={caption ?? undefined}
                         overlay={overlay}
                       />
                     </div>

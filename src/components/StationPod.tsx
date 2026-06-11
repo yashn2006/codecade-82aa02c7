@@ -35,7 +35,7 @@ export type StationPodProps = {
   status: DeviceStatus;
   hourlyRate: number;
   overlay?: React.ReactNode; // e.g. timer, customer name
-  caption?: string;          // small line under chip
+  caption?: React.ReactNode; // small line under chip
   index?: number;
   onClick?: () => void;
 };

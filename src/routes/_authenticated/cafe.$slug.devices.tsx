@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/devices")({
 });
 
 const TYPES = ["pc", "console", "vr", "racing", "other"] as const;
-const STATUSES = ["available", "in_use", "maintenance"] as const;
+const STATUSES = ["available", "in_use", "reserved", "suspended", "maintenance"] as const;
 
 function DevicesPage() {
   const { slug } = Route.useParams();
