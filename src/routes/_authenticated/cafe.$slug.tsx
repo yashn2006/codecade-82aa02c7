@@ -29,6 +29,7 @@ function CafeLayout() {
       nav={[
         { label: "Live floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
         { label: "Floor builder", icon: LayoutGrid, to: "/cafe/$slug/floor", params: { slug } },
+        { label: "Menu", icon: UtensilsCrossed, to: "/cafe/$slug/menu", params: { slug } },
         { label: "POS counter", icon: Receipt, to: "/cafe/$slug/pos", params: { slug } },
         { label: "Devices", icon: Cpu, to: "/cafe/$slug/devices", params: { slug } },
         { label: "Bookings", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug } },
