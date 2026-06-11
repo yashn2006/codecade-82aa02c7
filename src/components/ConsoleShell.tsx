@@ -100,6 +100,9 @@ export function ConsoleShell({
             })}
           </nav>
           <div className="border-t border-border/70 p-3">
+            <div className="mb-2 flex justify-end">
+              <NotificationBell />
+            </div>
             <div className="flex items-center gap-2 rounded-xl bg-secondary/60 p-2.5">
               <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground">
                 {(email[0] ?? "?").toUpperCase()}
