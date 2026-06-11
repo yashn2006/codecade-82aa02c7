@@ -88,7 +88,7 @@ function UsersPanel() {
                     <div className="font-medium">{u.full_name || "—"}</div>
                     <div className="truncate font-mono text-xs text-muted-foreground">{u.email}</div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {(u.user_roles ?? []).map((r, i) => (
                       <Badge key={i} variant="outline" className="gap-1.5">
                         {r.role}
@@ -103,6 +103,7 @@ function UsersPanel() {
                         ><X className="h-3 w-3" /></button>
                       </Badge>
                     ))}
+                    <UserActions user={u} onChanged={refresh} />
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -119,6 +120,7 @@ function UsersPanel() {
                 </div>
               </div>
             ))}
+
           </TabsContent>
         ))}
       </Tabs>
