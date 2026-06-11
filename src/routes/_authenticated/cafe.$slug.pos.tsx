@@ -111,10 +111,10 @@ function POSPage() {
     onSuccess: async (_, vars) => {
       toast.success("Settled");
       setSettleOpen(false);
-      // Auto-fetch + print receipt
-      if (pendingOrder) {
+      const orderId = (vars as { data: { order_id: string } } | undefined)?.data.order_id ?? pendingOrder?.id;
+      if (orderId) {
         try {
-          const full = (await getOrder({ data: { id: vars.data.order_id } })) as unknown as ReceiptOrder;
+          const full = (await getOrder({ data: { id: orderId } })) as unknown as ReceiptOrder;
           setReceiptOrder(full);
         } catch { /* ignore */ }
       }
