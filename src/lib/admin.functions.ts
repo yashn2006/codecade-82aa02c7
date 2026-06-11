@@ -486,6 +486,7 @@ export const platformRevenueAnalytics = createServerFn({ method: "GET" })
       daily: Array.from(daily.values()).sort((a, b) => a.date.localeCompare(b.date)),
       topCafes: Array.from(byCafe.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 12),
     };
+  });
 
 // ─── Platform config (fees, tax, branding, signup) ───
 export const getPlatformConfig = createServerFn({ method: "GET" })
