@@ -18,6 +18,7 @@ function AdminLayout() {
       intensity="hero"
       nav={[
         { label: "Overview", icon: Shield, to: "/admin", exact: true },
+        { label: "Revenue", icon: TrendingUp, to: "/admin/revenue" },
         { label: "Cafés", icon: Building2, to: "/admin/cafes" },
         { label: "Users & roles", icon: Users, to: "/admin/users" },
         { label: "Leads", icon: FileText, to: "/admin/leads" },
