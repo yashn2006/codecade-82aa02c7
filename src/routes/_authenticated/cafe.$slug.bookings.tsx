@@ -216,8 +216,8 @@ function CalendarView({ bookings }: { bookings: AnyBooking[] }) {
                 ) : dayBookings.map((b) => (
                   <div key={b.id} className={`rounded-md border p-1.5 text-[10px] ${b.status === "no_show" ? "border-amber-400/40 bg-amber-400/10" : b.status === "cancelled" ? "border-destructive/40 bg-destructive/5 opacity-60" : b.status === "confirmed" ? "border-emerald-400/40 bg-emerald-400/10" : "border-border/40"}`}>
                     <div className="font-mono">{new Date(b.scheduled_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
-                    <div className="truncate font-medium">{b.customers?.full_name ?? "—"}</div>
-                    <div className="truncate opacity-70">{b.devices?.name ?? "—"}</div>
+                    <div className="truncate font-medium">{(b.customers as { full_name?: string } | null)?.full_name ?? "—"}</div>
+                    <div className="truncate opacity-70">{(b.devices as { name?: string } | null)?.name ?? "—"}</div>
                   </div>
                 ))}
               </div>
