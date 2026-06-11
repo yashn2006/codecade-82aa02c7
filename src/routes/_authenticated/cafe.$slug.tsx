@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, UtensilsCrossed, Receipt, Trophy, Globe } from "lucide-react";
+import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, UtensilsCrossed, Receipt, Trophy, Globe, LayoutGrid } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -25,6 +25,7 @@ function CafeLayout() {
       subtitle={cafe ? `${cafe.city ?? ""}${cafe.city ? " · " : ""}/${cafe.slug}` : "Loading workspace…"}
       nav={[
         { label: "Live floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
+        { label: "Floor builder", icon: LayoutGrid, to: "/cafe/$slug/floor", params: { slug } },
         { label: "POS counter", icon: Receipt, to: "/cafe/$slug/pos", params: { slug } },
         { label: "Menu", icon: UtensilsCrossed, to: "/cafe/$slug/menu", params: { slug } },
         { label: "Tournaments", icon: Trophy, to: "/cafe/$slug/tournaments", params: { slug } },
