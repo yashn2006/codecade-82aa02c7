@@ -190,7 +190,8 @@ function BookingsPage() {
   );
 }
 
-function CalendarView({ bookings }: { bookings: { id: string; scheduled_at: string; duration_minutes: number; status: string; customers: { full_name?: string } | null; devices: { name?: string } | null }[] }) {
+type AnyBooking = { id: string; scheduled_at: string; duration_minutes: number; status: string; customers: unknown; devices: unknown };
+function CalendarView({ bookings }: { bookings: AnyBooking[] }) {
   const today = new Date();
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today); d.setDate(today.getDate() + i); d.setHours(0, 0, 0, 0); return d;
