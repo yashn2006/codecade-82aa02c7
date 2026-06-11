@@ -310,6 +310,130 @@ export const networkBroadcast = createServerFn({ method: "POST" })
   });
 
 
+// ─── Global audit logs (super-admin only) ───
+export const adminListAuditLogs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      cafe_id: z.string().uuid().optional().nullable(),
+      action: z.string().max(60).optional().nullable(),
+      q: z.string().max(120).optional().nullable(),
+      limit: z.number().int().min(1).max(500).default(200),
+    }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    let q = supabaseAdmin
+      .from("audit_logs")
+      .select("*, cafes(name, slug)")
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (data.cafe_id) q = q.eq("cafe_id", data.cafe_id);
+    if (data.action) q = q.eq("action", data.action);
+    if (data.q) q = q.ilike("actor_email", `%${data.q}%`);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+// ─── Broadcast announcement to many users via notifications ───
+export const broadcastAnnouncement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      audience: z.enum(["all", "owners", "staff", "customers"]),
+      title: z.string().min(1).max(120),
+      body: z.string().max(400).optional().nullable(),
+      link: z.string().max(400).optional().nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    let userIds: string[] = [];
+    if (data.audience === "all") {
+      const { data: rows } = await supabaseAdmin.from("profiles").select("id");
+      userIds = (rows ?? []).map((r) => r.id);
+    } else {
+      const roleMap = { owners: "cafe_owner", staff: "cafe_staff", customers: "customer" } as const;
+      const { data: rows } = await supabaseAdmin
+        .from("user_roles").select("user_id").eq("role", roleMap[data.audience]);
+      userIds = Array.from(new Set((rows ?? []).map((r) => r.user_id)));
+    }
+    if (userIds.length === 0) return { ok: true, count: 0 };
+    const payload = userIds.map((uid) => ({
+      user_id: uid,
+      cafe_id: null,
+      kind: "announcement",
+      title: data.title,
+      body: data.body ?? null,
+      link: data.link ?? null,
+    }));
+    for (let i = 0; i < payload.length; i += 500) {
+      const { error } = await supabaseAdmin.from("notifications").insert(payload.slice(i, i + 500));
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true, count: userIds.length };
+  });
+
+// ─── System health snapshot ───
+export const systemHealth = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const since = new Date(Date.now() - 86400_000).toISOString();
+    const [
+      cafes, devices, sessionsActive, sessions24, users, users24,
+      orders24, bookings24, leadsNew, notif24, audit24,
+      cafesActive, cafesPaused,
+    ] = await Promise.all([
+      supabaseAdmin.from("cafes").select("id", { count: "exact", head: true }),
+      supabaseAdmin.from("devices").select("id", { count: "exact", head: true }),
+      supabaseAdmin.from("sessions").select("id", { count: "exact", head: true }).eq("status", "active"),
+      supabaseAdmin.from("sessions").select("id", { count: "exact", head: true }).gte("started_at", since),
+      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }),
+      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", since),
+      supabaseAdmin.from("orders").select("id", { count: "exact", head: true }).gte("created_at", since),
+      supabaseAdmin.from("bookings").select("id", { count: "exact", head: true }).gte("created_at", since),
+      supabaseAdmin.from("contacts").select("id", { count: "exact", head: true }).eq("status", "new"),
+      supabaseAdmin.from("notifications").select("id", { count: "exact", head: true }).gte("created_at", since),
+      supabaseAdmin.from("audit_logs").select("id", { count: "exact", head: true }).gte("created_at", since),
+      supabaseAdmin.from("cafes").select("id", { count: "exact", head: true }).eq("is_active", true),
+      supabaseAdmin.from("cafes").select("id", { count: "exact", head: true }).eq("is_active", false),
+    ]);
+    return {
+      cafes: cafes.count ?? 0,
+      cafesActive: cafesActive.count ?? 0,
+      cafesPaused: cafesPaused.count ?? 0,
+      devices: devices.count ?? 0,
+      sessionsActive: sessionsActive.count ?? 0,
+      sessions24: sessions24.count ?? 0,
+      users: users.count ?? 0,
+      users24: users24.count ?? 0,
+      orders24: orders24.count ?? 0,
+      bookings24: bookings24.count ?? 0,
+      leadsNew: leadsNew.count ?? 0,
+      notifications24: notif24.count ?? 0,
+      audit24: audit24.count ?? 0,
+    };
+  });
+
+// Lightweight list of cafés for filter dropdowns
+export const adminCafeOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("cafes").select("id, name, slug").order("name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+
+
 
 // ============ Platform-wide revenue analytics ============
 export const platformRevenueAnalytics = createServerFn({ method: "GET" })
