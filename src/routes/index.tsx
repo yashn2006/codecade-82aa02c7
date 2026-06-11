@@ -39,6 +39,7 @@ function Landing() {
       <Header />
       <Hero />
       <Marquee />
+      <Cinematic />
       <Features />
       <Stats />
       <Pricing />
@@ -47,6 +48,7 @@ function Landing() {
     </div>
   );
 }
+
 
 function Header() {
   return (
