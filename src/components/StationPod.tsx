@@ -146,7 +146,7 @@ export function StationPod({
           {/* 3D Monitor */}
           <div className="relative mt-4 [transform:translateZ(20px)]">
             <div
-              className="relative mx-auto aspect-[16/9] w-full overflow-hidden rounded-md border border-white/10"
+              className="relative mx-auto aspect-[16/9] w-full overflow-hidden rounded-md border border-ink/20"
               style={{
                 background:
                   status === "in_use"
@@ -198,8 +198,8 @@ export function StationPod({
             </div>
 
             {/* Monitor neck + base */}
-            <div className="mx-auto mt-1 h-2 w-3 rounded-b-sm bg-white/10" />
-            <div className="mx-auto h-[3px] w-12 rounded-full bg-white/10" />
+            <div className="mx-auto mt-1 h-2 w-3 rounded-b-sm bg-ink/30" />
+            <div className="mx-auto h-[3px] w-12 rounded-full bg-ink/20" />
           </div>
 
           {/* Status chip */}
