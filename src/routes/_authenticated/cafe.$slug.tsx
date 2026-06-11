@@ -98,6 +98,69 @@ function CafeLayout() {
   );
 }
 
+const SECTION_LABELS: Record<string, { label: string; icon: typeof Activity }> = {
+  analytics: { label: "Analytics", icon: LineChart },
+  floor: { label: "Floor builder", icon: LayoutGrid },
+  menu: { label: "Menu", icon: UtensilsCrossed },
+  pos: { label: "POS counter", icon: Receipt },
+  devices: { label: "Devices", icon: Cpu },
+  bookings: { label: "Bookings", icon: CalendarRange },
+  customers: { label: "Customers", icon: Users },
+  wallet: { label: "Wallet", icon: Wallet },
+  memberships: { label: "Memberships", icon: Crown },
+  ledger: { label: "Ledger", icon: ScrollText },
+  page: { label: "Public page", icon: Globe },
+  staff: { label: "Staff", icon: Settings },
+};
+
+function CafeBreadcrumbs({ slug, cafeName }: { slug: string; cafeName: string | null }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const segments = pathname.split("/").filter(Boolean); // ["cafe", slug, maybeSection]
+  const section = segments[2];
+  const sectionMeta = section ? SECTION_LABELS[section] : null;
+
+  return (
+    <motion.nav
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      aria-label="Breadcrumb"
+      className="mb-3 flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-border/50 bg-card/40 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur"
+    >
+      <Link to="/owner" className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition hover:bg-accent/40 hover:text-foreground">
+        <Home className="h-3 w-3" /> Owner Hub
+      </Link>
+      <ChevronRight className="h-3 w-3 opacity-50" />
+      <Link
+        to="/cafe/$slug"
+        params={{ slug }}
+        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition hover:bg-accent/40 hover:text-foreground"
+      >
+        <LayoutDashboard className="h-3 w-3" />
+        <span className="max-w-[160px] truncate">{cafeName ?? slug}</span>
+      </Link>
+      {sectionMeta ? (
+        <>
+          <ChevronRight className="h-3 w-3 opacity-50" />
+          <span aria-current="page" className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-foreground">
+            <sectionMeta.icon className="h-3 w-3" /> {sectionMeta.label}
+          </span>
+        </>
+      ) : (
+        <span aria-current="page" className="ml-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-foreground">Overview</span>
+      )}
+      {sectionMeta && (
+        <Link
+          to="/cafe/$slug"
+          params={{ slug }}
+          className="ml-auto inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground/80 transition hover:border-primary/50 hover:text-foreground"
+        >
+          <Activity className="h-3 w-3" /> Back to Overview
+        </Link>
+      )}
+    </motion.nav>
+  );
+}
+
 function RestrictedOverlay({ message }: { message: string }) {
   return (
     <motion.div
