@@ -13,6 +13,7 @@ function AdminLayout() {
       badge="Super Admin"
       title="Network command center"
       subtitle="Cafés, users, leads — the whole platform from one console."
+      intensity="hero"
       nav={[
         { label: "Overview", icon: Shield, to: "/admin", exact: true },
         { label: "Cafés", icon: Building2, to: "/admin/cafes" },
