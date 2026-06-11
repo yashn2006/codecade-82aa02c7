@@ -257,6 +257,7 @@ function LiveFloor() {
                         hourlyRate={d.hourly_rate}
                         caption={caption ?? undefined}
                         overlay={overlay}
+                        accent={(d as { zone_color?: string | null }).zone_color}
                       />
                     </div>
                   </DropdownMenuTrigger>
