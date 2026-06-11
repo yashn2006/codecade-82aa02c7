@@ -237,38 +237,50 @@ function CafesPanel() {
           />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {data.map((c, i) => {
-              const owner = c.profiles as { email?: string } | null;
-              return (
-                <motion.a
-                  key={c.id}
-                  href={`/cafe/${c.slug}`}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                  className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur hover-lift hover:border-primary/40"
-                >
-                  <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-violet/20 blur-2xl" />
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                        {c.city ?? "—"}
-                      </div>
-                      <h3 className="mt-1 font-display text-lg font-bold">{c.name}</h3>
-                      <div className="mt-1 font-mono text-xs text-azure">/{c.slug}</div>
-                    </div>
-                    <Badge variant={c.is_active ? "default" : "secondary"}>
-                      {c.is_active ? "Live" : "Off"}
-                    </Badge>
-                  </div>
-                  <div className="mt-4 text-xs text-muted-foreground">
-                    Owner: <span className="text-foreground">{owner?.email ?? "—"}</span>
-                  </div>
-                </motion.a>
-              );
-            })}
+            {data.map((c, i) => <CafeAdminCard key={c.id} cafe={c} index={i} />)}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function CafeAdminCard({ cafe, index }: { cafe: { id: string; slug: string; name: string; city: string | null; is_active: boolean; profiles: unknown }; index: number }) {
+  const owner = cafe.profiles as { email?: string } | null;
+  const qc = useQueryClient();
+  const toggle = useServerFn(toggleCafeActive);
+  const tM = useMutation({
+    mutationFn: toggle,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-cafes"] }); qc.invalidateQueries({ queryKey: ["admin-overview"] }); },
+  });
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}
+      className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur hover-lift hover:border-primary/40"
+    >
+      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-violet/20 blur-2xl" />
+      <div className="relative flex items-start justify-between">
+        <Link to="/cafe/$slug" params={{ slug: cafe.slug }} className="block">
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{cafe.city ?? "—"}</div>
+          <h3 className="mt-1 font-display text-lg font-bold">{cafe.name}</h3>
+          <div className="mt-1 font-mono text-xs text-azure">/{cafe.slug}</div>
+        </Link>
+        <Badge variant={cafe.is_active ? "default" : "secondary"}>{cafe.is_active ? "Live" : "Off"}</Badge>
+      </div>
+      <div className="relative mt-4 flex items-end justify-between">
+        <div className="text-xs text-muted-foreground">
+          Owner: <span className="text-foreground">{owner?.email ?? "—"}</span>
+        </div>
+        <Button
+          size="sm" variant="ghost"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); tM.mutate({ data: { id: cafe.id, is_active: !cafe.is_active } }); }}
+          className="gap-1.5"
+        >
+          {cafe.is_active ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+          {cafe.is_active ? "Pause" : "Resume"}
+        </Button>
+      </div>
+    </motion.div>
   );
 }
 
