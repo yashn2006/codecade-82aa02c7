@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { listAllCafes, setCafeRestriction } from "@/lib/admin.functions";
 import { createCafe, toggleCafeActive } from "@/lib/cafes.functions";
+import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
+import { isMaintenanceActive } from "@/lib/maintenance";
 
 export const Route = createFileRoute("/_authenticated/admin/cafes")({
   component: CafesPanel,
@@ -22,7 +24,11 @@ export const Route = createFileRoute("/_authenticated/admin/cafes")({
 
 type CafeRow = {
   id: string; slug: string; name: string; city: string | null;
-  is_active: boolean; restricted_message?: string | null; profiles: unknown;
+  is_active: boolean; restricted_message?: string | null;
+  maintenance_starts_at: string | null;
+  maintenance_ends_at: string | null;
+  maintenance_message: string | null;
+  profiles: unknown;
 };
 
 function CafesPanel() {
