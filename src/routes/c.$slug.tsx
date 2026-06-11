@@ -91,7 +91,11 @@ function PublicCafePage() {
             <h1 className="mt-2 font-display text-4xl font-extrabold leading-tight sm:text-6xl">{cafe.name}</h1>
             {page?.tagline && <p className="mt-2 max-w-2xl text-base text-muted-foreground sm:text-lg">{page.tagline}</p>}
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Link to="/portal"><Button size="lg" style={{ background: "var(--gradient-brand-hot)" }}>Book a rig</Button></Link>
+              {inMaintenance ? (
+                <Button size="lg" disabled variant="outline" className="cursor-not-allowed">Bookings paused · maintenance</Button>
+              ) : (
+                <Link to="/portal"><Button size="lg" style={{ background: "var(--gradient-brand-hot)" }}>Book a rig</Button></Link>
+              )}
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
                 {freeCount} of {devices.length} stations free
