@@ -144,18 +144,45 @@ export function ConsoleShell({
 
           {/* Main content */}
           <main className="min-w-0 flex-1 px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="min-w-0">
-                <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                  {badge}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/30 px-5 py-7 shadow-pop backdrop-blur-xl sm:px-8 sm:py-9"
+            >
+              <HeroBackdrop3D />
+              <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.28em] text-primary shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                    </span>
+                    {badge}
+                  </div>
+                  <motion.h1
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, duration: 0.6 }}
+                    className="mt-3 truncate font-display text-3xl font-extrabold leading-[1] tracking-[-0.035em] sm:text-4xl lg:text-5xl"
+                  >
+                    <span className="text-gradient-hot">{title}</span>
+                  </motion.h1>
+                  {subtitle && (
+                    <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
+                      {subtitle}
+                    </p>
+                  )}
                 </div>
-                <h1 className="mt-1 truncate font-display text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
-                  {title}
-                </h1>
-                {subtitle && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>}
+                <div className="flex flex-col items-end gap-2">
+                  <span className="hidden font-mono text-[11px] text-muted-foreground sm:inline">{email}</span>
+                  <div className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-emerald-300 sm:flex">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_currentColor]" />
+                    Console online
+                  </div>
+                </div>
               </div>
-              <span className="hidden font-mono text-[11px] text-muted-foreground sm:inline">{email}</span>
-            </div>
+            </motion.div>
             <AnimatePresence mode="wait">
               <motion.div
                 key={path}
