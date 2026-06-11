@@ -29,6 +29,17 @@ const STATUS_GLYPH: Record<DeviceStatus, typeof Cpu> = {
   maintenance: Wrench,
 };
 
+/** Convert #rrggbb or shorthand to rgba string. Returns passed value if not a hex. */
+function hexToRgba(hex: string, alpha = 1): string {
+  if (!hex.startsWith("#")) return hex;
+  let h = hex.slice(1);
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const num = parseInt(h, 16);
+  const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+
 export type StationPodProps = {
   name: string;
   type: DeviceType;
