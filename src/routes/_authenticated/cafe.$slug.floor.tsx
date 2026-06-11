@@ -332,72 +332,28 @@ function FloorBuilder() {
         </aside>
       </div>
 
-      {/* Add dialog */}
+      {/* Add dialog — two-pane with live preview */}
       <Dialog open={!!adding} onOpenChange={(v) => !v && setAdding(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>New station {adding && `· cell ${adding.x},${adding.y}`}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.currentTarget);
+        <DialogContent className="overflow-hidden p-0 sm:max-w-2xl">
+          <NewStationForm
+            adding={adding}
+            defaultName={`PC-${devices.length + 1}`}
+            isPending={createM.isPending}
+            onSubmit={(values) => {
               if (!adding) return;
               const taken = cellMap.has(`${adding.x},${adding.y}`);
               createM.mutate({
                 data: {
                   cafe_id: cafe.id,
-                  name: String(fd.get("name") || "").trim() || `PC-${devices.length + 1}`,
-                  type: String(fd.get("type") || "pc") as typeof TYPES[number],
-                  hourly_rate: Number(fd.get("hourly_rate") || 100),
-                  zone: (String(fd.get("zone") || "").trim() || null) as string | null,
-                  zone_color: (String(fd.get("zone_color") || "") || null) as string | null,
+                  ...values,
                   pos_x: taken ? null : adding.x,
                   pos_y: taken ? null : adding.y,
                 },
               });
             }}
-            className="space-y-3"
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Name</Label>
-                <Input name="name" placeholder={`PC-${devices.length + 1}`} />
-              </div>
-              <div className="space-y-1">
-                <Label>Type</Label>
-                <select name="type" defaultValue="pc" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {TYPES.map((t) => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Hourly rate ₹</Label>
-                <Input name="hourly_rate" type="number" defaultValue={100} />
-              </div>
-              <div className="space-y-1">
-                <Label>Zone label</Label>
-                <Input name="zone" placeholder="e.g. PC Zone" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Zone color</Label>
-              <div className="flex flex-wrap gap-2">
-                {ZONE_COLORS.map((c) => (
-                  <label key={c.value} className="cursor-pointer">
-                    <input type="radio" name="zone_color" value={c.value} className="peer sr-only" />
-                    <span className="block h-7 w-7 rounded-full border-2 border-transparent ring-1 ring-border/60 transition peer-checked:border-foreground peer-checked:scale-110" style={{ background: c.value }} />
-                  </label>
-                ))}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" disabled={createM.isPending} style={{ background: "var(--gradient-brand-hot)" }} className="gap-1.5">
-                <Save className="h-3.5 w-3.5" /> {createM.isPending ? "Adding…" : "Add station"}
-              </Button>
-            </DialogFooter>
-          </form>
+          />
+        </DialogContent>
+      </Dialog>
         </DialogContent>
       </Dialog>
 
