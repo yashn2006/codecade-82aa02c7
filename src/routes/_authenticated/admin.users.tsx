@@ -1,15 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, Search, X } from "lucide-react";
+import { Users, Search, X, UserPlus } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { searchUsers, grantRole, revokeRole } from "@/lib/admin.functions";
+import { searchUsers, grantRole, revokeRole, adminCreateUser } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   component: UsersPanel,
@@ -50,8 +52,8 @@ function UsersPanel() {
 
   return (
     <div>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap gap-2">
+        <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-10"
@@ -62,6 +64,7 @@ function UsersPanel() {
           />
         </div>
         <Button variant="outline" onClick={() => refetch()}>{isFetching ? "…" : "Search"}</Button>
+        <CreateUserButton onCreated={refresh} />
       </div>
 
       <Tabs defaultValue="all" className="mt-4">
@@ -118,5 +121,74 @@ function UsersPanel() {
         ))}
       </Tabs>
     </div>
+  );
+}
+
+function CreateUserButton({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const create = useServerFn(adminCreateUser);
+  const m = useMutation({
+    mutationFn: create,
+    onSuccess: () => {
+      toast.success("User created");
+      onCreated();
+      setOpen(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2 text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
+          <UserPlus className="h-4 w-4" /> Create user
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Create a new user</DialogTitle></DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const mode = String(fd.get("mode"));
+            const password = String(fd.get("password") || "");
+            m.mutate({
+              data: {
+                email: String(fd.get("email")),
+                full_name: String(fd.get("full_name") || "") || null,
+                role: (String(fd.get("role")) || "customer") as "super_admin" | "cafe_owner" | "cafe_staff" | "customer",
+                password: mode === "password" ? password : null,
+                send_invite: mode === "invite",
+              },
+            });
+          }}
+          className="space-y-3"
+        >
+          <div className="space-y-1"><Label>Full name</Label><Input name="full_name" placeholder="Jane Doe" /></div>
+          <div className="space-y-1"><Label>Email *</Label><Input name="email" type="email" required /></div>
+          <div className="space-y-1">
+            <Label>Role</Label>
+            <select name="role" defaultValue="customer" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+              <option value="customer">Customer</option>
+              <option value="cafe_staff">Café staff</option>
+              <option value="cafe_owner">Café owner</option>
+              <option value="super_admin">Super admin</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>How to onboard</Label>
+            <select name="mode" defaultValue="password" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+              <option value="password">Set a password now</option>
+              <option value="invite">Send magic-link invite email</option>
+            </select>
+          </div>
+          <div className="space-y-1"><Label>Password (if setting now)</Label><Input name="password" type="text" placeholder="min 8 chars" minLength={8} /></div>
+          <DialogFooter>
+            <Button type="submit" disabled={m.isPending} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+              {m.isPending ? "Creating…" : "Create user"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
