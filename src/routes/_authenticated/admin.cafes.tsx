@@ -51,7 +51,12 @@ function CafesPanel() {
   const cafes = (data ?? []) as CafeRow[];
   const buckets = useMemo(() => ({
     all: cafes,
-    active: cafes.filter((c) => c.is_active && !c.restricted_message),
+    active: cafes.filter((c) => c.is_active && !c.restricted_message && !isMaintenanceActive({
+      starts_at: c.maintenance_starts_at, ends_at: c.maintenance_ends_at, message: c.maintenance_message,
+    })),
+    maintenance: cafes.filter((c) => isMaintenanceActive({
+      starts_at: c.maintenance_starts_at, ends_at: c.maintenance_ends_at, message: c.maintenance_message,
+    })),
     paused: cafes.filter((c) => !c.is_active),
     restricted: cafes.filter((c) => !!c.restricted_message),
   }), [cafes]);
@@ -112,13 +117,14 @@ function CafesPanel() {
       </div>
 
       <Tabs defaultValue="all" className="mt-5">
-        <TabsList className="glass-strong rounded-2xl p-1">
+        <TabsList className="glass-strong flex-wrap rounded-2xl p-1">
           <TabsTrigger value="all">All <Badge variant="secondary" className="ml-2">{buckets.all.length}</Badge></TabsTrigger>
           <TabsTrigger value="active">Live <Badge variant="secondary" className="ml-2">{buckets.active.length}</Badge></TabsTrigger>
+          <TabsTrigger value="maintenance">Maintenance <Badge variant="secondary" className="ml-2">{buckets.maintenance.length}</Badge></TabsTrigger>
           <TabsTrigger value="paused">Paused <Badge variant="secondary" className="ml-2">{buckets.paused.length}</Badge></TabsTrigger>
           <TabsTrigger value="restricted">Restricted <Badge variant="secondary" className="ml-2">{buckets.restricted.length}</Badge></TabsTrigger>
         </TabsList>
-        {(["all", "active", "paused", "restricted"] as const).map((k) => (
+        {(["all", "active", "maintenance", "paused", "restricted"] as const).map((k) => (
           <TabsContent key={k} value={k} className="mt-5">
             {isLoading ? (
               <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
