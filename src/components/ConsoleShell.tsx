@@ -142,13 +142,7 @@ export function ConsoleShell({
 
           {/* Main content */}
           <main className="min-w-0 flex-1 px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">
-            <motion.div
-              key={title}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-wrap items-end justify-between gap-4"
-            >
+            <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="min-w-0">
                 <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
                   {badge}
@@ -159,9 +153,21 @@ export function ConsoleShell({
                 {subtitle && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>}
               </div>
               <span className="hidden font-mono text-[11px] text-muted-foreground sm:inline">{email}</span>
-            </motion.div>
-            <div className="mt-6">{children}</div>
+            </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={path}
+                initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -6, filter: "blur(4px)" }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-6"
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
           </main>
+
 
           {/* === Mobile bottom nav === */}
           <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border/70 bg-card/90 backdrop-blur-xl lg:hidden">
