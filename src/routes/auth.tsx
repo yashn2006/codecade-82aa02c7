@@ -107,8 +107,8 @@ function AuthPage() {
           </div>
         </motion.div>
 
-        <div className="pointer-events-none absolute -right-32 top-1/2 -translate-y-1/2 opacity-60">
-          <img src={glowAsset.url} alt="" className="h-[520px] w-[520px] animate-float" aria-hidden />
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/2 items-center justify-center opacity-80">
+          <img src={glowAsset.url} alt="" className="h-auto max-h-[80vh] w-full object-contain animate-float" aria-hidden />
         </div>
 
         <div className="relative z-10 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
