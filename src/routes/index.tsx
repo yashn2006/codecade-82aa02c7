@@ -1,20 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import {
   Zap, Shield, BarChart3, Users, Cpu, ArrowRight, Check,
-  Wifi, Activity, Clock, Sparkles, IndianRupee,
+  Activity, Sparkles, Terminal,
 } from "lucide-react";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandMark } from "@/components/Brand";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
-import { submitContact } from "@/lib/contact.functions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import glowAsset from "@/assets/corecade-glow.png.asset.json";
+import { ConsoleMockup } from "@/components/ConsoleMockup";
+import { TerminalContact } from "@/components/TerminalContact";
+
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,6 +39,7 @@ function Landing() {
       <Header />
       <Hero />
       <Marquee />
+      <Cinematic />
       <Features />
       <Stats />
       <Pricing />
@@ -50,6 +48,7 @@ function Landing() {
     </div>
   );
 }
+
 
 function Header() {
   return (
@@ -77,114 +76,160 @@ function Header() {
 }
 
 function Hero() {
-  const headline = "Powering";
   return (
-    <section className="relative px-4 pt-20 pb-32 sm:px-6">
-      <AuroraBackground intensity="hero" />
+    <section className="relative px-4 pt-16 pb-24 sm:px-6">
+      <AuroraBackground intensity="immersive" />
 
-      <div className="relative z-10 mx-auto max-w-6xl text-center">
-        <motion.div
-          initial="hidden" animate="visible" variants={fadeUp}
-          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur"
-        >
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-          </span>
-          Live in 12 Indian cities · Onboarding cafés daily
-        </motion.div>
-
-        <motion.h1
-          initial="hidden" animate="visible" custom={1} variants={fadeUp}
-          className="mt-8 font-display text-[3.25rem] font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-7xl md:text-[7.5rem]"
-        >
-          <span className="block text-foreground/95">{headline}</span>
-          <span className="relative block">
-            <span className="text-gradient-hot">Gaming Cafés.</span>
-            <span className="absolute -bottom-2 left-1/2 h-1 w-[60%] -translate-x-1/2 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent blur-sm" />
-          </span>
-        </motion.h1>
-
-        <motion.p
-          initial="hidden" animate="visible" custom={2} variants={fadeUp}
-          className="mx-auto mt-7 max-w-2xl text-base text-muted-foreground sm:text-lg"
-        >
-          Sessions, bookings, memberships, devices, analytics — one platform.
-          Real-time everything. Built mobile-first for café owners across India.
-        </motion.p>
-
-        <motion.div
-          initial="hidden" animate="visible" custom={3} variants={fadeUp}
-          className="mt-10 flex flex-wrap items-center justify-center gap-3"
-        >
-          <Link
-            to="/auth"
-            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl px-7 py-3.5 text-sm font-semibold text-primary-foreground glow-violet"
-            style={{ background: "var(--gradient-brand-hot)" }}
+      <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-8">
+        {/* LEFT — typography column */}
+        <div>
+          <motion.div
+            initial="hidden" animate="visible" variants={fadeUp}
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur"
           >
-            <span className="relative z-10">Launch your café</span>
-            <ArrowRight className="relative z-10 h-4 w-4 transition group-hover:translate-x-1" />
-            <span className="absolute inset-0 -z-0 animate-shimmer" />
-          </Link>
-          <a
-            href="#features"
-            className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/40 px-6 py-3.5 text-sm font-semibold backdrop-blur transition hover:border-primary/50 hover:bg-background/60"
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+            </span>
+            <span>Live in 12 Indian cities · Onboarding cafés daily</span>
+          </motion.div>
+
+          <motion.h1
+            initial="hidden" animate="visible" custom={1} variants={fadeUp}
+            className="mt-6 font-display font-extrabold leading-[0.92] tracking-[-0.045em] text-[3rem] sm:text-[4.5rem] xl:text-[6rem]"
           >
-            Explore the OS
-          </a>
-        </motion.div>
+            <span className="block text-foreground/95">The OS that runs</span>
+            <span className="relative block">
+              <span className="text-gradient-hot">India's arcades.</span>
+              <span className="absolute -bottom-1 left-0 h-1 w-[55%] rounded-full bg-gradient-to-r from-primary via-magenta to-transparent blur-[2px]" />
+            </span>
+          </motion.h1>
 
-        {/* Floating brand mark */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.7, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-          className="relative mx-auto mt-16 h-56 w-56 sm:h-72 sm:w-72"
-        >
-          <div className="absolute inset-0 rounded-full blur-3xl opacity-60" style={{ background: "var(--gradient-brand-hot)" }} />
-          <img src={glowAsset.url} alt="" className="relative h-full w-full object-contain animate-float" aria-hidden />
-        </motion.div>
+          <motion.p
+            initial="hidden" animate="visible" custom={2} variants={fadeUp}
+            className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg"
+          >
+            Live sessions. Per-minute billing. Bookings, memberships, devices, analytics —
+            collapsed into one ridiculously fast console you can run from a phone.
+          </motion.p>
 
-        {/* Live ops widget */}
+          <motion.div
+            initial="hidden" animate="visible" custom={3} variants={fadeUp}
+            className="mt-9 flex flex-wrap items-center gap-3"
+          >
+            <Link
+              to="/auth"
+              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl px-7 py-3.5 text-sm font-semibold text-primary-foreground glow-violet"
+              style={{ background: "var(--gradient-brand-hot)" }}
+            >
+              <span className="relative z-10">Launch your café</span>
+              <ArrowRight className="relative z-10 h-4 w-4 transition group-hover:translate-x-1" />
+              <span className="absolute inset-0 -z-0 animate-shimmer" />
+            </Link>
+            <a
+              href="#features"
+              className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/40 px-6 py-3.5 text-sm font-semibold backdrop-blur transition hover:border-primary/50 hover:bg-background/60"
+            >
+              Explore the OS
+            </a>
+          </motion.div>
+
+          {/* Trust / proof strip */}
+          <motion.div
+            initial="hidden" animate="visible" custom={4} variants={fadeUp}
+            className="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-border/40 pt-6"
+          >
+            {[
+              { v: "50k+", l: "sessions" },
+              { v: "₹2.4 Cr", l: "processed" },
+              { v: "99.9%", l: "uptime" },
+            ].map((k) => (
+              <div key={k.l}>
+                <div className="font-display text-2xl font-extrabold text-gradient">{k.v}</div>
+                <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{k.l}</div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* RIGHT — 3D console mockup */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9, duration: 0.8 }}
-          className="relative mx-auto mt-12 max-w-4xl"
+          initial={{ opacity: 0, y: 40, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.4, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          className="relative"
         >
-          <div className="border-conic glass-strong rounded-2xl p-2">
-            <div className="rounded-xl bg-background/70 p-5 sm:p-7">
-              <div className="mb-4 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Activity className="h-3 w-3 text-primary" /> Live · Mumbai · Andheri W
-                </div>
-                <div className="font-mono">UPDATED 00:01s</div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-4">
-                {[
-                  { label: "Active sessions", value: 24, icon: Cpu, c: "text-violet" },
-                  { label: "Today's revenue", value: 18420, icon: IndianRupee, c: "text-magenta", prefix: "₹" },
-                  { label: "Devices online", value: 30, icon: Wifi, c: "text-azure", suffix: "/30" },
-                  { label: "Avg. session", value: 92, icon: Clock, c: "text-primary", suffix: "m" },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-lg border border-border/40 bg-card/40 p-3.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{s.label}</span>
-                      <s.icon className={`h-3.5 w-3.5 ${s.c}`} />
-                    </div>
-                    <div className={`mt-2 font-mono text-2xl font-bold ${s.c}`}>
-                      <AnimatedNumber value={s.value} prefix={s.prefix} suffix={s.suffix} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <ConsoleMockup />
+          {/* Floating annotations */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1.1 }}
+            className="absolute -left-2 top-1/3 hidden rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-300 backdrop-blur xl:flex"
+          >
+            ◉ realtime · 60fps
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1.3 }}
+            className="absolute -right-2 bottom-12 hidden rounded-full border border-fuchsia-400/40 bg-fuchsia-400/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-200 backdrop-blur xl:flex"
+          >
+            ⏵ ₹ per-minute billing
+          </motion.div>
         </motion.div>
       </div>
     </section>
   );
 }
+
+function Cinematic() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const y1 = useTransform(scrollYProgress, [0, 1], [60, -60]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [120, -120]);
+  const rot = useTransform(scrollYProgress, [0, 1], [-6, 6]);
+  const blur = useTransform(scrollYProgress, [0, 0.5, 1], [8, 0, 8]);
+  const filter = useTransform(blur, (b) => `blur(${b}px)`);
+
+  return (
+    <section ref={ref} className="relative overflow-hidden py-32">
+      <div className="pointer-events-none absolute inset-0 grid-arcade opacity-30" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-magenta/40 to-transparent" />
+
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+        <motion.div style={{ y: y2 }} className="absolute -left-10 top-10 hidden h-40 w-40 rounded-full bg-violet/30 blur-3xl md:block" />
+        <motion.div style={{ y: y1 }} className="absolute -right-10 bottom-10 hidden h-56 w-56 rounded-full bg-magenta/30 blur-3xl md:block" />
+
+        <motion.div style={{ filter, rotate: rot }} className="text-center">
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Chapter 01</div>
+          <h2 className="mt-4 font-display text-5xl font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-7xl md:text-[8rem]">
+            <span className="block text-foreground/90">Built like</span>
+            <span className="block text-gradient-hot">an arcade.</span>
+            <span className="block text-foreground/40">Runs like a bank.</span>
+          </h2>
+          <p className="mx-auto mt-8 max-w-2xl text-muted-foreground sm:text-lg">
+            CoreCade is the operating system underneath every PC, console, controller and
+            QR-code in your café. One backend. One source of truth. Zero spreadsheets.
+          </p>
+        </motion.div>
+
+        {/* Marquee accent */}
+        <motion.div
+          style={{ y: y1 }}
+          className="mt-16 flex w-full justify-between font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground"
+        >
+          {["per-minute billing", "live floor map", "wallet + UPI", "rls secured", "60fps everywhere"].map((t) => (
+            <span key={t} className="hidden md:inline">◉ {t}</span>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+
 
 function Marquee() {
   const items = [
@@ -347,63 +392,42 @@ function Pricing() {
 }
 
 function Contact() {
-  const submit = useServerFn(submitContact);
-  const [loading, setLoading] = useState(false);
-
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    setLoading(true);
-    try {
-      await submit({
-        data: {
-          name: String(fd.get("name") ?? ""),
-          email: String(fd.get("email") ?? ""),
-          phone: String(fd.get("phone") ?? "") || null,
-          message: String(fd.get("message") ?? ""),
-        },
-      });
-      toast.success("Message sent — we'll get back within 24 hours.");
-      e.currentTarget.reset();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <section id="contact" className="relative px-4 py-28 sm:px-6">
-      <div className="mx-auto grid max-w-5xl gap-12 md:grid-cols-2">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-1/2 h-[480px] w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl opacity-30" style={{ background: "var(--gradient-brand-hot)" }} />
+      </div>
+      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
         <div>
-          <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl">Let's talk.</h2>
-          <p className="mt-4 text-muted-foreground">
-            Running a café? Thinking of opening one? Drop us a line — humans reply within 24 hours, IST.
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/5 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-emerald-300 backdrop-blur">
+            <Terminal className="h-3 w-3" /> direct line · encrypted
+          </div>
+          <h2 className="mt-5 font-display text-5xl font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-7xl">
+            Open a <span className="text-gradient-hot">socket</span> to us.
+          </h2>
+          <p className="mt-5 max-w-md text-muted-foreground sm:text-lg">
+            No forms. No funnels. A live shell straight to the team that builds CoreCade.
+            Type, hit <span className="font-mono text-emerald-300">[enter]</span>, then
+            <span className="font-mono text-emerald-300"> :send</span> to transmit.
           </p>
-          <div className="mt-8 space-y-3 text-sm">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-muted-foreground">Online · Mon–Sat 10am–8pm IST</span>
+          <div className="mt-8 space-y-3 font-mono text-xs">
+            <div className="flex items-center gap-3 text-emerald-300">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              </span>
+              ● connected · Mon–Sat · 10:00–20:00 IST
             </div>
+            <div className="text-muted-foreground">↳ avg first reply 4h 12m</div>
+            <div className="text-muted-foreground">↳ humans only, no autoresponders</div>
           </div>
         </div>
-        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur">
-          <Input name="name" placeholder="Your name" required maxLength={120} className="h-12" />
-          <Input name="email" type="email" placeholder="Email" required maxLength={200} className="h-12" />
-          <Input name="phone" placeholder="Phone (optional)" maxLength={20} className="h-12" />
-          <Textarea name="message" placeholder="What are you building?" rows={4} required maxLength={2000} />
-          <Button
-            type="submit" disabled={loading}
-            className="h-12 w-full text-base font-semibold text-primary-foreground glow-violet"
-            style={{ background: "var(--gradient-brand-hot)" }}
-          >
-            {loading ? "Sending…" : "Send message"}
-          </Button>
-        </form>
+        <TerminalContact />
       </div>
     </section>
   );
 }
+
 
 function Footer() {
   return (
