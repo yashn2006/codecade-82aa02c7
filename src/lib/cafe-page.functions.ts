@@ -60,6 +60,13 @@ export const updateCafePage = createServerFn({ method: "POST" })
       hours: z.record(z.string(), z.string()).optional(),
       socials: z.record(z.string(), z.string()).optional(),
       gallery: z.array(z.string().url()).optional(),
+      theme: z.object({
+        accent: z.string().max(20).optional(),
+        bg: z.string().max(20).optional(),
+        font: z.string().max(40).optional(),
+        mode: z.enum(["dark", "neon", "minimal", "arcade"]).optional(),
+      }).optional(),
+      map_url: z.string().url().max(800).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
