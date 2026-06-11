@@ -37,16 +37,17 @@ function ConfigPanel() {
 
   useEffect(() => {
     if (q.data) {
+      const d = q.data as Partial<Cfg>;
       setC({
-        platform_fee_pct: Number(q.data.platform_fee_pct ?? 0),
-        default_tax_pct: Number(q.data.default_tax_pct ?? 0),
-        currency: q.data.currency ?? "INR",
-        support_email: q.data.support_email ?? null,
-        support_phone: q.data.support_phone ?? null,
-        brand_name: q.data.brand_name ?? null,
-        brand_tagline: q.data.brand_tagline ?? null,
-        signup_enabled: q.data.signup_enabled ?? true,
-        new_cafes_require_approval: q.data.new_cafes_require_approval ?? false,
+        platform_fee_pct: Number(d.platform_fee_pct ?? 0),
+        default_tax_pct: Number(d.default_tax_pct ?? 0),
+        currency: d.currency ?? "INR",
+        support_email: d.support_email ?? null,
+        support_phone: d.support_phone ?? null,
+        brand_name: d.brand_name ?? null,
+        brand_tagline: d.brand_tagline ?? null,
+        signup_enabled: d.signup_enabled ?? true,
+        new_cafes_require_approval: d.new_cafes_require_approval ?? false,
       });
     }
   }, [q.data]);
