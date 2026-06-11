@@ -184,9 +184,11 @@ function POSPage() {
             <label className="text-xs text-muted-foreground">Attach session (optional)</label>
             <select value={sessionId} onChange={(e) => setSessionId(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
               <option value="">None</option>
-              {activeSessions.map((s: { id: string; devices: { name: string } | null; customers: { full_name: string } | null }) => (
-                <option key={s.id} value={s.id}>{s.devices?.name ?? "—"} · {s.customers?.full_name ?? "Walk-in"}</option>
-              ))}
+              {activeSessions.map((s) => {
+                const dev = Array.isArray(s.devices) ? s.devices[0] : s.devices;
+                const cus = Array.isArray(s.customers) ? s.customers[0] : s.customers;
+                return <option key={s.id} value={s.id}>{dev?.name ?? "—"} · {cus?.full_name ?? "Walk-in"}</option>;
+              })}
             </select>
           </div>
           <div className="space-y-1">
