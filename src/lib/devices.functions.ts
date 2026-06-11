@@ -12,6 +12,11 @@ const DeviceInput = z.object({
   hourly_rate: z.number().int().min(0).max(100000),
   status: z.enum(DEVICE_STATUSES).optional(),
   notes: z.string().max(280).nullable().optional(),
+  pos_x: z.number().int().min(0).max(60).nullable().optional(),
+  pos_y: z.number().int().min(0).max(60).nullable().optional(),
+  zone: z.string().max(40).nullable().optional(),
+  zone_color: z.string().max(20).nullable().optional(),
+  specs: z.record(z.string(), z.any()).nullable().optional(),
 });
 
 export const listDevices = createServerFn({ method: "GET" })
