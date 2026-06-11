@@ -12,7 +12,7 @@ export const seedSuperAdmin = createServerFn({ method: "POST" }).handler(async (
     email: SUPER_ADMIN_EMAIL,
     password: SUPER_ADMIN_PASSWORD,
     email_confirm: true,
-    user_metadata: { full_name: "Giganexa Super Admin" },
+    user_metadata: { full_name: "CoreCade Super Admin" },
   });
 
   if (createErr) {

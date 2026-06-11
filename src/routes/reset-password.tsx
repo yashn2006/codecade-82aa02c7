@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({ meta: [{ title: "Reset password — Giganexa" }] }),
+  head: () => ({ meta: [{ title: "Reset password — CoreCade" }] }),
   component: ResetPassword,
 });
 
@@ -41,7 +41,7 @@ function ResetPassword() {
           <Label htmlFor="password">New password</Label>
           <Input id="password" name="password" type="password" minLength={8} required className="h-12" />
         </div>
-        <Button type="submit" disabled={loading} className="w-full h-12 bg-gradient-to-r from-cyan to-magenta text-primary-foreground glow-cyan font-semibold">
+        <Button type="submit" disabled={loading} className="w-full h-12 bg-gradient-to-r from-violet via-primary to-azure text-primary-foreground glow-violet font-semibold">
           {loading ? "Updating…" : "Update password"}
         </Button>
       </form>
