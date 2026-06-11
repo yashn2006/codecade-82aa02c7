@@ -3,20 +3,22 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
-import { Plus, Building2, Power, PowerOff, Lock, Unlock, Wrench } from "lucide-react";
+import { Plus, Building2, Power, PowerOff, Lock, Unlock, Wrench, MoreHorizontal, Trash2, ExternalLink, LayoutDashboard, Cpu, CalendarClock, Users as UsersIcon, ShoppingBag, Wallet, Receipt, UserCog, Utensils, Map as MapIcon, BadgePercent, Trophy, FileEdit, BarChart3 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { listAllCafes, setCafeRestriction } from "@/lib/admin.functions";
+import { listAllCafes, setCafeRestriction, deleteCafe, cafeDeepStats } from "@/lib/admin.functions";
 import { createCafe, toggleCafeActive } from "@/lib/cafes.functions";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { isMaintenanceActive } from "@/lib/maintenance";
+
 
 export const Route = createFileRoute("/_authenticated/admin/cafes")({
   component: CafesPanel,
