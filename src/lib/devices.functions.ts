@@ -100,3 +100,22 @@ export const setDeviceStatus = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Fast drag-and-drop placement on the floor builder grid. */
+export const placeDevice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      pos_x: z.number().int().min(0).max(60).nullable(),
+      pos_y: z.number().int().min(0).max(60).nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("devices")
+      .update({ pos_x: data.pos_x, pos_y: data.pos_y })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
