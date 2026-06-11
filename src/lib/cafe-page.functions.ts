@@ -10,7 +10,7 @@ export const getPublicCafe = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: cafe, error } = await supabaseAdmin
       .from("cafes")
-      .select("id, slug, name, city, state, address, phone, email, description, logo_url, cover_url, maintenance_starts_at, maintenance_ends_at, maintenance_message")
+      .select("id, slug, name, city, state, address, phone, email, description, logo_url, cover_url, latitude, longitude, gst_no, maintenance_starts_at, maintenance_ends_at, maintenance_message")
       .eq("slug", data.slug)
       .eq("is_active", true)
       .maybeSingle();
