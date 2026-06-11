@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useServerFn } from "@tanstack/react-start";
 import { submitContact } from "@/lib/contact.functions";
 import { toast } from "sonner";
+import { Loader2, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 
 type Field = "name" | "email" | "phone" | "message";
 const FIELDS: { key: Field; label: string; type: string; required: boolean; placeholder: string }[] = [
@@ -23,6 +24,7 @@ export function TerminalContact() {
   const [values, setValues] = useState<Record<Field, string>>({ name: "", email: "", phone: "", message: "" });
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [boot, setBoot] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
