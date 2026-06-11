@@ -24,7 +24,6 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/analytics")({
       { property: "og:description", content: "Activity feed, attendance heatmap and session quality." },
     ],
   }),
-  head: () => ({ meta: [{ title: "Analytics — Café Console" }] }),
   component: AnalyticsPage,
 });
 

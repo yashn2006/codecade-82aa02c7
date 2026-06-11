@@ -20,7 +20,6 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug")({
       { property: "og:description", content: "Your CoreCade café command center." },
     ],
   }),
-  head: () => ({ meta: [{ title: "Café Console — CoreCade" }] }),
   component: CafeLayout,
 });
 
