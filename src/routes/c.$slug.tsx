@@ -7,6 +7,8 @@ import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup } from "@/components/Brand";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
+import { isMaintenanceActive } from "@/lib/maintenance";
 
 export const Route = createFileRoute("/c/$slug")({
   head: ({ params }) => ({
@@ -45,11 +47,17 @@ function PublicCafePage() {
     </div>
   );
 
-  const { cafe, page, devices, menu, tournaments, activeDeviceIds } = data;
+  const { cafe, page, devices, menu, tournaments, activeDeviceIds, platform } = data;
   const freeCount = devices.filter((d) => !activeDeviceIds.includes(d.id) && d.status !== "maintenance").length;
   const heroUrl = page?.hero_url ?? cafe.cover_url;
   const social = (page?.socials ?? {}) as Record<string, string>;
   const gallery = (page?.gallery ?? []) as string[];
+  const cafeMaint = {
+    starts_at: (cafe as { maintenance_starts_at?: string | null }).maintenance_starts_at ?? null,
+    ends_at: (cafe as { maintenance_ends_at?: string | null }).maintenance_ends_at ?? null,
+    message: (cafe as { maintenance_message?: string | null }).maintenance_message ?? null,
+  };
+  const inMaintenance = isMaintenanceActive(cafeMaint) || isMaintenanceActive(platform);
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -63,6 +71,11 @@ function PublicCafePage() {
           </div>
         </div>
       </header>
+
+      <div className="mx-auto mt-4 max-w-6xl space-y-3 px-4">
+        <MaintenanceBanner window={platform} title="CoreCade network maintenance" />
+        <MaintenanceBanner window={cafeMaint} title={`${cafe.name} is in maintenance`} />
+      </div>
 
       {/* HERO */}
       <section className="relative mx-auto mt-6 max-w-6xl px-4">
