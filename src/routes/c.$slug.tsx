@@ -62,8 +62,8 @@ function PublicCafePage() {
   const inMaintenance = isMaintenanceActive(cafeMaint) || isMaintenanceActive(platform);
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <AuroraBackground />
+    <div className="relative min-h-screen overflow-hidden" style={theme.bg ? { background: `radial-gradient(circle at 50% -10%, ${theme.accent}33, transparent 50%), ${theme.bg}` } : undefined}>
+      {!theme.bg && <AuroraBackground />}
 
       <header className="sticky top-0 z-30">
         <div className="mx-auto mt-3 max-w-6xl px-4">
