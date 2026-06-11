@@ -215,6 +215,15 @@ function PublicCafePage() {
         </div>
       </section>
 
+      {mapUrl && (
+        <section className="mx-auto mt-12 max-w-6xl px-4">
+          <h2 className="font-display text-2xl font-bold">Find us</h2>
+          <div className="mt-4 overflow-hidden rounded-2xl border border-border/60">
+            <iframe src={mapUrl} className="aspect-[21/9] w-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={`${cafe.name} on map`} />
+          </div>
+        </section>
+      )}
+
       <footer className="mx-auto mt-16 max-w-6xl px-4 py-10 text-center text-xs text-muted-foreground">
         Powered by <span className="text-gradient font-semibold">CoreCade</span>
       </footer>
