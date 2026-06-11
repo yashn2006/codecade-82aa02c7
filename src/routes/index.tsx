@@ -302,8 +302,13 @@ function FeatureCard({
   const sy = useSpring(my, { stiffness: 120, damping: 16 });
   const rotY = useTransform(sx, [-1, 1], [-12, 12]);
   const rotX = useTransform(sy, [-1, 1], [10, -10]);
-  const glowX = useTransform(sx, [-1, 1], ["0%", "100%"]);
-  const glowY = useTransform(sy, [-1, 1], ["0%", "100%"]);
+  const glowX = useTransform(sx, [-1, 1], [0, 100]);
+  const glowY = useTransform(sy, [-1, 1], [0, 100]);
+  const spotlight = useTransform(
+    [glowX, glowY] as never,
+    ([x, y]: number[]) =>
+      `radial-gradient(280px circle at ${x}% ${y}%, ${feature.accent}, transparent 60%)`,
+  );
 
   function onMove(e: React.MouseEvent) {
     const el = ref.current;
