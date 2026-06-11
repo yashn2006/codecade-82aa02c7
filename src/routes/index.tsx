@@ -358,11 +358,7 @@ function FeatureCard({
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
             style={{
-              background: useTransform(
-                [glowX, glowY] as never,
-                ([x, y]: [string, string]) =>
-                  `radial-gradient(280px circle at ${x} ${y}, ${feature.accent}, transparent 60%)`,
-              ),
+              background: spotlight,
               mixBlendMode: "screen",
             }}
           />
