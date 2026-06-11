@@ -16,7 +16,7 @@ ALTER TABLE public.platform_settings
 -- 2) Helper: per-user activity summary (super-admin only via server fn)
 CREATE OR REPLACE FUNCTION public.user_activity_summary(_user_id uuid)
 RETURNS jsonb
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
