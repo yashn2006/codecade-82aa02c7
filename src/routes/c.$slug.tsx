@@ -52,6 +52,8 @@ function PublicCafePage() {
   const heroUrl = page?.hero_url ?? cafe.cover_url;
   const social = (page?.socials ?? {}) as Record<string, string>;
   const gallery = (page?.gallery ?? []) as string[];
+  const theme = (page?.theme ?? {}) as { accent?: string; bg?: string; mode?: string };
+  const mapUrl = (page?.map_url ?? null) as string | null;
   const cafeMaint = {
     starts_at: (cafe as { maintenance_starts_at?: string | null }).maintenance_starts_at ?? null,
     ends_at: (cafe as { maintenance_ends_at?: string | null }).maintenance_ends_at ?? null,
