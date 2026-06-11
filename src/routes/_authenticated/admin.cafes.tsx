@@ -149,10 +149,20 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
   const qc = useQueryClient();
   const toggle = useServerFn(toggleCafeActive);
   const restrict = useServerFn(setCafeRestriction);
+  const del = useServerFn(deleteCafe);
+  const statsFn = useServerFn(cafeDeepStats);
   const [restrictOpen, setRestrictOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const stats = useQuery({
+    queryKey: ["cafe-deep-stats", cafe.id],
+    queryFn: () => statsFn({ data: { cafe_id: cafe.id } }),
+    enabled: statsOpen,
+  });
   const tM = useMutation({
     mutationFn: toggle,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-cafes"] }); qc.invalidateQueries({ queryKey: ["admin-overview"] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const rM = useMutation({
     mutationFn: restrict,
@@ -161,6 +171,17 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
       qc.invalidateQueries({ queryKey: ["admin-cafes"] });
       setRestrictOpen(false);
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const dM = useMutation({
+    mutationFn: del,
+    onSuccess: () => {
+      toast.success("Café deleted");
+      qc.invalidateQueries({ queryKey: ["admin-cafes"] });
+      qc.invalidateQueries({ queryKey: ["admin-overview"] });
+      setConfirmDelete(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const isRestricted = !!cafe.restricted_message;
   const maintWindow = {
@@ -169,6 +190,23 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
     message: cafe.maintenance_message,
   };
   const inMaintenance = isMaintenanceActive(maintWindow);
+
+  const consolePages = [
+    { to: "/cafe/$slug", label: "Overview", icon: LayoutDashboard },
+    { to: "/cafe/$slug/devices", label: "Devices", icon: Cpu },
+    { to: "/cafe/$slug/floor", label: "Floor map", icon: MapIcon },
+    { to: "/cafe/$slug/bookings", label: "Bookings", icon: CalendarClock },
+    { to: "/cafe/$slug/customers", label: "Customers", icon: UsersIcon },
+    { to: "/cafe/$slug/pos", label: "POS", icon: ShoppingBag },
+    { to: "/cafe/$slug/ledger", label: "Ledger", icon: Receipt },
+    { to: "/cafe/$slug/wallet", label: "Wallet", icon: Wallet },
+    { to: "/cafe/$slug/menu", label: "Menu", icon: Utensils },
+    { to: "/cafe/$slug/memberships", label: "Memberships", icon: BadgePercent },
+    { to: "/cafe/$slug/tournaments", label: "Tournaments", icon: Trophy },
+    { to: "/cafe/$slug/staff", label: "Staff", icon: UserCog },
+    { to: "/cafe/$slug/page", label: "Public page", icon: FileEdit },
+  ] as const;
+
 
   return (
     <motion.div
