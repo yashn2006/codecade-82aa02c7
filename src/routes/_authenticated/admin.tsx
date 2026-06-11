@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
-  Shield, Users, Building2, FileText, Activity, Plus, Search, Check, X, Trash2,
+  Shield, Users, Building2, FileText, Activity, Plus, Search, Check, X,
 } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { StatCard } from "@/components/StatCard";

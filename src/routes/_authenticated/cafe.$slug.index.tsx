@@ -249,11 +249,7 @@ function Stat({ label, value, accent, hint }: { label: string; value: number | s
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { variant: "default" | "secondary" | "outline" | "destructive"; label: string }> = {
-    available: { variant: "outline", label: "Free" },
-    in_use: { variant: "default", label: "In use" },
-    maintenance: { variant: "secondary", label: <Wrench className="h-3 w-3 inline" /> as unknown as string },
-  };
-  const s = map[status] ?? map.available;
-  return <Badge variant={s.variant}>{s.label}</Badge>;
+  if (status === "in_use") return <Badge>In use</Badge>;
+  if (status === "maintenance") return <Badge variant="secondary"><Wrench className="h-3 w-3" /></Badge>;
+  return <Badge variant="outline">Free</Badge>;
 }
