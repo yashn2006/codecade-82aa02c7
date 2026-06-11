@@ -12,6 +12,11 @@ const DeviceInput = z.object({
   hourly_rate: z.number().int().min(0).max(100000),
   status: z.enum(DEVICE_STATUSES).optional(),
   notes: z.string().max(280).nullable().optional(),
+  pos_x: z.number().int().min(0).max(60).nullable().optional(),
+  pos_y: z.number().int().min(0).max(60).nullable().optional(),
+  zone: z.string().max(40).nullable().optional(),
+  zone_color: z.string().max(20).nullable().optional(),
+  specs: z.record(z.string(), z.any()).nullable().optional(),
 });
 
 export const listDevices = createServerFn({ method: "GET" })
@@ -92,6 +97,25 @@ export const setDeviceStatus = createServerFn({ method: "POST" })
     }
     if (data.notes !== undefined) patch.notes = data.notes;
     const { error } = await context.supabase.from("devices").update(patch).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Fast drag-and-drop placement on the floor builder grid. */
+export const placeDevice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      pos_x: z.number().int().min(0).max(60).nullable(),
+      pos_y: z.number().int().min(0).max(60).nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("devices")
+      .update({ pos_x: data.pos_x, pos_y: data.pos_y })
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

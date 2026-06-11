@@ -27,6 +27,7 @@ import { Route as AuthenticatedCafeSlugPageRouteImport } from './routes/_authent
 import { Route as AuthenticatedCafeSlugMenuRouteImport } from './routes/_authenticated/cafe.$slug.menu'
 import { Route as AuthenticatedCafeSlugMembershipsRouteImport } from './routes/_authenticated/cafe.$slug.memberships'
 import { Route as AuthenticatedCafeSlugLedgerRouteImport } from './routes/_authenticated/cafe.$slug.ledger'
+import { Route as AuthenticatedCafeSlugFloorRouteImport } from './routes/_authenticated/cafe.$slug.floor'
 import { Route as AuthenticatedCafeSlugDevicesRouteImport } from './routes/_authenticated/cafe.$slug.devices'
 import { Route as AuthenticatedCafeSlugCustomersRouteImport } from './routes/_authenticated/cafe.$slug.customers'
 import { Route as AuthenticatedCafeSlugBookingsRouteImport } from './routes/_authenticated/cafe.$slug.bookings'
@@ -129,6 +130,12 @@ const AuthenticatedCafeSlugLedgerRoute =
     path: '/ledger',
     getParentRoute: () => AuthenticatedCafeSlugRoute,
   } as any)
+const AuthenticatedCafeSlugFloorRoute =
+  AuthenticatedCafeSlugFloorRouteImport.update({
+    id: '/floor',
+    path: '/floor',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
 const AuthenticatedCafeSlugDevicesRoute =
   AuthenticatedCafeSlugDevicesRouteImport.update({
     id: '/devices',
@@ -160,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
+  '/cafe/$slug/floor': typeof AuthenticatedCafeSlugFloorRoute
   '/cafe/$slug/ledger': typeof AuthenticatedCafeSlugLedgerRoute
   '/cafe/$slug/memberships': typeof AuthenticatedCafeSlugMembershipsRoute
   '/cafe/$slug/menu': typeof AuthenticatedCafeSlugMenuRoute
@@ -181,6 +189,7 @@ export interface FileRoutesByTo {
   '/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
+  '/cafe/$slug/floor': typeof AuthenticatedCafeSlugFloorRoute
   '/cafe/$slug/ledger': typeof AuthenticatedCafeSlugLedgerRoute
   '/cafe/$slug/memberships': typeof AuthenticatedCafeSlugMembershipsRoute
   '/cafe/$slug/menu': typeof AuthenticatedCafeSlugMenuRoute
@@ -205,6 +214,7 @@ export interface FileRoutesById {
   '/_authenticated/cafe/$slug/bookings': typeof AuthenticatedCafeSlugBookingsRoute
   '/_authenticated/cafe/$slug/customers': typeof AuthenticatedCafeSlugCustomersRoute
   '/_authenticated/cafe/$slug/devices': typeof AuthenticatedCafeSlugDevicesRoute
+  '/_authenticated/cafe/$slug/floor': typeof AuthenticatedCafeSlugFloorRoute
   '/_authenticated/cafe/$slug/ledger': typeof AuthenticatedCafeSlugLedgerRoute
   '/_authenticated/cafe/$slug/memberships': typeof AuthenticatedCafeSlugMembershipsRoute
   '/_authenticated/cafe/$slug/menu': typeof AuthenticatedCafeSlugMenuRoute
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/cafe/$slug/bookings'
     | '/cafe/$slug/customers'
     | '/cafe/$slug/devices'
+    | '/cafe/$slug/floor'
     | '/cafe/$slug/ledger'
     | '/cafe/$slug/memberships'
     | '/cafe/$slug/menu'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/cafe/$slug/bookings'
     | '/cafe/$slug/customers'
     | '/cafe/$slug/devices'
+    | '/cafe/$slug/floor'
     | '/cafe/$slug/ledger'
     | '/cafe/$slug/memberships'
     | '/cafe/$slug/menu'
@@ -273,6 +285,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cafe/$slug/bookings'
     | '/_authenticated/cafe/$slug/customers'
     | '/_authenticated/cafe/$slug/devices'
+    | '/_authenticated/cafe/$slug/floor'
     | '/_authenticated/cafe/$slug/ledger'
     | '/_authenticated/cafe/$slug/memberships'
     | '/_authenticated/cafe/$slug/menu'
@@ -421,6 +434,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCafeSlugLedgerRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
     }
+    '/_authenticated/cafe/$slug/floor': {
+      id: '/_authenticated/cafe/$slug/floor'
+      path: '/floor'
+      fullPath: '/cafe/$slug/floor'
+      preLoaderRoute: typeof AuthenticatedCafeSlugFloorRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
     '/_authenticated/cafe/$slug/devices': {
       id: '/_authenticated/cafe/$slug/devices'
       path: '/devices'
@@ -449,6 +469,7 @@ interface AuthenticatedCafeSlugRouteChildren {
   AuthenticatedCafeSlugBookingsRoute: typeof AuthenticatedCafeSlugBookingsRoute
   AuthenticatedCafeSlugCustomersRoute: typeof AuthenticatedCafeSlugCustomersRoute
   AuthenticatedCafeSlugDevicesRoute: typeof AuthenticatedCafeSlugDevicesRoute
+  AuthenticatedCafeSlugFloorRoute: typeof AuthenticatedCafeSlugFloorRoute
   AuthenticatedCafeSlugLedgerRoute: typeof AuthenticatedCafeSlugLedgerRoute
   AuthenticatedCafeSlugMembershipsRoute: typeof AuthenticatedCafeSlugMembershipsRoute
   AuthenticatedCafeSlugMenuRoute: typeof AuthenticatedCafeSlugMenuRoute
@@ -464,6 +485,7 @@ const AuthenticatedCafeSlugRouteChildren: AuthenticatedCafeSlugRouteChildren = {
   AuthenticatedCafeSlugBookingsRoute: AuthenticatedCafeSlugBookingsRoute,
   AuthenticatedCafeSlugCustomersRoute: AuthenticatedCafeSlugCustomersRoute,
   AuthenticatedCafeSlugDevicesRoute: AuthenticatedCafeSlugDevicesRoute,
+  AuthenticatedCafeSlugFloorRoute: AuthenticatedCafeSlugFloorRoute,
   AuthenticatedCafeSlugLedgerRoute: AuthenticatedCafeSlugLedgerRoute,
   AuthenticatedCafeSlugMembershipsRoute: AuthenticatedCafeSlugMembershipsRoute,
   AuthenticatedCafeSlugMenuRoute: AuthenticatedCafeSlugMenuRoute,

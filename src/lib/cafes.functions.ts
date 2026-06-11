@@ -126,6 +126,8 @@ export const updateCafe = createServerFn({ method: "POST" })
         email: z.string().max(200).optional().nullable(),
         description: z.string().max(1000).optional().nullable(),
         is_active: z.boolean().optional(),
+        floor_cols: z.number().int().min(4).max(40).optional(),
+        floor_rows: z.number().int().min(3).max(30).optional(),
       }),
     }).parse(d),
   )
