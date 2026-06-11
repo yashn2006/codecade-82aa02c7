@@ -67,12 +67,14 @@ function CafesPanel() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">{cafes.length} cafés on network</div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
-              <Plus className="h-4 w-4" /> Onboard café
-            </Button>
-          </DialogTrigger>
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButton kind="cafes" />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+                <Plus className="h-4 w-4" /> Onboard café
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader><DialogTitle>Onboard a café</DialogTitle></DialogHeader>
             <form
