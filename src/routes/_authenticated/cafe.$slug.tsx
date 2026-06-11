@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
-import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail } from "lucide-react";
+import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
@@ -29,6 +29,7 @@ function CafeLayout() {
       nav={[
         { label: "Live floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
         { label: "Floor builder", icon: LayoutGrid, to: "/cafe/$slug/floor", params: { slug } },
+        { label: "Menu", icon: UtensilsCrossed, to: "/cafe/$slug/menu", params: { slug } },
         { label: "POS counter", icon: Receipt, to: "/cafe/$slug/pos", params: { slug } },
         { label: "Devices", icon: Cpu, to: "/cafe/$slug/devices", params: { slug } },
         { label: "Bookings", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug } },

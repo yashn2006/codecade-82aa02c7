@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -104,7 +104,20 @@ function POSPage() {
           ))}
         </div>
         {items.length === 0 ? (
-          <div className="mt-6"><EmptyState icon={Receipt} title="No items" description="Add items in the Menu tab." /></div>
+          <div className="mt-6">
+            <EmptyState
+              icon={Receipt}
+              title={menuQ.isLoading ? "Loading menu…" : "No items yet"}
+              description="Add categories and items in the Menu tab to start selling at POS."
+              action={
+                <Link to="/cafe/$slug/menu" params={{ slug }}>
+                  <Button style={{ background: "var(--gradient-brand-hot)" }} className="gap-2">
+                    <Plus className="h-4 w-4" /> Go to Menu
+                  </Button>
+                </Link>
+              }
+            />
+          </div>
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {items.map((it) => {
