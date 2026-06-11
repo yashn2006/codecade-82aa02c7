@@ -237,7 +237,7 @@ function CafesPanel() {
           />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {data.map((c, i) => <CafeAdminCard key={c.id} cafe={c} index={i} />)}
+            {data.map((c, i) => <CafeAdminCard key={c.id} cafe={c as Parameters<typeof CafeAdminCard>[0]["cafe"]} index={i} />)}
           </div>
         )}
       </div>
