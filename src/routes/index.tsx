@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import { useRef } from "react";
 import {
   Zap, Shield, BarChart3, Users, Cpu, ArrowRight, Check,
@@ -255,15 +255,16 @@ function Marquee() {
 
 function Features() {
   const items = [
-    { icon: Zap, title: "Real-time sessions", desc: "Track every PC live. Auto-bill by the minute. Pause, resume, transfer in one tap.", c: "violet" },
-    { icon: Cpu, title: "Device manager", desc: "Remote lock, push updates, monitor specs, uptime, health — all from one console.", c: "azure" },
-    { icon: Users, title: "Memberships & wallets", desc: "Hour packs, monthly passes, referrals, loyalty. Designed for repeat gamers.", c: "magenta" },
-    { icon: BarChart3, title: "Analytics that matter", desc: "Peak hours. Top games. Customer retention. India-first metrics, not vanity charts.", c: "violet" },
-    { icon: Shield, title: "Staff permissions", desc: "Granular role control. Owner sees everything. Staff sees only what they need.", c: "azure" },
-    { icon: Activity, title: "Mobile portal", desc: "Customers book from their phone. Owners run the floor from theirs. PWA-ready.", c: "magenta" },
+    { icon: Zap, title: "Real-time sessions", desc: "Track every PC live. Auto-bill by the minute. Pause, resume, transfer in one tap.", c: "violet", tag: "01 / live", accent: "oklch(0.7 0.22 285)" },
+    { icon: Cpu, title: "Device manager", desc: "Remote lock, push updates, monitor specs, uptime, health — all from one console.", c: "azure", tag: "02 / fleet", accent: "oklch(0.78 0.18 220)" },
+    { icon: Users, title: "Memberships & wallets", desc: "Hour packs, monthly passes, referrals, loyalty. Designed for repeat gamers.", c: "magenta", tag: "03 / loyalty", accent: "oklch(0.7 0.26 335)" },
+    { icon: BarChart3, title: "Analytics that matter", desc: "Peak hours. Top games. Customer retention. India-first metrics, not vanity charts.", c: "violet", tag: "04 / signal", accent: "oklch(0.7 0.22 285)" },
+    { icon: Shield, title: "Staff permissions", desc: "Granular role control. Owner sees everything. Staff sees only what they need.", c: "azure", tag: "05 / vault", accent: "oklch(0.78 0.18 220)" },
+    { icon: Activity, title: "Mobile portal", desc: "Customers book from their phone. Owners run the floor from theirs. PWA-ready.", c: "magenta", tag: "06 / pocket", accent: "oklch(0.7 0.26 335)" },
   ];
   return (
     <section id="features" className="relative px-4 py-28 sm:px-6">
+      <div className="pointer-events-none absolute inset-0 -z-10 grid-arcade opacity-20" />
       <div className="mx-auto max-w-7xl">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
@@ -277,30 +278,159 @@ function Features() {
           </p>
         </motion.div>
 
-        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" style={{ perspective: 1600 }}>
           {items.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i} variants={fadeUp}
-              className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/40 p-6 backdrop-blur hover-lift hover:border-primary/40"
-            >
-              <div
-                className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-70"
-                style={{ background: `oklch(var(--${f.c}) / 0.5)` }}
-              />
-              <div
-                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/60"
-                style={{ background: `oklch(0.15 0.03 285 / 0.7)` }}
-              >
-                <f.icon className={`h-5 w-5 text-${f.c}`} />
-              </div>
-              <h3 className="mt-5 font-heading text-xl font-bold tracking-tight">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.desc}</p>
-            </motion.div>
+            <FeatureCard key={f.title} feature={f} index={i} />
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function FeatureCard({
+  feature,
+  index,
+}: {
+  feature: { icon: typeof Zap; title: string; desc: string; c: string; tag: string; accent: string };
+  index: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const sx = useSpring(mx, { stiffness: 120, damping: 16 });
+  const sy = useSpring(my, { stiffness: 120, damping: 16 });
+  const rotY = useTransform(sx, [-1, 1], [-12, 12]);
+  const rotX = useTransform(sy, [-1, 1], [10, -10]);
+  const glowX = useTransform(sx, [-1, 1], [0, 100]);
+  const glowY = useTransform(sy, [-1, 1], [0, 100]);
+  const spotlight = useTransform(
+    [glowX, glowY] as never,
+    ([x, y]: number[]) =>
+      `radial-gradient(280px circle at ${x}% ${y}%, ${feature.accent}, transparent 60%)`,
+  );
+
+  function onMove(e: React.MouseEvent) {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    mx.set(((e.clientX - r.left) / r.width - 0.5) * 2);
+    my.set(((e.clientY - r.top) / r.height - 0.5) * 2);
+  }
+  function onLeave() { mx.set(0); my.set(0); }
+
+  const Icon = feature.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40, rotateX: -8 }}
+      whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ delay: index * 0.08, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      style={{ transformStyle: "preserve-3d" }}
+    >
+      <motion.div
+        ref={ref}
+        onMouseMove={onMove}
+        onMouseLeave={onLeave}
+        style={{ rotateX: rotX, rotateY: rotY, transformStyle: "preserve-3d" }}
+        className="group relative h-full rounded-3xl"
+      >
+        {/* Conic glow ring */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition duration-500 group-hover:opacity-100"
+          style={{
+            background: `conic-gradient(from 140deg at 50% 50%, transparent 0deg, ${feature.accent} 90deg, transparent 200deg, ${feature.accent} 300deg, transparent 360deg)`,
+            filter: "blur(14px)",
+          }}
+        />
+        {/* Drop shadow underbed */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-2 -z-10 rounded-[2rem] opacity-0 blur-2xl transition duration-500 group-hover:opacity-60"
+          style={{ background: feature.accent }}
+        />
+
+        <div className="relative h-full overflow-hidden rounded-3xl border border-border/60 bg-card/50 p-6 backdrop-blur-xl">
+          {/* Cursor-tracked spotlight */}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
+            style={{
+              background: spotlight,
+              mixBlendMode: "screen",
+            }}
+          />
+          {/* Grid texture */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
+              backgroundSize: "28px 28px",
+              maskImage: "radial-gradient(ellipse 90% 60% at 50% 40%, black 30%, transparent 80%)",
+            }}
+          />
+          {/* Scanline shimmer on hover */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-y-2 -left-full h-[200%] w-1/3 -rotate-12 bg-gradient-to-r from-transparent via-white/10 to-transparent transition-all duration-1000 ease-out group-hover:left-[120%]"
+          />
+
+          <div className="relative flex h-full flex-col" style={{ transform: "translateZ(40px)" }}>
+            <div className="flex items-start justify-between">
+              <motion.div
+                whileHover={{ rotate: -8, scale: 1.08 }}
+                transition={{ type: "spring", stiffness: 300, damping: 14 }}
+                className="relative inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+                style={{
+                  background: `linear-gradient(135deg, ${feature.accent}30, transparent 70%), oklch(0.14 0.03 285)`,
+                }}
+              >
+                <span
+                  className="absolute inset-0 rounded-2xl opacity-60 blur-xl"
+                  style={{ background: feature.accent }}
+                />
+                <Icon className={`relative h-6 w-6 text-${feature.c}`} style={{ color: feature.accent }} />
+              </motion.div>
+              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground/70">
+                {feature.tag}
+              </span>
+            </div>
+
+            <h3 className="mt-6 font-heading text-2xl font-bold leading-tight tracking-tight">
+              {feature.title}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.desc}</p>
+
+            <div className="mt-auto pt-6">
+              <div
+                className="h-px w-full opacity-40"
+                style={{ background: `linear-gradient(90deg, ${feature.accent}, transparent)` }}
+              />
+              <div className="mt-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span
+                      className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-70"
+                      style={{ background: feature.accent }}
+                    />
+                    <span
+                      className="relative inline-flex h-1.5 w-1.5 rounded-full"
+                      style={{ background: feature.accent }}
+                    />
+                  </span>
+                  module · online
+                </span>
+                <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
