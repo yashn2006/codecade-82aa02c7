@@ -86,7 +86,7 @@ export function NotificationBell() {
                 <div className="font-display text-sm font-bold">Notifications</div>
                 {unread > 0 && (
                   <button
-                    onClick={() => markM.mutate(undefined)}
+                    onClick={() => markM.mutate()}
                     className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-primary hover:bg-primary/10"
                   >
                     <Check className="h-3 w-3" /> Mark all read
