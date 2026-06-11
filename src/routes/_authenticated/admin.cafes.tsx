@@ -161,15 +161,25 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
     },
   });
   const isRestricted = !!cafe.restricted_message;
+  const maintWindow = {
+    starts_at: cafe.maintenance_starts_at,
+    ends_at: cafe.maintenance_ends_at,
+    message: cafe.maintenance_message,
+  };
+  const inMaintenance = isMaintenanceActive(maintWindow);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}
       className={`group relative overflow-hidden rounded-2xl border bg-card/40 p-5 backdrop-blur hover-lift ${
-        isRestricted ? "border-destructive/50 hover:border-destructive" : "border-border/60 hover:border-primary/40"
+        isRestricted ? "border-destructive/50 hover:border-destructive" :
+        inMaintenance ? "border-amber-500/50 hover:border-amber-400" :
+        "border-border/60 hover:border-primary/40"
       }`}
     >
-      <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full blur-2xl ${isRestricted ? "bg-destructive/20" : "bg-violet/20"}`} />
+      <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full blur-2xl ${
+        isRestricted ? "bg-destructive/20" : inMaintenance ? "bg-amber-500/20" : "bg-violet/20"
+      }`} />
       <div className="relative flex items-start justify-between gap-3">
         <Link to="/cafe/$slug" params={{ slug: cafe.slug }} className="block min-w-0">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{cafe.city ?? "—"}</div>
@@ -178,6 +188,7 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
         </Link>
         <div className="flex flex-col items-end gap-1.5">
           <Badge variant={cafe.is_active ? "default" : "secondary"}>{cafe.is_active ? "Live" : "Off"}</Badge>
+          {inMaintenance && <Badge className="gap-1 bg-amber-500/20 text-amber-200 hover:bg-amber-500/30">Maintenance</Badge>}
           {isRestricted && <Badge variant="destructive" className="gap-1"><Lock className="h-3 w-3" /> Restricted</Badge>}
         </div>
       </div>
@@ -186,11 +197,16 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
           “{cafe.restricted_message}”
         </p>
       )}
-      <div className="relative mt-4 flex items-end justify-between gap-2">
+      {inMaintenance && cafe.maintenance_message && (
+        <p className="relative mt-3 line-clamp-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-foreground/80">
+          “{cafe.maintenance_message}”
+        </p>
+      )}
+      <div className="relative mt-4 flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0 text-xs text-muted-foreground">
           Owner: <span className="truncate text-foreground">{owner?.email ?? "—"}</span>
         </div>
-        <div className="flex shrink-0 gap-1">
+        <div className="flex flex-wrap shrink-0 gap-1">
           <Button
             size="sm" variant="ghost"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); tM.mutate({ data: { id: cafe.id, is_active: !cafe.is_active } }); }}
@@ -200,6 +216,16 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
             {cafe.is_active ? <PowerOff className="h-3 w-3" /> : <Power className="h-3 w-3" />}
             {cafe.is_active ? "Pause" : "Resume"}
           </Button>
+          <MaintenanceScheduler
+            scope={{ kind: "cafe", cafeId: cafe.id, cafeName: cafe.name }}
+            current={maintWindow}
+            onSaved={() => qc.invalidateQueries({ queryKey: ["admin-cafes"] })}
+            trigger={
+              <Button size="sm" variant="ghost" className={`h-7 gap-1 text-xs ${inMaintenance ? "text-amber-300" : ""}`}>
+                <Wrench className="h-3 w-3" /> Maintenance
+              </Button>
+            }
+          />
           <Button
             size="sm" variant="ghost"
             onClick={(e) => {
