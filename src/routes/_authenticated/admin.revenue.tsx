@@ -47,7 +47,7 @@ function AdminRevenue() {
         </div>
         {(d?.daily.length ?? 0) === 0
           ? <div className="grid h-40 place-items-center text-sm text-muted-foreground">No data yet</div>
-          : <Sparkline data={d!.daily.map((x) => x.revenue)} className="h-40 w-full" />}
+          : <Sparkline data={d!.daily.map((x) => ({ d: x.date, v: x.revenue }))} />}
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
