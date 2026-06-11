@@ -1,0 +1,72 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
+
+// PUBLIC — fetches café + page + devices + menu + tournaments for the public landing.
+// Uses admin client to bypass RLS for read-only public projection (filtered to active café).
+export const getPublicCafe = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ slug: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: cafe, error } = await supabaseAdmin
+      .from("cafes")
+      .select("id, slug, name, city, state, address, phone, email, description, logo_url, cover_url")
+      .eq("slug", data.slug)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!cafe) throw new Error("Café not found");
+
+    const [page, devices, menuItems, menuCats, tournaments] = await Promise.all([
+      supabaseAdmin.from("cafe_pages").select("*").eq("cafe_id", cafe.id).maybeSingle(),
+      supabaseAdmin.from("devices").select("id,name,type,hourly_rate,status,specs").eq("cafe_id", cafe.id),
+      supabaseAdmin.from("menu_items").select("*").eq("cafe_id", cafe.id).eq("is_active", true),
+      supabaseAdmin.from("menu_categories").select("*").eq("cafe_id", cafe.id).order("sort_order"),
+      supabaseAdmin.from("tournaments").select("*").eq("cafe_id", cafe.id)
+        .in("status", ["upcoming", "live"]).order("starts_at").limit(10),
+    ]);
+
+    const liveSessions = await supabaseAdmin
+      .from("sessions").select("device_id", { count: "exact", head: false })
+      .eq("cafe_id", cafe.id).eq("status", "active");
+
+    return {
+      cafe,
+      page: page.data,
+      devices: devices.data ?? [],
+      menu: { items: menuItems.data ?? [], categories: menuCats.data ?? [] },
+      tournaments: tournaments.data ?? [],
+      activeDeviceIds: (liveSessions.data ?? []).map((s) => s.device_id),
+    };
+  });
+
+export const updateCafePage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      cafe_id: z.string().uuid(),
+      tagline: z.string().max(200).nullable().optional(),
+      hero_url: z.string().url().nullable().optional(),
+      about: z.string().max(4000).nullable().optional(),
+      hours: z.record(z.string(), z.string()).optional(),
+      socials: z.record(z.string(), z.string()).optional(),
+      gallery: z.array(z.string().url()).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("cafe_pages").upsert({
+      ...data,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getCafePage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row } = await context.supabase
+      .from("cafe_pages").select("*").eq("cafe_id", data.cafe_id).maybeSingle();
+    return row;
+  });
