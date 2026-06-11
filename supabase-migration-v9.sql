@@ -20,7 +20,20 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $fn$
+DECLARE
+  result jsonb;
+  wallet_total bigint := 0;
+BEGIN
+  IF to_regclass('public.wallet_transactions') IS NOT NULL THEN
+    EXECUTE $q$
+      SELECT COALESCE(sum(wt.amount), 0)
+      FROM public.wallet_transactions wt
+      JOIN public.customers c ON c.id = wt.customer_id
+      WHERE c.user_id = $1
+    $q$ INTO wallet_total USING _user_id;
+  END IF;
+
   SELECT jsonb_build_object(
     'sessions_started',
       (SELECT count(*) FROM public.sessions s
@@ -34,18 +47,18 @@ AS $$
       (SELECT count(*) FROM public.bookings b
         JOIN public.customers c ON c.id = b.customer_id
         WHERE c.user_id = _user_id),
-    'wallet_balance',
-      COALESCE((SELECT sum(amount) FROM public.wallet_transactions wt
-        JOIN public.customers c ON c.id = wt.customer_id
-        WHERE c.user_id = _user_id), 0),
+    'wallet_balance', wallet_total,
     'cafes_owned',
       (SELECT count(*) FROM public.cafes WHERE owner_id = _user_id),
     'audit_events_24h',
       (SELECT count(*) FROM public.audit_logs
         WHERE actor_id = _user_id
           AND created_at > now() - interval '24 hours')
-  );
-$$;
+  ) INTO result;
+
+  RETURN result;
+END;
+$fn$;
 
 REVOKE ALL ON FUNCTION public.user_activity_summary(uuid) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.user_activity_summary(uuid) TO authenticated, service_role;
