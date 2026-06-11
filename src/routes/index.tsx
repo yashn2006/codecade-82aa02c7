@@ -1,20 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import {
   Zap, Shield, BarChart3, Users, Cpu, ArrowRight, Check,
-  Wifi, Activity, Clock, Sparkles, IndianRupee,
+  Wifi, Activity, Clock, Sparkles, IndianRupee, Terminal,
 } from "lucide-react";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandMark } from "@/components/Brand";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
-import { submitContact } from "@/lib/contact.functions";
+import { ConsoleMockup } from "@/components/ConsoleMockup";
+import { TerminalContact } from "@/components/TerminalContact";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import glowAsset from "@/assets/corecade-glow.png.asset.json";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
