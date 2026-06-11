@@ -31,7 +31,7 @@ function AdminRevenue() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={IndianRupee} label="Total revenue" value={`₹${(d?.totalRevenue ?? 0).toLocaleString("en-IN")}`} accent="magenta" delay={0} />
+        <StatCard icon={IndianRupee} label="Total revenue" value={d?.totalRevenue ?? 0} accent="magenta" delay={0} hint="₹" />
         <StatCard icon={Activity} label="Sessions" value={d?.totalSessions ?? 0} accent="azure" delay={0.05} />
         <StatCard icon={TrendingUp} label="Orders" value={d?.totalOrders ?? 0} accent="violet" delay={0.1} />
         <StatCard icon={Building2} label="Active cafés" value={d?.topCafes.length ?? 0} accent="violet" delay={0.15} />
