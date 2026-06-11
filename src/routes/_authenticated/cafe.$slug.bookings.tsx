@@ -38,6 +38,7 @@ function BookingsPage() {
   const list = useServerFn(listBookings);
   const setStatus = useServerFn(updateBookingStatus);
   const create = useServerFn(createBookingForCustomer);
+  const deposit = useServerFn(markBookingDeposit);
   const lDev = useServerFn(listDevices);
   const lCus = useServerFn(listCustomers);
 
@@ -52,6 +53,7 @@ function BookingsPage() {
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: ["bookings", cafeId] });
   const setM = useMutation({ mutationFn: setStatus, onSuccess: () => { refresh(); toast.success("Updated"); } });
+  const depositM = useMutation({ mutationFn: deposit, onSuccess: () => { refresh(); toast.success("Deposit updated"); } });
   const createM = useMutation({
     mutationFn: create,
     onSuccess: () => { refresh(); toast.success("Booking created"); setOpen(false); },
@@ -59,6 +61,7 @@ function BookingsPage() {
   });
 
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"list" | "calendar">("list");
 
   if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
 
