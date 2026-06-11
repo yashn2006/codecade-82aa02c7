@@ -313,6 +313,45 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
           ) : <div className="text-sm text-muted-foreground">No link generated.</div>}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={actOpen} onOpenChange={setActOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><ActivityIcon className="h-4 w-4" /> Activity</DialogTitle>
+            <DialogDescription className="truncate">{user.email}</DialogDescription>
+          </DialogHeader>
+          {aQ.isLoading || !aQ.data ? (
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-card/60" />)}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                {Object.entries((aQ.data.summary ?? {}) as Record<string, number>).map(([k, v]) => (
+                  <div key={k} className="rounded-xl border border-border/60 bg-card/40 p-3">
+                    <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{k.replace(/_/g, " ")}</div>
+                    <div className="mt-1 font-display text-lg font-bold">{typeof v === "number" ? v.toLocaleString("en-IN") : String(v)}</div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Recent audit</div>
+                <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-border/40">
+                  {(aQ.data.audit ?? []).length === 0 ? (
+                    <div className="p-3 text-xs text-muted-foreground">No audit events.</div>
+                  ) : (aQ.data.audit ?? []).map((r) => (
+                    <div key={r.id} className="flex items-center justify-between border-b border-border/30 px-3 py-1.5 text-xs last:border-0">
+                      <div className="font-mono text-azure">{new Date(r.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                      <div className="font-mono">{r.action}</div>
+                      <div className="text-muted-foreground">{(r.cafes as { name?: string } | null)?.name ?? "—"}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
