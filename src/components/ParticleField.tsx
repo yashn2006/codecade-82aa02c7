@@ -1,9 +1,12 @@
 import { useEffect, useRef } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function ParticleField({ density = 60 }: { density?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
+    if (isMobile) return; // skip canvas animation on mobile to save battery / jank
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -63,7 +66,9 @@ export function ParticleField({ density = 60 }: { density?: number }) {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [density]);
+  }, [density, isMobile]);
+
+  if (isMobile) return null;
 
   return (
     <canvas
