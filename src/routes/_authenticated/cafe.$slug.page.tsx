@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { ImageUploader } from "@/components/ImageUploader";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/page")({
   head: () => ({
@@ -110,7 +111,13 @@ function PageEditor() {
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
         <div className="space-y-1"><Label>Tagline</Label><Input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="The fastest rigs in town" /></div>
-        <div className="space-y-1"><Label>Hero image URL</Label><Input value={form.hero_url} onChange={(e) => setForm({ ...form, hero_url: e.target.value })} placeholder="https://…" /></div>
+        <div className="space-y-1">
+          <Label>Hero image</Label>
+          <div className="flex gap-2">
+            <Input value={form.hero_url} onChange={(e) => setForm({ ...form, hero_url: e.target.value })} placeholder="Paste URL or upload…" />
+            <ImageUploader cafeId={cafeId} folder="hero" label="Upload" onUploaded={(url) => setForm((c) => ({ ...c, hero_url: url }))} />
+          </div>
+        </div>
         <div className="space-y-1"><Label>About</Label><Textarea rows={5} value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value })} /></div>
 
         {/* Theme picker */}
@@ -179,9 +186,10 @@ function PageEditor() {
         {/* Gallery */}
         <div>
           <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-primary" /> Gallery</Label>
-          <div className="mt-2 flex gap-2">
-            <Input value={form.galleryInput} onChange={(e) => setForm({ ...form, galleryInput: e.target.value })} placeholder="https://image-url.jpg" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGallery(); } }} />
-            <Button type="button" variant="outline" onClick={addGallery}>Add</Button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Input value={form.galleryInput} onChange={(e) => setForm({ ...form, galleryInput: e.target.value })} placeholder="Paste image URL…" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGallery(); } }} className="flex-1 min-w-[180px]" />
+            <Button type="button" variant="outline" onClick={addGallery}>Add URL</Button>
+            <ImageUploader cafeId={cafeId} folder="gallery" label="Upload image" onUploaded={(url) => setForm((c) => ({ ...c, gallery: [...c.gallery, url] }))} />
           </div>
           {form.gallery.length > 0 && (
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -195,7 +203,7 @@ function PageEditor() {
               ))}
             </div>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground">Paste hosted image URLs. (Direct uploads coming with storage setup.)</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Upload directly to your café gallery bucket, or paste a hosted image URL.</p>
         </div>
 
         <Button type="submit" className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>

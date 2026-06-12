@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Wallet, Plus, Minus, Receipt, Download, FileText } from "lucide-react";
+import { Wallet, Plus, Minus, Receipt, Download, FileText, CreditCard } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listCustomers } from "@/lib/customers.functions";
 import { adjustWallet, listWalletTransactions, exportWalletCSV } from "@/lib/wallet.functions";
+import { createTopupOrder, verifyTopupPayment, getRazorpayConfig } from "@/lib/razorpay.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,20 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { PrintableStatement, type StatementTx } from "@/components/PrintableStatement";
+
+declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void } } }
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (window.Razorpay) return resolve(true);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/wallet")({
   head: () => ({
@@ -56,6 +71,53 @@ function WalletPage() {
 
   const [sel, setSel] = useState<null | { id: string; name: string; balance: number; sign: 1 | -1 }>(null);
   const [statementFor, setStatementFor] = useState<null | { id: string; name: string; phone: string | null; balance: number }>(null);
+  const [rzpBusy, setRzpBusy] = useState(false);
+
+  const rzpCfgFn = useServerFn(getRazorpayConfig);
+  const rzpCfgQ = useQuery({ queryKey: ["rzp-cfg"], queryFn: () => rzpCfgFn() });
+  const createOrderFn = useServerFn(createTopupOrder);
+  const verifyFn = useServerFn(verifyTopupPayment);
+
+  useEffect(() => { void loadRazorpayScript(); }, []);
+
+  async function payRazorpay() {
+    if (!sel || !cafeId) return;
+    const fd = document.getElementById("wallet-form") as HTMLFormElement | null;
+    const amt = Number(new FormData(fd ?? undefined).get("amount")) || 0;
+    if (amt <= 0) return toast.error("Enter amount first");
+    if (!rzpCfgQ.data?.enabled) return toast.error("Razorpay not configured");
+    setRzpBusy(true);
+    try {
+      const ok = await loadRazorpayScript();
+      if (!ok || !window.Razorpay) throw new Error("Could not load Razorpay");
+      const order = await createOrderFn({ data: { cafe_id: cafeId, customer_id: sel.id, amount: amt } });
+      const rzp = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount * 100,
+        currency: order.currency,
+        name: cafe?.name ?? "CoreCade",
+        description: `Wallet top-up — ${sel.name}`,
+        order_id: order.order_id,
+        prefill: { name: sel.name },
+        theme: { color: "#ec4899" },
+        handler: async (resp: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          try {
+            await verifyFn({ data: { topup_id: order.topup_id, ...resp } });
+            toast.success(`₹${amt} added via Razorpay`);
+            qc.invalidateQueries({ queryKey: ["customers", cafeId] });
+            qc.invalidateQueries({ queryKey: ["wallet-tx", cafeId] });
+            setSel(null);
+          } catch (e) { toast.error(e instanceof Error ? e.message : "Verify failed"); }
+        },
+        modal: { ondismiss: () => setRzpBusy(false) },
+      });
+      rzp.open();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Razorpay failed");
+    } finally {
+      setRzpBusy(false);
+    }
+  }
 
   const stmtTxQ = useQuery({
     queryKey: ["wallet-tx", "customer", statementFor?.id],
@@ -165,16 +227,22 @@ function WalletPage() {
               });
             }}
             className="space-y-3"
+            id="wallet-form"
           >
             <div className="rounded-xl border border-border/40 p-3 text-xs text-muted-foreground">
               Current balance: <span className="font-mono text-foreground">₹{sel?.balance}</span>
             </div>
             <div className="space-y-1"><Label>Amount (₹)</Label><Input name="amount" type="number" min={1} required autoFocus /></div>
             <div className="space-y-1"><Label>Note (optional)</Label><Input name="note" placeholder="Cash, UPI, refund…" /></div>
-            <DialogFooter>
+            <DialogFooter className="flex-col gap-2 sm:flex-row">
               <Button type="submit" disabled={m.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
-                {m.isPending ? "Saving…" : sel?.sign === 1 ? "Add" : "Deduct"}
+                {m.isPending ? "Saving…" : sel?.sign === 1 ? "Add (cash)" : "Deduct"}
               </Button>
+              {sel?.sign === 1 && rzpCfgQ.data?.enabled && (
+                <Button type="button" variant="outline" onClick={payRazorpay} disabled={rzpBusy} className="gap-2">
+                  <CreditCard className="h-4 w-4" /> {rzpBusy ? "Opening…" : "Pay with Razorpay"}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </DialogContent>
