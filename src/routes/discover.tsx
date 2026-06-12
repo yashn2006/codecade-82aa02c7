@@ -93,6 +93,7 @@ function DiscoverPage() {
    NEON CURSOR (desktop only)
 ================================================================= */
 function NeonCursor() {
+  if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px), (pointer: coarse)").matches) return null;
   const x = useMotionValue(-200);
   const y = useMotionValue(-200);
   const sx = useSpring(x, { stiffness: 350, damping: 30, mass: 0.4 });
@@ -145,7 +146,9 @@ function NeonCursor() {
 ================================================================= */
 function NebulaCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
+  const isMobileLike = typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
   useEffect(() => {
+    if (isMobileLike) return;
     const c = ref.current; if (!c) return;
     const ctx = c.getContext("2d"); if (!ctx) return;
     let raf = 0; const DPR = Math.min(2, window.devicePixelRatio || 1);
