@@ -699,7 +699,7 @@ function RevealWord({ progress, range, word }: { progress: any; range: [number, 
 ================================================================= */
 function ArenaShowcase({ cafes, loading }: { cafes: Cafe[]; loading: boolean }) {
   return (
-    <section className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
+    <section id="arenas" className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
       <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-fuchsia-300">/ Featured Arenas</div>
