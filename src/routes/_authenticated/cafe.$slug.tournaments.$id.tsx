@@ -75,6 +75,12 @@ function BracketPage() {
   }
   const rounds = Array.from(roundsMap.entries()).sort(([a], [b]) => a - b);
 
+  const finalRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
+  const finalMatch = finalRound?.[1]?.[0];
+  const champion = finalMatch?.winner && finalMatch.winner !== "BYE" ? finalMatch.winner : null;
+  const t = (tournament ?? {}) as { paid_out_at?: string | null; winner_team?: string | null; prize_pool?: number; payout_amount?: number };
+  const paidOut = !!t.paid_out_at;
+
   return (
     <div>
       <button onClick={() => nav({ to: "/cafe/$slug/tournaments", params: { slug } })} className="mb-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -93,30 +99,19 @@ function BracketPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {(() => {
-              const finalRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
-              const finalMatch = finalRound?.[1]?.[0];
-              const champion = finalMatch?.winner && finalMatch.winner !== "BYE" ? finalMatch.winner : null;
-              const t = tournament as { paid_out_at?: string | null; winner_team?: string | null; prize_pool: number; payout_amount?: number };
-              const paidOut = !!t.paid_out_at;
-              return (
-                <>
-                  {champion && !paidOut && (
-                    <Button onClick={() => setPayoutOpen(true)} className="gap-2" variant="outline">
-                      <Crown className="h-4 w-4 text-amber-400" /> Payout to {champion}
-                    </Button>
-                  )}
-                  {paidOut && (
-                    <Badge className="gap-1 bg-amber-500/20 text-amber-200">
-                      <Crown className="h-3 w-3" /> ₹{t.payout_amount} paid to {t.winner_team}
-                    </Badge>
-                  )}
-                  <Button onClick={() => { if (confirm("Regenerate bracket? Existing matches will be wiped.")) genM.mutate({ data: { tournament_id: id } }); }} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
-                    <Shuffle className="h-4 w-4" /> {matches.length === 0 ? "Generate" : "Regenerate"} bracket
-                  </Button>
-                </>
-              );
-            })()}
+            {champion && !paidOut && (
+              <Button onClick={() => setPayoutOpen(true)} className="gap-2" variant="outline">
+                <Crown className="h-4 w-4 text-amber-400" /> Payout to {champion}
+              </Button>
+            )}
+            {paidOut && (
+              <Badge className="gap-1 bg-amber-500/20 text-amber-200">
+                <Crown className="h-3 w-3" /> ₹{t.payout_amount} paid to {t.winner_team}
+              </Badge>
+            )}
+            <Button onClick={() => { if (confirm("Regenerate bracket? Existing matches will be wiped.")) genM.mutate({ data: { tournament_id: id } }); }} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+              <Shuffle className="h-4 w-4" /> {matches.length === 0 ? "Generate" : "Regenerate"} bracket
+            </Button>
           </div>
         </div>
       )}
@@ -138,23 +133,6 @@ function BracketPage() {
             ))}
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-type Match = { id: string; round: number; match_index: number; team_a: string; team_b: string; score_a: number | null; score_b: number | null; winner: string | null };
-function MatchCard({ m, onPick }: { m: Match; onPick: (w: "a" | "b") => void }) {
-  const [scoreA, setScoreA] = useState<string>(m.score_a?.toString() ?? "");
-  const [scoreB, setScoreB] = useState<string>(m.score_b?.toString() ?? "");
-  const ready = m.team_a && m.team_b && m.team_a !== "BYE" && m.team_b !== "BYE";
-  return (
-    <div className="w-56 rounded-xl border border-border/60 bg-card/60 p-2 backdrop-blur">
-      <Row team={m.team_a} score={scoreA} setScore={setScoreA} winner={m.winner === m.team_a} canPick={!!ready && !m.winner} onPick={() => onPick("a")} />
-      <div className="my-1 text-center text-[9px] font-mono uppercase tracking-wider text-muted-foreground">vs</div>
-      <Row team={m.team_b} score={scoreB} setScore={setScoreB} winner={m.winner === m.team_b} canPick={!!ready && !m.winner} onPick={() => onPick("b")} />
-      {m.winner && (
-        <Badge className="mt-2 w-full justify-center gap-1 bg-primary/20 text-primary"><Crown className="h-3 w-3" />{m.winner}</Badge>
       )}
 
       {/* Payout dialog */}
@@ -178,10 +156,7 @@ function MatchCard({ m, onPick }: { m: Match; onPick: (w: "a" | "b") => void }) 
           >
             <div className="space-y-1">
               <Label>Winner team / player</Label>
-              <Input name="winner_team" required defaultValue={(() => {
-                const finalRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
-                return finalRound?.[1]?.[0]?.winner ?? "";
-              })()} />
+              <Input name="winner_team" required defaultValue={champion ?? ""} />
             </div>
             <div className="space-y-1">
               <Label>Credit to customer</Label>
