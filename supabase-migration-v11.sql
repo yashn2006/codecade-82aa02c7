@@ -35,7 +35,7 @@ CREATE POLICY "topups_select_owner_staff" ON public.wallet_topups
   FOR SELECT TO authenticated
   USING (
     EXISTS (SELECT 1 FROM public.cafes c WHERE c.id = wallet_topups.cafe_id AND c.owner_id = auth.uid())
-    OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id = wallet_topups.cafe_id AND sp.user_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id = wallet_topups.cafe_id AND sp.staff_user_id = auth.uid())
   );
 
 DROP POLICY IF EXISTS "topups_insert_owner_staff" ON public.wallet_topups;
@@ -43,7 +43,7 @@ CREATE POLICY "topups_insert_owner_staff" ON public.wallet_topups
   FOR INSERT TO authenticated
   WITH CHECK (
     EXISTS (SELECT 1 FROM public.cafes c WHERE c.id = wallet_topups.cafe_id AND c.owner_id = auth.uid())
-    OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id = wallet_topups.cafe_id AND sp.user_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id = wallet_topups.cafe_id AND sp.staff_user_id = auth.uid())
   );
 
 -- ---------- 2. Storage bucket for café galleries ----------
@@ -71,7 +71,7 @@ CREATE POLICY "cafe_gallery_insert_owner_staff" ON storage.objects
     bucket_id = 'cafe-gallery'
     AND (
       EXISTS (SELECT 1 FROM public.cafes c WHERE c.id::text = (storage.foldername(name))[1] AND c.owner_id = auth.uid())
-      OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id::text = (storage.foldername(name))[1] AND sp.user_id = auth.uid())
+      OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id::text = (storage.foldername(name))[1] AND sp.staff_user_id = auth.uid())
     )
   );
 
@@ -82,7 +82,7 @@ CREATE POLICY "cafe_gallery_update_owner_staff" ON storage.objects
     bucket_id = 'cafe-gallery'
     AND (
       EXISTS (SELECT 1 FROM public.cafes c WHERE c.id::text = (storage.foldername(name))[1] AND c.owner_id = auth.uid())
-      OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id::text = (storage.foldername(name))[1] AND sp.user_id = auth.uid())
+      OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id::text = (storage.foldername(name))[1] AND sp.staff_user_id = auth.uid())
     )
   );
 
@@ -93,6 +93,6 @@ CREATE POLICY "cafe_gallery_delete_owner_staff" ON storage.objects
     bucket_id = 'cafe-gallery'
     AND (
       EXISTS (SELECT 1 FROM public.cafes c WHERE c.id::text = (storage.foldername(name))[1] AND c.owner_id = auth.uid())
-      OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id::text = (storage.foldername(name))[1] AND sp.user_id = auth.uid())
+      OR EXISTS (SELECT 1 FROM public.staff_permissions sp WHERE sp.cafe_id::text = (storage.foldername(name))[1] AND sp.staff_user_id = auth.uid())
     )
   );
