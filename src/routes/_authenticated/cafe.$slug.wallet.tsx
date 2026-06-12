@@ -179,6 +179,17 @@ function WalletPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {statementFor && stmtTxQ.data && (
+        <PrintableStatement
+          cafeName={cafe?.name ?? "Café"}
+          customerName={statementFor.name}
+          customerPhone={statementFor.phone}
+          balance={statementFor.balance}
+          transactions={(stmtTxQ.data as unknown as StatementTx[]) ?? []}
+          onClose={() => setStatementFor(null)}
+        />
+      )}
     </div>
   );
 }
