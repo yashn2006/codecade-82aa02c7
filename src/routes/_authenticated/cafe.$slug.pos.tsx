@@ -2,10 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ShoppingCart, Trash2, Receipt, Plus, Minus, Leaf, Beef, Printer, RotateCcw, FileBarChart } from "lucide-react";
+import { ShoppingCart, Trash2, Receipt, Plus, Minus, Leaf, Beef, Printer, RotateCcw, FileBarChart, Split } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listMenu } from "@/lib/menu.functions";
-import { createOrder, settleOrder, listRecentOrders, voidOrder, refundOrder, dailyZReport, getOrderForReceipt } from "@/lib/pos.functions";
+import { createOrder, settleOrder, listRecentOrders, voidOrder, refundOrder, dailyZReport, getOrderForReceipt, splitOrder } from "@/lib/pos.functions";
 import { listSessions } from "@/lib/sessions.functions";
 import { listCustomers } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ function POSPage() {
   const refund = useServerFn(refundOrder);
   const z = useServerFn(dailyZReport);
   const getOrder = useServerFn(getOrderForReceipt);
+  const splitFn = useServerFn(splitOrder);
 
   const menuQ = useQuery({ queryKey: ["menu", cafeId], queryFn: () => list({ data: { cafe_id: cafeId! } }), enabled: !!cafeId });
   const sesQ = useQuery({ queryKey: ["sessions", cafeId], queryFn: () => lSes({ data: { cafe_id: cafeId! } }), enabled: !!cafeId, refetchInterval: 10_000 });
@@ -71,6 +72,7 @@ function POSPage() {
   const [receiptOrder, setReceiptOrder] = useState<ReceiptOrder | null>(null);
   const [refundFor, setRefundFor] = useState<{ id: string; max: number } | null>(null);
   const [zOpen, setZOpen] = useState(false);
+  const [splitFor, setSplitFor] = useState<null | { id: string; total: number }>(null);
 
   const cats = menuQ.data?.categories ?? [];
   const items: Item[] = useMemo(() => {
@@ -128,6 +130,11 @@ function POSPage() {
   const refundM = useMutation({
     mutationFn: refund,
     onSuccess: () => { toast.success("Refunded"); setRefundFor(null); refresh(); qc.invalidateQueries({ queryKey: ["customers", cafeId] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const splitM = useMutation({
+    mutationFn: splitFn,
+    onSuccess: () => { toast.success("Order split"); setSplitFor(null); refresh(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
