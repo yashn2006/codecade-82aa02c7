@@ -4,7 +4,7 @@ import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { supabase } from "@/lib/supabase/client";
 
-const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
+const SUPER_ADMIN_EMAILS = ["giganexa2026@gmail.com", "yashnandi77@gmail.com"];
 
 export const Route = createFileRoute("/_authenticated/admin")({
   ssr: false,
