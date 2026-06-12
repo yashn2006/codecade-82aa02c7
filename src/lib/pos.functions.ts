@@ -237,7 +237,7 @@ export const splitOrder = createServerFn({ method: "POST" })
       if (ce) throw new Error(ce.message);
       await context.supabase.from("order_items").insert({
         order_id: child.id,
-        item_id: parent.id, // placeholder — references parent for trace
+        item_id: null,
         name: `Split: ${sp.label}`,
         unit_price: sp.amount,
         qty: 1,
