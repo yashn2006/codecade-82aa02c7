@@ -70,9 +70,9 @@ export function ConsoleMockup() {
             </div>
           </div>
 
-          <div className="grid grid-cols-[140px_1fr] min-h-[360px]">
-            {/* Sidebar */}
-            <div className="border-r border-white/5 bg-white/[0.02] p-3 text-[11px] text-white/70">
+          <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] lg:grid-cols-[140px_1fr] min-h-[300px] sm:min-h-[360px]">
+            {/* Sidebar — hidden on mobile */}
+            <div className="hidden sm:block border-r border-white/5 bg-white/[0.02] p-3 text-[11px] text-white/70">
               <div className="mb-2 px-2 font-mono text-[9px] uppercase tracking-[0.25em] text-white/30">Console</div>
               {[
                 { l: "Overview", a: true },
