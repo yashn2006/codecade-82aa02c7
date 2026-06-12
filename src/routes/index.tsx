@@ -174,7 +174,7 @@ function Hero() {
 
           <motion.h1
             initial="hidden" animate="visible" custom={1} variants={fadeUp}
-            className="mt-6 font-display font-extrabold leading-[0.92] tracking-[-0.045em] text-[3rem] sm:text-[4.5rem] xl:text-[6rem]"
+            className="mt-6 font-display font-extrabold leading-[0.92] tracking-[-0.045em] text-[2.5rem] sm:text-[4.5rem] xl:text-[6rem]"
           >
             <span className="block text-foreground/95">The OS that runs</span>
             <span className="relative block">
@@ -415,7 +415,7 @@ function FeatureCard({
         {/* Conic glow ring */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition duration-500 group-hover:opacity-100"
+          className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition duration-500 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
           style={{
             background: `conic-gradient(from 140deg at 50% 50%, transparent 0deg, ${feature.accent} 90deg, transparent 200deg, ${feature.accent} 300deg, transparent 360deg)`,
             filter: "blur(14px)",
@@ -424,7 +424,7 @@ function FeatureCard({
         {/* Drop shadow underbed */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-2 -z-10 rounded-[2rem] opacity-0 blur-2xl transition duration-500 group-hover:opacity-60"
+          className="pointer-events-none absolute -inset-2 -z-10 rounded-[2rem] opacity-0 blur-2xl transition duration-500 group-hover:opacity-60 [@media(hover:none)]:opacity-40"
           style={{ background: feature.accent }}
         />
 
@@ -432,7 +432,7 @@ function FeatureCard({
           {/* Cursor-tracked spotlight */}
           <motion.div
             aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
+            className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100 [@media(hover:none)]:opacity-70"
             style={{
               background: spotlight,
               mixBlendMode: "screen",

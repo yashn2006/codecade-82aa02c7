@@ -52,13 +52,13 @@ export function ConsoleMockup() {
       >
         <div className="rounded-[14px] bg-[oklch(0.09_0.02_285)]/95 overflow-hidden">
           {/* Window chrome */}
-          <div className="flex items-center justify-between border-b border-white/5 px-4 py-2.5">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between gap-2 border-b border-white/5 px-3 py-2.5 sm:px-4">
+            <div className="flex shrink-0 items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">
+            <div className="hidden min-w-0 truncate font-mono text-[10px] uppercase tracking-[0.25em] text-white/40 md:block">
               corecade.os · /cafe/andheri-west · live
             </div>
             <div className="flex items-center gap-1 font-mono text-[10px] text-emerald-300">
@@ -70,9 +70,9 @@ export function ConsoleMockup() {
             </div>
           </div>
 
-          <div className="grid grid-cols-[140px_1fr] min-h-[360px]">
-            {/* Sidebar */}
-            <div className="border-r border-white/5 bg-white/[0.02] p-3 text-[11px] text-white/70">
+          <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] lg:grid-cols-[140px_1fr] min-h-[300px] sm:min-h-[360px]">
+            {/* Sidebar — hidden on mobile */}
+            <div className="hidden sm:block border-r border-white/5 bg-white/[0.02] p-3 text-[11px] text-white/70">
               <div className="mb-2 px-2 font-mono text-[9px] uppercase tracking-[0.25em] text-white/30">Console</div>
               {[
                 { l: "Overview", a: true },
@@ -98,9 +98,10 @@ export function ConsoleMockup() {
             </div>
 
             {/* Body */}
-            <div className="p-4">
+            <div className="p-3 sm:p-4 min-w-0">
               {/* KPI row */}
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+
                 {[
                   { l: "Active", v: "24", i: Cpu, c: "text-violet-300" },
                   { l: "Revenue", v: `₹${rev.toLocaleString("en-IN")}`, i: IndianRupee, c: "text-rose-300" },
@@ -188,7 +189,7 @@ export function ConsoleMockup() {
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.7 + i * 0.12 }}
-                      className="grid grid-cols-[60px_1fr_72px_60px] items-center gap-2 px-3 py-1.5 text-[11px]"
+                      className="grid grid-cols-[52px_1fr_60px_52px] sm:grid-cols-[60px_1fr_72px_60px] items-center gap-2 px-3 py-1.5 text-[10px] sm:text-[11px]"
                     >
                       <span className="font-mono text-violet-300">{r.d}</span>
                       <span className="truncate text-white/80">{r.c}</span>
