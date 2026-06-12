@@ -92,9 +92,32 @@ function BracketPage() {
               <div className="text-xs text-muted-foreground">{tournament.game} · {tournament.format} · {(regsQ.data ?? []).length}/{tournament.capacity} teams · Prize ₹{tournament.prize_pool}</div>
             </div>
           </div>
-          <Button onClick={() => { if (confirm("Regenerate bracket from current registrations? Existing matches will be wiped.")) genM.mutate({ data: { tournament_id: id } }); }} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
-            <Shuffle className="h-4 w-4" /> {matches.length === 0 ? "Generate" : "Regenerate"} bracket
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {(() => {
+              const finalRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
+              const finalMatch = finalRound?.[1]?.[0];
+              const champion = finalMatch?.winner && finalMatch.winner !== "BYE" ? finalMatch.winner : null;
+              const t = tournament as { paid_out_at?: string | null; winner_team?: string | null; prize_pool: number; payout_amount?: number };
+              const paidOut = !!t.paid_out_at;
+              return (
+                <>
+                  {champion && !paidOut && (
+                    <Button onClick={() => setPayoutOpen(true)} className="gap-2" variant="outline">
+                      <Crown className="h-4 w-4 text-amber-400" /> Payout to {champion}
+                    </Button>
+                  )}
+                  {paidOut && (
+                    <Badge className="gap-1 bg-amber-500/20 text-amber-200">
+                      <Crown className="h-3 w-3" /> ₹{t.payout_amount} paid to {t.winner_team}
+                    </Badge>
+                  )}
+                  <Button onClick={() => { if (confirm("Regenerate bracket? Existing matches will be wiped.")) genM.mutate({ data: { tournament_id: id } }); }} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+                    <Shuffle className="h-4 w-4" /> {matches.length === 0 ? "Generate" : "Regenerate"} bracket
+                  </Button>
+                </>
+              );
+            })()}
+          </div>
         </div>
       )}
 
@@ -133,6 +156,53 @@ function MatchCard({ m, onPick }: { m: Match; onPick: (w: "a" | "b") => void }) 
       {m.winner && (
         <Badge className="mt-2 w-full justify-center gap-1 bg-primary/20 text-primary"><Crown className="h-3 w-3" />{m.winner}</Badge>
       )}
+
+      {/* Payout dialog */}
+      <Dialog open={payoutOpen} onOpenChange={setPayoutOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Wallet className="h-4 w-4 text-primary" /> Pay out tournament prize</DialogTitle></DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const customer_id = String(fd.get("customer_id") || "");
+              const winner_team = String(fd.get("winner_team") || "").trim();
+              const amount = Number(fd.get("amount")) || 0;
+              if (!customer_id) return toast.error("Pick the winning customer");
+              if (!winner_team) return toast.error("Team name required");
+              if (amount <= 0) return toast.error("Amount must be > 0");
+              if (!confirm(`Credit ₹${amount} to ${winner_team}'s wallet? This cannot be undone.`)) return;
+              payM.mutate({ data: { tournament_id: id, customer_id, winner_team, amount } });
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1">
+              <Label>Winner team / player</Label>
+              <Input name="winner_team" required defaultValue={(() => {
+                const finalRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
+                return finalRound?.[1]?.[0]?.winner ?? "";
+              })()} />
+            </div>
+            <div className="space-y-1">
+              <Label>Credit to customer</Label>
+              <select name="customer_id" required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="">— select customer —</option>
+                {(cusQ.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.full_name} {c.phone ? `· ${c.phone}` : ""}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Amount (₹)</Label>
+              <Input name="amount" type="number" min={1} defaultValue={tournament?.prize_pool ?? 0} required />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setPayoutOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={payM.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
+                {payM.isPending ? "Paying…" : "Confirm payout"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
