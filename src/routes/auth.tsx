@@ -29,6 +29,19 @@ function AuthPage() {
   const [shake, setShake] = useState(false);
   const navigate = useNavigate();
 
+  // After Google OAuth redirect (or when an existing session lands on /auth),
+  // route the user straight to their dashboard.
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled && data.session) routeByRole(navigate);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) routeByRole(navigate);
+    });
+    return () => { cancelled = true; sub.subscription.unsubscribe(); };
+  }, [navigate]);
+
   // Validation state (drives magnetic-evading button)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
