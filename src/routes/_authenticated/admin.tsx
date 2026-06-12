@@ -4,12 +4,17 @@ import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { supabase } from "@/lib/supabase/client";
 
+const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
+
 export const Route = createFileRoute("/_authenticated/admin")({
   ssr: false,
   head: () => ({ meta: [{ title: "Super Admin — CoreCade" }] }),
   beforeLoad: async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw redirect({ to: "/auth" });
+    if (user.email?.toLowerCase() !== SUPER_ADMIN_EMAIL) {
+      throw redirect({ to: "/portal" });
+    }
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")

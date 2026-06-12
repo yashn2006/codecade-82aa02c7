@@ -25,7 +25,6 @@ type Mode = "signin" | "signup" | "forgot";
 function AuthPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [shake, setShake] = useState(false);
   const navigate = useNavigate();
@@ -95,20 +94,6 @@ function AuthPage() {
     }
   };
 
-  const signInGoogle = async () => {
-    setGoogleLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/portal` },
-      });
-      if (error) throw error;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Google sign-in failed.");
-      setGoogleLoading(false);
-    }
-  };
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <AuroraBackground intensity="immersive" />
@@ -146,17 +131,17 @@ function AuthPage() {
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
               </span>
               {mode === "signin" && "Secure access · TLS 1.3"}
-              {mode === "signup" && "New operator · 60-second onboarding"}
+              {mode === "signup" && "New player · customer access"}
               {mode === "forgot" && "Recovery channel"}
             </div>
             <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
               {mode === "signin" && (<>Welcome <span className="text-gradient-hot">back</span></>)}
-              {mode === "signup" && (<>Start your <span className="text-gradient-hot">console</span></>)}
+              {mode === "signup" && (<>Create customer <span className="text-gradient-hot">account</span></>)}
               {mode === "forgot" && (<>Reset <span className="text-gradient-hot">password</span></>)}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {mode === "signin" && "Sign in to enter your live ops console."}
-              {mode === "signup" && "Spin up a café in under a minute."}
+              {mode === "signin" && "Sign in with email and password to enter the right dashboard."}
+              {mode === "signup" && "New accounts start as customers. Café owner access is granted by admin only."}
               {mode === "forgot" && "We'll email you a one-time reset link."}
             </p>
 
@@ -186,27 +171,7 @@ function AuthPage() {
               </div>
             )}
 
-            {/* Google */}
-            {mode !== "forgot" && (
-              <>
-                <button
-                  type="button"
-                  onClick={signInGoogle}
-                  disabled={googleLoading}
-                  className="group relative mt-6 inline-flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl border border-border/70 bg-background/60 px-4 text-sm font-semibold text-foreground backdrop-blur transition hover:border-primary/50 hover:bg-background/80 disabled:opacity-60"
-                >
-                  <span className="absolute inset-0 opacity-0 transition group-hover:opacity-100"
-                        style={{ background: "radial-gradient(600px circle at var(--mx,50%) var(--my,50%), oklch(0.74 0.21 15 / 0.18), transparent 40%)" }} />
-                  <GoogleGlyph />
-                  {googleLoading ? "Opening Google…" : `Continue with Google`}
-                </button>
-                <div className="my-5 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                  <span className="h-px flex-1 bg-border/60" /> or with email <span className="h-px flex-1 bg-border/60" />
-                </div>
-              </>
-            )}
-
-            <form onSubmit={handle} noValidate className="space-y-4">
+            <form onSubmit={handle} noValidate className="mt-6 space-y-4">
               <AnimatePresence initial={false}>
                 {mode === "signup" && (
                   <motion.div
@@ -577,17 +542,6 @@ function MagneticSubmit({
         </span>
       </button>
     </motion.div>
-  );
-}
-
-function GoogleGlyph() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
-      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
-      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8l-6.5 5C9.6 39.6 16.3 44 24 44z"/>
-      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.6l6.2 5.2C41.9 35.2 44 30 44 24c0-1.3-.1-2.4-.4-3.5z"/>
-    </svg>
   );
 }
 
