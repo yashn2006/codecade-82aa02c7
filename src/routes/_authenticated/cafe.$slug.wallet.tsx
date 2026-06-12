@@ -71,6 +71,53 @@ function WalletPage() {
 
   const [sel, setSel] = useState<null | { id: string; name: string; balance: number; sign: 1 | -1 }>(null);
   const [statementFor, setStatementFor] = useState<null | { id: string; name: string; phone: string | null; balance: number }>(null);
+  const [rzpBusy, setRzpBusy] = useState(false);
+
+  const rzpCfgFn = useServerFn(getRazorpayConfig);
+  const rzpCfgQ = useQuery({ queryKey: ["rzp-cfg"], queryFn: () => rzpCfgFn() });
+  const createOrderFn = useServerFn(createTopupOrder);
+  const verifyFn = useServerFn(verifyTopupPayment);
+
+  useEffect(() => { void loadRazorpayScript(); }, []);
+
+  async function payRazorpay() {
+    if (!sel || !cafeId) return;
+    const fd = document.getElementById("wallet-form") as HTMLFormElement | null;
+    const amt = Number(new FormData(fd ?? undefined).get("amount")) || 0;
+    if (amt <= 0) return toast.error("Enter amount first");
+    if (!rzpCfgQ.data?.enabled) return toast.error("Razorpay not configured");
+    setRzpBusy(true);
+    try {
+      const ok = await loadRazorpayScript();
+      if (!ok || !window.Razorpay) throw new Error("Could not load Razorpay");
+      const order = await createOrderFn({ data: { cafe_id: cafeId, customer_id: sel.id, amount: amt } });
+      const rzp = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount * 100,
+        currency: order.currency,
+        name: cafe?.name ?? "CoreCade",
+        description: `Wallet top-up — ${sel.name}`,
+        order_id: order.order_id,
+        prefill: { name: sel.name },
+        theme: { color: "#ec4899" },
+        handler: async (resp: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          try {
+            await verifyFn({ data: { topup_id: order.topup_id, ...resp } });
+            toast.success(`₹${amt} added via Razorpay`);
+            qc.invalidateQueries({ queryKey: ["customers", cafeId] });
+            qc.invalidateQueries({ queryKey: ["wallet-tx", cafeId] });
+            setSel(null);
+          } catch (e) { toast.error(e instanceof Error ? e.message : "Verify failed"); }
+        },
+        modal: { ondismiss: () => setRzpBusy(false) },
+      });
+      rzp.open();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Razorpay failed");
+    } finally {
+      setRzpBusy(false);
+    }
+  }
 
   const stmtTxQ = useQuery({
     queryKey: ["wallet-tx", "customer", statementFor?.id],
