@@ -168,3 +168,25 @@ export const setMatchResult = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/** Pay out tournament prize from cafe → winner's customer wallet. */
+export const payoutTournament = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      tournament_id: z.string().uuid(),
+      customer_id: z.string().uuid(),
+      winner_team: z.string().min(1).max(80),
+      amount: z.number().int().min(1).max(10_000_000),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("payout_tournament", {
+      _tournament_id: data.tournament_id,
+      _customer_id: data.customer_id,
+      _winner_team: data.winner_team,
+      _amount: data.amount,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
