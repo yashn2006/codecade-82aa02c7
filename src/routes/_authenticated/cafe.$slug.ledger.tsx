@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ScrollText, TrendingUp, Clock, Activity } from "lucide-react";
+import { ScrollText, TrendingUp, Clock, Activity, Download } from "lucide-react";
 import { motion } from "framer-motion";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { getCafeAnalytics } from "@/lib/analytics.functions";
 import { Sparkline } from "@/components/Sparkline";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { downloadCsv } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/ledger")({
   head: () => ({
@@ -65,9 +67,16 @@ function LedgerPage() {
       </div>
 
       <div>
-        <div className="flex items-center gap-2">
-          <ScrollText className="h-4 w-4 text-azure" />
-          <h3 className="font-display text-lg font-bold">Recent sessions</h3>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ScrollText className="h-4 w-4 text-azure" />
+            <h3 className="font-display text-lg font-bold">Recent sessions</h3>
+          </div>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => downloadCsv(`${slug}-ledger.csv`, data.recent.map((s: any) => ({
+            when: s.started_at, customer: s.customers?.full_name ?? "Walk-in", device: s.devices?.name ?? "", duration_minutes: s.duration_minutes ?? 0, amount: s.amount ?? 0, status: s.status,
+          })))}>
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </Button>
         </div>
         <div className="mt-3 overflow-hidden rounded-2xl border border-border/60 bg-card/30 backdrop-blur">
           {data.recent.length === 0 ? (
