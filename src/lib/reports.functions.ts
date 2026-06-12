@@ -91,7 +91,7 @@ export const getNetworkReports = createServerFn({ method: "GET" })
       supabaseAdmin.from("sessions").select("id, amount, cafe_id, started_at, cafes(name, slug)").gte("started_at", data.from).lte("started_at", data.to),
       supabaseAdmin.from("pos_orders").select("total_amount, cafe_id, created_at").gte("created_at", data.from).lte("created_at", data.to),
       supabaseAdmin.from("customer_memberships").select("amount_paid, cafe_id, created_at").gte("created_at", data.from).lte("created_at", data.to),
-      supabaseAdmin.from("cafes").select("id, name, slug, city, status"),
+      supabaseAdmin.from("cafes").select("id, name, slug, city"),
     ]);
 
     const sessionsRevenue = (sessions.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
