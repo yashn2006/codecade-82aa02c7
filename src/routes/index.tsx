@@ -3,7 +3,7 @@ import { motion, useScroll, useTransform, useMotionValue, useSpring } from "fram
 import { useRef } from "react";
 import {
   Zap, Shield, BarChart3, Users, Cpu, ArrowRight, Check,
-  Activity, Sparkles, Terminal,
+  Activity, Sparkles, Terminal, Gamepad2,
 } from "lucide-react";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandMark } from "@/components/Brand";
@@ -98,6 +98,14 @@ function Header() {
                     <span className="relative">{l}</span>
                   </a>
                 ))}
+                <Link
+                  to="/discover"
+                  className="group relative ml-1 inline-flex items-center gap-1.5 rounded-lg border border-fuchsia-400/30 bg-gradient-to-r from-fuchsia-500/10 via-violet-500/10 to-blue-500/10 px-3.5 py-1.5 text-sm font-medium text-foreground transition hover:border-fuchsia-400/60"
+                >
+                  <Gamepad2 className="h-3.5 w-3.5 text-fuchsia-300" />
+                  For Gamers
+                  <ArrowRight className="h-3 w-3 opacity-60 transition group-hover:translate-x-0.5" />
+                </Link>
               </div>
 
               <MagneticSignIn />
