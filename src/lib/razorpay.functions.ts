@@ -116,3 +116,74 @@ export const verifyTopupPayment = createServerFn({ method: "POST" })
 
     return { ok: true, already: false };
   });
+
+// ---------- Booking payment (full prepayment) ----------
+export const createBookingOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ booking_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keyId || !keySecret) throw new Error("Razorpay is not configured");
+
+    const { data: b, error } = await context.supabase
+      .from("bookings")
+      .select("id, cafe_id, customer_id, deposit_amount, razorpay_order_id, paid_at")
+      .eq("id", data.booking_id)
+      .single();
+    if (error) throw new Error(error.message);
+    if (b.paid_at) throw new Error("Already paid");
+    const amount = b.deposit_amount ?? 0;
+    if (amount <= 0) throw new Error("Invalid amount");
+
+    const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+    const res = await fetch("https://api.razorpay.com/v1/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Basic ${auth}` },
+      body: JSON.stringify({
+        amount: amount * 100,
+        currency: "INR",
+        receipt: b.id,
+        notes: { booking_id: b.id, cafe_id: b.cafe_id, customer_id: b.customer_id },
+      }),
+    });
+    const json = await res.json() as { id?: string; error?: { description?: string } };
+    if (!res.ok || !json.id) throw new Error(json.error?.description ?? "Razorpay order create failed");
+
+    await context.supabase.from("bookings").update({ razorpay_order_id: json.id }).eq("id", b.id);
+    return { order_id: json.id, amount, currency: "INR", key_id: keyId, booking_id: b.id };
+  });
+
+export const verifyBookingPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      booking_id: z.string().uuid(),
+      razorpay_order_id: z.string(),
+      razorpay_payment_id: z.string(),
+      razorpay_signature: z.string(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) throw new Error("Razorpay is not configured");
+
+    const expected = createHmac("sha256", keySecret)
+      .update(`${data.razorpay_order_id}|${data.razorpay_payment_id}`)
+      .digest("hex");
+    if (expected !== data.razorpay_signature) throw new Error("Invalid payment signature");
+
+    const { error } = await context.supabase
+      .from("bookings")
+      .update({
+        status: "confirmed",
+        deposit_paid: true,
+        razorpay_payment_id: data.razorpay_payment_id,
+        razorpay_signature: data.razorpay_signature,
+        paid_at: new Date().toISOString(),
+      })
+      .eq("id", data.booking_id)
+      .eq("razorpay_order_id", data.razorpay_order_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
