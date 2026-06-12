@@ -2,12 +2,16 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Trophy, Shuffle, Crown } from "lucide-react";
+import { ArrowLeft, Trophy, Shuffle, Crown, Wallet } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
-import { listTournaments, listRegistrations, listMatches, generateBracket, setMatchResult } from "@/lib/tournaments.functions";
+import { listTournaments, listRegistrations, listMatches, generateBracket, setMatchResult, payoutTournament } from "@/lib/tournaments.functions";
+import { listCustomers } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/tournaments/$id")({
@@ -30,12 +34,15 @@ function BracketPage() {
   const lM = useServerFn(listMatches);
   const gen = useServerFn(generateBracket);
   const setRes = useServerFn(setMatchResult);
+  const payFn = useServerFn(payoutTournament);
+  const lCus = useServerFn(listCustomers);
   const qc = useQueryClient();
 
   const tournQ = useQuery({ queryKey: ["tourns", cafe?.id], queryFn: () => lT({ data: { cafe_id: cafe!.id } }), enabled: !!cafe?.id });
   const tournament = (tournQ.data ?? []).find((t) => t.id === id);
   const regsQ = useQuery({ queryKey: ["regs", id], queryFn: () => lR({ data: { tournament_id: id } }) });
   const matchQ = useQuery({ queryKey: ["matches", id], queryFn: () => lM({ data: { tournament_id: id } }) });
+  const cusQ = useQuery({ queryKey: ["customers", cafe?.id], queryFn: () => lCus({ data: { cafe_id: cafe!.id } }), enabled: !!cafe?.id });
 
   const genM = useMutation({
     mutationFn: gen,
@@ -47,6 +54,17 @@ function BracketPage() {
     onSuccess: () => { toast.success("Result saved"); qc.invalidateQueries({ queryKey: ["matches", id] }); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+  const payM = useMutation({
+    mutationFn: payFn,
+    onSuccess: () => {
+      toast.success("Prize paid out to winner's wallet");
+      qc.invalidateQueries({ queryKey: ["tourns", cafe?.id] });
+      qc.invalidateQueries({ queryKey: ["customers", cafe?.id] });
+      setPayoutOpen(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const [payoutOpen, setPayoutOpen] = useState(false);
 
   const matches = matchQ.data ?? [];
   const roundsMap = new Map<number, typeof matches>();
