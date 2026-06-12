@@ -193,3 +193,67 @@ export const updateCafe = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// Owner dashboard: per-café stats for everything the signed-in user owns.
+export const getOwnerDashboard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: cafes } = await supabaseAdmin
+      .from("cafes")
+      .select("id, slug, name, city, is_active, created_at")
+      .eq("owner_id", context.userId)
+      .order("created_at", { ascending: true });
+
+    const list = cafes ?? [];
+    if (list.length === 0) {
+      return { cafes: [], totals: { revenue: 0, revenueToday: 0, bookings: 0, activeSessions: 0, devices: 0, customers: 0 } };
+    }
+    const ids = list.map((c) => c.id);
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+
+    const [devicesRes, customersRes, sessionsActiveRes, sessionsAllRes, sessionsTodayRes, bookingsRes] = await Promise.all([
+      supabaseAdmin.from("devices").select("id, cafe_id").in("cafe_id", ids),
+      supabaseAdmin.from("customers").select("id, cafe_id").in("cafe_id", ids),
+      supabaseAdmin.from("sessions").select("id, cafe_id").in("cafe_id", ids).eq("status", "active"),
+      supabaseAdmin.from("sessions").select("cafe_id, amount").in("cafe_id", ids).not("amount", "is", null),
+      supabaseAdmin.from("sessions").select("cafe_id, amount").in("cafe_id", ids).gte("started_at", startOfDay.toISOString()),
+      supabaseAdmin.from("bookings").select("id, cafe_id, status").in("cafe_id", ids),
+    ]);
+
+    const count = (rows: { cafe_id: string }[] | null) => {
+      const m = new Map<string, number>();
+      (rows ?? []).forEach((r) => m.set(r.cafe_id, (m.get(r.cafe_id) ?? 0) + 1));
+      return m;
+    };
+    const sum = (rows: { cafe_id: string; amount: number | null }[] | null) => {
+      const m = new Map<string, number>();
+      (rows ?? []).forEach((r) => m.set(r.cafe_id, (m.get(r.cafe_id) ?? 0) + (r.amount ?? 0)));
+      return m;
+    };
+
+    const dev = count(devicesRes.data); const cust = count(customersRes.data);
+    const act = count(sessionsActiveRes.data); const book = count(bookingsRes.data);
+    const rev = sum(sessionsAllRes.data); const revToday = sum(sessionsTodayRes.data);
+
+    const perCafe = list.map((c) => ({
+      id: c.id, slug: c.slug, name: c.name, city: c.city, is_active: c.is_active,
+      devices: dev.get(c.id) ?? 0,
+      customers: cust.get(c.id) ?? 0,
+      activeSessions: act.get(c.id) ?? 0,
+      bookings: book.get(c.id) ?? 0,
+      revenue: rev.get(c.id) ?? 0,
+      revenueToday: revToday.get(c.id) ?? 0,
+    }));
+
+    const totals = perCafe.reduce((a, c) => ({
+      revenue: a.revenue + c.revenue,
+      revenueToday: a.revenueToday + c.revenueToday,
+      bookings: a.bookings + c.bookings,
+      activeSessions: a.activeSessions + c.activeSessions,
+      devices: a.devices + c.devices,
+      customers: a.customers + c.customers,
+    }), { revenue: 0, revenueToday: 0, bookings: 0, activeSessions: 0, devices: 0, customers: 0 });
+
+    return { cafes: perCafe, totals };
+  });
