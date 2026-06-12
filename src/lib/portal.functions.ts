@@ -48,6 +48,7 @@ export const customerBookDevice = createServerFn({ method: "POST" })
       device_id: z.string().uuid(),
       scheduled_at: z.string(),
       duration_minutes: z.number().int().min(30).max(480),
+      payment_method: z.enum(["pay_online", "pay_at_cafe", "cash"]).default("pay_at_cafe"),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -97,6 +98,7 @@ export const customerBookDevice = createServerFn({ method: "POST" })
       customerId = nc.id;
     }
 
+    const amount = Math.ceil((device.hourly_rate * data.duration_minutes) / 60);
     const { data: row, error } = await supabaseAdmin
       .from("bookings")
       .insert({
@@ -106,11 +108,14 @@ export const customerBookDevice = createServerFn({ method: "POST" })
         scheduled_at: start.toISOString(),
         duration_minutes: data.duration_minutes,
         status: "pending",
+        payment_method: data.payment_method,
+        deposit_amount: amount,
       })
       .select().single();
     if (error) throw new Error(error.message);
-    return row;
+    return { ...row, amount, cafe_id: device.cafe_id, customer_id: customerId };
   });
+
 
 export const getMyPortalSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
