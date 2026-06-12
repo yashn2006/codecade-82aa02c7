@@ -630,18 +630,47 @@ export function BookingFlow({
                               ₹<AnimatedCost value={cost} />
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-300">Pay at counter</div>
-                            <div className="font-mono text-[9px] uppercase text-white/40">no upfront charge</div>
-                          </div>
                         </div>
                       </div>
                       {/* ticket perforations */}
                       <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-background" />
                       <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-background" />
                     </div>
+
+                    {/* Payment method selector */}
+                    <div>
+                      <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-white/50">Payment method</div>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        {([
+                          { id: "pay_online", title: "Pay online now", sub: "UPI · Card · Wallet" },
+                          { id: "pay_at_cafe", title: "Pay at café", sub: "On arrival · card/UPI" },
+                          { id: "cash", title: "Cash at café", sub: "Pay in cash on arrival" },
+                        ] as const).map((opt) => {
+                          const sel = paymentMethod === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setPaymentMethod(opt.id)}
+                              className={cn(
+                                "rounded-2xl border p-3 text-left transition-all",
+                                sel
+                                  ? "border-primary bg-primary/15 shadow-[0_0_24px_-6px_oklch(0.7_0.26_335/0.8)]"
+                                  : "border-white/10 bg-white/5 hover:border-primary/40 hover:bg-white/10",
+                              )}
+                            >
+                              <div className="font-display text-sm font-bold text-white">{opt.title}</div>
+                              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/50">{opt.sub}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <p className="text-center text-xs text-white/50">
-                      Your booking starts <Badge variant="secondary" className="mx-1 bg-white/10">pending</Badge> until the café confirms · Free cancellation anytime
+                      {paymentMethod === "pay_online"
+                        ? "You'll be charged ₹" + cost + " securely via Razorpay. Booking auto-confirms on payment."
+                        : <>Your booking starts <Badge variant="secondary" className="mx-1 bg-white/10">pending</Badge> until the café confirms · Free cancellation anytime</>}
                     </p>
                   </div>
                 )}
