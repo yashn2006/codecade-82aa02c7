@@ -318,3 +318,32 @@
   .hover-lift { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
   .hover-lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-pop); }
 }
+
+/* ===================================================================
+   MOBILE PERFORMANCE — kill GPU-killers on small screens
+   - backdrop-filter is the #1 mobile jank source (re-samples every frame)
+   - heavy infinite animations halved or stilled
+   - opt-out hooks: .mobile-keep-blur, .mobile-keep-anim
+=================================================================== */
+@media (max-width: 767px) {
+  *:not(.mobile-keep-blur) {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .animate-blob,
+  .animate-marquee,
+  .animate-spin-slow {
+    animation-duration: 60s !important;
+  }
+  /* opt-out marker for components that need to stay animated */
+  .mobile-hide { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
