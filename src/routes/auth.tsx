@@ -591,13 +591,17 @@ function GoogleGlyph() {
   );
 }
 
+// Only this email may ever route into /admin. Defense-in-depth alongside the
+// route's beforeLoad role gate and DB-level RLS.
+const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
+
 async function routeByRole(navigate: ReturnType<typeof useNavigate>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) { navigate({ to: "/auth" }); return; }
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
   const set = new Set((roles ?? []).map((r) => r.role));
-  if (set.has("super_admin")) navigate({ to: "/admin" });
+  const isSuperAdmin = set.has("super_admin") && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  if (isSuperAdmin) navigate({ to: "/admin" });
   else if (set.has("cafe_owner")) navigate({ to: "/owner" });
-  else if (set.has("cafe_staff")) navigate({ to: "/portal" });
   else navigate({ to: "/portal" });
 }
