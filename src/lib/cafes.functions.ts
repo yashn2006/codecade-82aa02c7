@@ -106,26 +106,36 @@ export const createCafe = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CafeInput.parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "super_admin",
+      _user_id: context.userId, _role: "super_admin",
     });
-    if (!isAdmin) throw new Error("Forbidden");
+    const { data: isOwner } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId, _role: "cafe_owner",
+    });
+    if (!isAdmin && !isOwner) throw new Error("Forbidden — only café owners or admins can create cafés.");
 
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    // Find or invite owner
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("email", data.owner_email)
-      .maybeSingle();
-    let ownerId = profile?.id;
-    if (!ownerId) {
-      const { data: invited, error: invErr } =
-        await supabaseAdmin.auth.admin.inviteUserByEmail(data.owner_email);
-      if (invErr) throw new Error(invErr.message);
-      ownerId = invited.user?.id;
+
+    // Resolve owner. Café owners always own their own cafés.
+    let ownerId: string | undefined;
+    if (isAdmin && data.owner_email) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles").select("id").eq("email", data.owner_email).maybeSingle();
+      ownerId = profile?.id;
+      if (!ownerId) {
+        const { data: invited, error: invErr } =
+          await supabaseAdmin.auth.admin.inviteUserByEmail(data.owner_email);
+        if (invErr) throw new Error(invErr.message);
+        ownerId = invited.user?.id;
+      }
+    } else {
+      ownerId = context.userId;
     }
     if (!ownerId) throw new Error("Could not resolve owner");
+
+    // Unique slug guard
+    const { data: clash } = await supabaseAdmin
+      .from("cafes").select("id").eq("slug", data.slug).maybeSingle();
+    if (clash) throw new Error("That slug is taken — pick another.");
 
     const { data: cafe, error } = await supabaseAdmin
       .from("cafes")
@@ -140,14 +150,14 @@ export const createCafe = createServerFn({ method: "POST" })
         email: data.email || null,
         description: data.description || null,
       })
-      .select()
-      .single();
+      .select().single();
     if (error) throw new Error(error.message);
 
-    // grant cafe_owner role scoped to this cafe
-    await supabaseAdmin
-      .from("user_roles")
+    // Ensure cafe_owner role exists (scoped + global) — ignore duplicates
+    await supabaseAdmin.from("user_roles")
       .insert({ user_id: ownerId, role: "cafe_owner", cafe_id: cafe.id });
+    await supabaseAdmin.from("user_roles")
+      .insert({ user_id: ownerId, role: "cafe_owner", cafe_id: null });
 
     return cafe;
   });
