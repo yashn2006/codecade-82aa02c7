@@ -52,13 +52,13 @@ export function ConsoleMockup() {
       >
         <div className="rounded-[14px] bg-[oklch(0.09_0.02_285)]/95 overflow-hidden">
           {/* Window chrome */}
-          <div className="flex items-center justify-between border-b border-white/5 px-4 py-2.5">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between gap-2 border-b border-white/5 px-3 py-2.5 sm:px-4">
+            <div className="flex shrink-0 items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">
+            <div className="hidden min-w-0 truncate font-mono text-[10px] uppercase tracking-[0.25em] text-white/40 md:block">
               corecade.os · /cafe/andheri-west · live
             </div>
             <div className="flex items-center gap-1 font-mono text-[10px] text-emerald-300">
