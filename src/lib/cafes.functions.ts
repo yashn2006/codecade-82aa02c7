@@ -11,7 +11,8 @@ const CafeInput = z.object({
   phone: z.string().max(20).optional().nullable(),
   email: z.string().email().max(200).optional().nullable().or(z.literal("")),
   description: z.string().max(1000).optional().nullable(),
-  owner_email: z.string().email().max(200),
+  // Optional — only super admins may set a different owner. Café owners auto-own.
+  owner_email: z.string().email().max(200).optional().nullable(),
 });
 
 export const listMyCafes = createServerFn({ method: "GET" })
