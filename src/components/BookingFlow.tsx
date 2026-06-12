@@ -707,12 +707,12 @@ export function BookingFlow({
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                 <Button
                   size="sm" disabled={book.isPending || !device || !time}
-                  onClick={() => book.mutate({ data: { device_id: device!.id, scheduled_at: time!, duration_minutes: duration } })}
+                  onClick={() => book.mutate({ data: { device_id: device!.id, scheduled_at: time!, duration_minutes: duration, payment_method: paymentMethod } })}
                   style={{ background: "var(--gradient-brand-hot)" }}
                   className="shadow-[0_0_30px_-2px_oklch(0.7_0.26_335/0.9)]"
                 >
                   <Sparkles className="h-4 w-4" />
-                  {book.isPending ? "Locking it in…" : "Confirm & lock"}
+                  {book.isPending ? "Locking it in…" : paymentMethod === "pay_online" ? `Pay ₹${cost} & lock` : "Confirm & lock"}
                 </Button>
               </motion.div>
             )}
