@@ -98,9 +98,10 @@ export function ConsoleMockup() {
             </div>
 
             {/* Body */}
-            <div className="p-4">
+            <div className="p-3 sm:p-4 min-w-0">
               {/* KPI row */}
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+
                 {[
                   { l: "Active", v: "24", i: Cpu, c: "text-violet-300" },
                   { l: "Revenue", v: `₹${rev.toLocaleString("en-IN")}`, i: IndianRupee, c: "text-rose-300" },
