@@ -2,10 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ShoppingCart, Trash2, Receipt, Plus, Minus, Leaf, Beef, Printer, RotateCcw, FileBarChart } from "lucide-react";
+import { ShoppingCart, Trash2, Receipt, Plus, Minus, Leaf, Beef, Printer, RotateCcw, FileBarChart, Split } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listMenu } from "@/lib/menu.functions";
-import { createOrder, settleOrder, listRecentOrders, voidOrder, refundOrder, dailyZReport, getOrderForReceipt } from "@/lib/pos.functions";
+import { createOrder, settleOrder, listRecentOrders, voidOrder, refundOrder, dailyZReport, getOrderForReceipt, splitOrder } from "@/lib/pos.functions";
 import { listSessions } from "@/lib/sessions.functions";
 import { listCustomers } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ function POSPage() {
   const refund = useServerFn(refundOrder);
   const z = useServerFn(dailyZReport);
   const getOrder = useServerFn(getOrderForReceipt);
+  const splitFn = useServerFn(splitOrder);
 
   const menuQ = useQuery({ queryKey: ["menu", cafeId], queryFn: () => list({ data: { cafe_id: cafeId! } }), enabled: !!cafeId });
   const sesQ = useQuery({ queryKey: ["sessions", cafeId], queryFn: () => lSes({ data: { cafe_id: cafeId! } }), enabled: !!cafeId, refetchInterval: 10_000 });
@@ -71,6 +72,7 @@ function POSPage() {
   const [receiptOrder, setReceiptOrder] = useState<ReceiptOrder | null>(null);
   const [refundFor, setRefundFor] = useState<{ id: string; max: number } | null>(null);
   const [zOpen, setZOpen] = useState(false);
+  const [splitFor, setSplitFor] = useState<null | { id: string; total: number }>(null);
 
   const cats = menuQ.data?.categories ?? [];
   const items: Item[] = useMemo(() => {
@@ -128,6 +130,11 @@ function POSPage() {
   const refundM = useMutation({
     mutationFn: refund,
     onSuccess: () => { toast.success("Refunded"); setRefundFor(null); refresh(); qc.invalidateQueries({ queryKey: ["customers", cafeId] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const splitM = useMutation({
+    mutationFn: splitFn,
+    onSuccess: () => { toast.success("Order split"); setSplitFor(null); refresh(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
@@ -217,9 +224,14 @@ function POSPage() {
                       </Button>
                     )}
                     {o.status === "open" && (
-                      <Button size="sm" variant="ghost" onClick={() => voidIt.mutate({ data: { id: o.id } })}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+                      <>
+                        <Button size="icon" variant="ghost" title="Split bill" onClick={() => setSplitFor({ id: o.id, total: tot })}>
+                          <Split className="h-3.5 w-3.5 text-azure" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => voidIt.mutate({ data: { id: o.id } })}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -336,8 +348,99 @@ function POSPage() {
 
       <ZReportDialog open={zOpen} onClose={() => setZOpen(false)} cafeId={cafeId} z={z} cafeName={cafe?.name ?? ""} />
 
+      <SplitDialog
+        order={splitFor}
+        onClose={() => setSplitFor(null)}
+        onSubmit={(splits) => splitFor && splitM.mutate({ data: { order_id: splitFor.id, splits } })}
+        pending={splitM.isPending}
+      />
+
       {receiptOrder && <PrintableReceipt order={receiptOrder} onClose={() => setReceiptOrder(null)} />}
     </div>
+  );
+}
+
+function SplitDialog({ order, onClose, onSubmit, pending }: {
+  order: { id: string; total: number } | null;
+  onClose: () => void;
+  onSubmit: (splits: { label: string; amount: number }[]) => void;
+  pending: boolean;
+}) {
+  const [count, setCount] = useState(2);
+  const [splits, setSplits] = useState<{ label: string; amount: number }[]>([]);
+
+  // Re-init splits when order or count changes
+  const init = (n: number, total: number) => {
+    const base = Math.floor(total / n);
+    const remainder = total - base * n;
+    return Array.from({ length: n }, (_, i) => ({
+      label: `Person ${i + 1}`,
+      amount: base + (i === 0 ? remainder : 0),
+    }));
+  };
+
+  // Use derived state when order/count changes
+  const expectedTotal = order?.total ?? 0;
+  const currentTotal = splits.reduce((s, x) => s + x.amount, 0);
+  const balanced = currentTotal === expectedTotal;
+
+  return (
+    <Dialog open={!!order} onOpenChange={(v) => { if (!v) { onClose(); setSplits([]); } }}>
+      <DialogContent
+        className="sm:max-w-md"
+        onOpenAutoFocus={() => order && setSplits(init(count, order.total))}
+      >
+        <DialogHeader><DialogTitle>Split ₹{order?.total}</DialogTitle></DialogHeader>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Number of people</Label>
+          <Input
+            type="number"
+            min={2}
+            max={10}
+            value={count}
+            onChange={(e) => {
+              const n = Math.max(2, Math.min(10, Number(e.target.value) || 2));
+              setCount(n);
+              if (order) setSplits(init(n, order.total));
+            }}
+            className="h-9 w-20"
+          />
+          <Button variant="ghost" size="sm" onClick={() => order && setSplits(init(count, order.total))}>Even split</Button>
+        </div>
+        <div className="max-h-72 space-y-2 overflow-y-auto">
+          {splits.map((sp, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input
+                value={sp.label}
+                onChange={(e) => setSplits((cur) => cur.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                className="h-9 flex-1"
+                maxLength={40}
+              />
+              <Input
+                type="number"
+                min={1}
+                value={sp.amount}
+                onChange={(e) => setSplits((cur) => cur.map((x, j) => j === i ? { ...x, amount: Math.max(0, Number(e.target.value) || 0) } : x))}
+                className="h-9 w-24 font-mono"
+              />
+            </div>
+          ))}
+        </div>
+        <div className={`rounded-md border p-2 text-xs ${balanced ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200" : "border-rose-400/40 bg-rose-500/10 text-rose-200"}`}>
+          Splits total: <b>₹{currentTotal}</b> / ₹{expectedTotal} {balanced ? "✓ balanced" : `(off by ₹${currentTotal - expectedTotal})`}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button
+            disabled={!balanced || pending || splits.some((s) => !s.label.trim() || s.amount <= 0)}
+            onClick={() => onSubmit(splits.map((s) => ({ label: s.label.trim(), amount: s.amount })))}
+            style={{ background: "var(--gradient-brand-hot)" }}
+          >
+            {pending ? "Splitting…" : `Split into ${count} bills`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

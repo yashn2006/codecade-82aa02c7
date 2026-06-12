@@ -11,6 +11,12 @@ async function assertCafeOwner(ctx: { supabase: ReturnType<typeof Object> & { fr
   if (!cafe || cafe.owner_id !== ctx.userId) throw new Error("Forbidden");
 }
 
+export const STAFF_PERMS = [
+  "start_sessions", "end_sessions", "register_customers", "create_bookings",
+  "generate_bills", "view_revenue", "manage_devices", "manage_menu",
+] as const;
+export type StaffPerm = typeof STAFF_PERMS[number];
+
 export const listStaff = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
@@ -19,11 +25,45 @@ export const listStaff = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
       .from("staff_permissions")
-      .select("id, staff_user_id, permissions, created_at, profiles:staff_user_id(email, full_name)")
+      .select("id, staff_user_id, permissions, last_seen_at, created_at, profiles:staff_user_id(email, full_name)")
       .eq("cafe_id", data.cafe_id)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return rows ?? [];
+  });
+
+export const updateStaffPermissions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      cafe_id: z.string().uuid(),
+      staff_user_id: z.string().uuid(),
+      permissions: z.array(z.enum(STAFF_PERMS)),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertCafeOwner(context, data.cafe_id);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("staff_permissions")
+      .update({ permissions: data.permissions })
+      .eq("cafe_id", data.cafe_id)
+      .eq("staff_user_id", data.staff_user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Heartbeat — called by staff client every ~2 min to mark "online". */
+export const staffHeartbeat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    await supabaseAdmin.from("staff_permissions")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("cafe_id", data.cafe_id)
+      .eq("staff_user_id", context.userId);
+    return { ok: true };
   });
 
 export const inviteStaff = createServerFn({ method: "POST" })

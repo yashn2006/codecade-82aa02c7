@@ -185,3 +185,65 @@ export const dailyZReport = createServerFn({ method: "GET" })
       sessionCount: (sessions ?? []).length,
     };
   });
+
+/**
+ * Split a single open order into N child orders. Each split gets a copy of the
+ * items proportional to its share (by amount). Parent order is voided.
+ * Simple equal-split for v1 — each share gets share_amount as a single line.
+ */
+export const splitOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      order_id: z.string().uuid(),
+      splits: z.array(z.object({
+        label: z.string().min(1).max(40),
+        amount: z.number().int().min(1),
+        customer_id: z.string().uuid().nullable().optional(),
+      })).min(2).max(10),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: parent, error: pe } = await context.supabase
+      .from("orders")
+      .select("id, cafe_id, status, subtotal, total_amount, gst_rate, session_id")
+      .eq("id", data.order_id).single();
+    if (pe || !parent) throw new Error(pe?.message ?? "Order not found");
+    if (parent.status !== "open") throw new Error("Only open orders can be split");
+
+    const parentTotal = parent.total_amount || parent.subtotal;
+    const splitsTotal = data.splits.reduce((s, x) => s + x.amount, 0);
+    if (splitsTotal !== parentTotal) {
+      throw new Error(`Splits sum (₹${splitsTotal}) must equal total ₹${parentTotal}`);
+    }
+
+    const childIds: string[] = [];
+    for (const sp of data.splits) {
+      const { data: rno } = await context.supabase.rpc("next_receipt_no", { _cafe_id: parent.cafe_id });
+      const { data: child, error: ce } = await context.supabase.from("orders").insert({
+        cafe_id: parent.cafe_id,
+        customer_id: sp.customer_id ?? null,
+        session_id: parent.session_id,
+        subtotal: sp.amount,
+        discount_amount: 0,
+        tax_amount: 0,
+        total_amount: sp.amount,
+        gst_rate: 0,
+        receipt_no: rno ?? null,
+        parent_order_id: parent.id,
+        split_label: sp.label,
+        created_by: context.userId,
+      }).select("id").single();
+      if (ce) throw new Error(ce.message);
+      await context.supabase.from("order_items").insert({
+        order_id: child.id,
+        item_id: null,
+        name: `Split: ${sp.label}`,
+        unit_price: sp.amount,
+        qty: 1,
+      });
+      childIds.push(child.id);
+    }
+    await context.supabase.from("orders").update({ status: "void", refund_reason: `Split into ${data.splits.length}` }).eq("id", parent.id);
+    return { ok: true, child_ids: childIds };
+  });

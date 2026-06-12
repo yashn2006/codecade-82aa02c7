@@ -2,12 +2,16 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Trophy, Shuffle, Crown } from "lucide-react";
+import { ArrowLeft, Trophy, Shuffle, Crown, Wallet } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
-import { listTournaments, listRegistrations, listMatches, generateBracket, setMatchResult } from "@/lib/tournaments.functions";
+import { listTournaments, listRegistrations, listMatches, generateBracket, setMatchResult, payoutTournament } from "@/lib/tournaments.functions";
+import { listCustomers } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/tournaments/$id")({
@@ -30,12 +34,15 @@ function BracketPage() {
   const lM = useServerFn(listMatches);
   const gen = useServerFn(generateBracket);
   const setRes = useServerFn(setMatchResult);
+  const payFn = useServerFn(payoutTournament);
+  const lCus = useServerFn(listCustomers);
   const qc = useQueryClient();
 
   const tournQ = useQuery({ queryKey: ["tourns", cafe?.id], queryFn: () => lT({ data: { cafe_id: cafe!.id } }), enabled: !!cafe?.id });
   const tournament = (tournQ.data ?? []).find((t) => t.id === id);
   const regsQ = useQuery({ queryKey: ["regs", id], queryFn: () => lR({ data: { tournament_id: id } }) });
   const matchQ = useQuery({ queryKey: ["matches", id], queryFn: () => lM({ data: { tournament_id: id } }) });
+  const cusQ = useQuery({ queryKey: ["customers", cafe?.id], queryFn: () => lCus({ data: { cafe_id: cafe!.id } }), enabled: !!cafe?.id });
 
   const genM = useMutation({
     mutationFn: gen,
@@ -47,6 +54,17 @@ function BracketPage() {
     onSuccess: () => { toast.success("Result saved"); qc.invalidateQueries({ queryKey: ["matches", id] }); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+  const payM = useMutation({
+    mutationFn: payFn,
+    onSuccess: () => {
+      toast.success("Prize paid out to winner's wallet");
+      qc.invalidateQueries({ queryKey: ["tourns", cafe?.id] });
+      qc.invalidateQueries({ queryKey: ["customers", cafe?.id] });
+      setPayoutOpen(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const [payoutOpen, setPayoutOpen] = useState(false);
 
   const matches = matchQ.data ?? [];
   const roundsMap = new Map<number, typeof matches>();
@@ -56,6 +74,12 @@ function BracketPage() {
     roundsMap.set(m.round, arr);
   }
   const rounds = Array.from(roundsMap.entries()).sort(([a], [b]) => a - b);
+
+  const finalRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
+  const finalMatch = finalRound?.[1]?.[0];
+  const champion = finalMatch?.winner && finalMatch.winner !== "BYE" ? finalMatch.winner : null;
+  const t = (tournament ?? {}) as { paid_out_at?: string | null; winner_team?: string | null; prize_pool?: number; payout_amount?: number };
+  const paidOut = !!t.paid_out_at;
 
   return (
     <div>
@@ -74,9 +98,21 @@ function BracketPage() {
               <div className="text-xs text-muted-foreground">{tournament.game} · {tournament.format} · {(regsQ.data ?? []).length}/{tournament.capacity} teams · Prize ₹{tournament.prize_pool}</div>
             </div>
           </div>
-          <Button onClick={() => { if (confirm("Regenerate bracket from current registrations? Existing matches will be wiped.")) genM.mutate({ data: { tournament_id: id } }); }} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
-            <Shuffle className="h-4 w-4" /> {matches.length === 0 ? "Generate" : "Regenerate"} bracket
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {champion && !paidOut && (
+              <Button onClick={() => setPayoutOpen(true)} className="gap-2" variant="outline">
+                <Crown className="h-4 w-4 text-amber-400" /> Payout to {champion}
+              </Button>
+            )}
+            {paidOut && (
+              <Badge className="gap-1 bg-amber-500/20 text-amber-200">
+                <Crown className="h-3 w-3" /> ₹{t.payout_amount} paid to {t.winner_team}
+              </Badge>
+            )}
+            <Button onClick={() => { if (confirm("Regenerate bracket? Existing matches will be wiped.")) genM.mutate({ data: { tournament_id: id } }); }} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+              <Shuffle className="h-4 w-4" /> {matches.length === 0 ? "Generate" : "Regenerate"} bracket
+            </Button>
+          </div>
         </div>
       )}
 
@@ -98,6 +134,52 @@ function BracketPage() {
           </div>
         </div>
       )}
+
+      {/* Payout dialog */}
+      <Dialog open={payoutOpen} onOpenChange={setPayoutOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Wallet className="h-4 w-4 text-primary" /> Pay out tournament prize</DialogTitle></DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const customer_id = String(fd.get("customer_id") || "");
+              const winner_team = String(fd.get("winner_team") || "").trim();
+              const amount = Number(fd.get("amount")) || 0;
+              if (!customer_id) return toast.error("Pick the winning customer");
+              if (!winner_team) return toast.error("Team name required");
+              if (amount <= 0) return toast.error("Amount must be > 0");
+              if (!confirm(`Credit ₹${amount} to ${winner_team}'s wallet? This cannot be undone.`)) return;
+              payM.mutate({ data: { tournament_id: id, customer_id, winner_team, amount } });
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1">
+              <Label>Winner team / player</Label>
+              <Input name="winner_team" required defaultValue={champion ?? ""} />
+            </div>
+            <div className="space-y-1">
+              <Label>Credit to customer</Label>
+              <select name="customer_id" required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="">— select customer —</option>
+                {(cusQ.data ?? []).map((c: { id: string; full_name: string; phone: string | null }) => (
+                  <option key={c.id} value={c.id}>{c.full_name} {c.phone ? `· ${c.phone}` : ""}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Amount (₹)</Label>
+              <Input name="amount" type="number" min={1} defaultValue={tournament?.prize_pool ?? 0} required />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setPayoutOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={payM.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
+                {payM.isPending ? "Paying…" : "Confirm payout"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

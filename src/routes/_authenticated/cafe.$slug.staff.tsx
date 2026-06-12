@@ -7,7 +7,8 @@ import {
   ShieldCheck, Plus, Trash2, Mail, Sparkles, Activity, CalendarRange, Users as UsersIcon, Wallet, Check,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
-import { listStaff, inviteStaff, removeStaff } from "@/lib/staff.functions";
+import { listStaff, inviteStaff, removeStaff, updateStaffPermissions, STAFF_PERMS, type StaffPerm } from "@/lib/staff.functions";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,7 @@ function StaffPage() {
   const list = useServerFn(listStaff);
   const invite = useServerFn(inviteStaff);
   const remove = useServerFn(removeStaff);
+  const updateP = useServerFn(updateStaffPermissions);
 
   const q = useQuery({ queryKey: ["staff", cafeId], queryFn: () => list({ data: { cafe_id: cafeId! } }), enabled: !!cafeId });
   const qc = useQueryClient();
@@ -57,6 +59,11 @@ function StaffPage() {
   const removeM = useMutation({
     mutationFn: remove,
     onSuccess: () => { toast.success("Removed"); qc.invalidateQueries({ queryKey: ["staff", cafeId] }); },
+  });
+  const updateM = useMutation({
+    mutationFn: updateP,
+    onSuccess: () => { toast.success("Permissions updated"); qc.invalidateQueries({ queryKey: ["staff", cafeId] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const [open, setOpen] = useState(false);
   const [perms, setPerms] = useState<PermKey[]>(["sessions", "bookings"]);
@@ -243,6 +250,66 @@ function StaffPage() {
           </div>
         )}
       </div>
+
+      {/* Permissions matrix */}
+      {(q.data?.length ?? 0) > 0 && (
+        <div className="mt-8">
+          <div className="mb-2 flex items-baseline justify-between gap-2">
+            <h2 className="font-display text-lg font-bold">Permissions matrix</h2>
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              Toggle = save instantly · Green dot = online (≤5min)
+            </span>
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card/40 backdrop-blur">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border/60 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="sticky left-0 z-10 bg-card/80 p-3 backdrop-blur">Staff</th>
+                  {STAFF_PERMS.map((p) => (
+                    <th key={p} className="p-3 text-center font-mono">{p.replace(/_/g, " ")}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(q.data ?? []).map((s) => {
+                  const prof = s.profiles as { email?: string; full_name?: string } | null;
+                  const current = ((s.permissions as string[]) ?? []) as StaffPerm[];
+                  const lastSeen = (s as { last_seen_at?: string | null }).last_seen_at;
+                  const online = lastSeen && Date.now() - new Date(lastSeen).getTime() < 5 * 60 * 1000;
+                  return (
+                    <tr key={s.id} className="border-b border-border/30 last:border-0">
+                      <td className="sticky left-0 z-10 min-w-[180px] bg-card/80 p-3 backdrop-blur">
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2 w-2 rounded-full ${online ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" : "bg-muted-foreground/30"}`} />
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">{prof?.full_name || prof?.email || "—"}</div>
+                            <div className="truncate font-mono text-[10px] text-muted-foreground">{prof?.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      {STAFF_PERMS.map((p) => {
+                        const active = current.includes(p);
+                        return (
+                          <td key={p} className="p-2 text-center">
+                            <Switch
+                              checked={active}
+                              disabled={updateM.isPending}
+                              onCheckedChange={(checked) => {
+                                const next = checked ? [...new Set([...current, p])] : current.filter((x) => x !== p);
+                                updateM.mutate({ data: { cafe_id: cafeId, staff_user_id: s.staff_user_id, permissions: next } });
+                              }}
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
