@@ -54,6 +54,12 @@ function BookingsPage() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["bookings", cafeId] });
   const setM = useMutation({ mutationFn: setStatus, onSuccess: () => { refresh(); toast.success("Updated"); } });
   const depositM = useMutation({ mutationFn: deposit, onSuccess: () => { refresh(); toast.success("Deposit updated"); } });
+  const payDep = useServerFn(payBookingDeposit);
+  const refDep = useServerFn(refundBookingDeposit);
+  const cxlRef = useServerFn(cancelBookingWithRefund);
+  const payM = useMutation({ mutationFn: payDep, onSuccess: () => { refresh(); toast.success("Deposit paid from wallet"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
+  const refM = useMutation({ mutationFn: refDep, onSuccess: () => { refresh(); toast.success("Deposit refunded"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
+  const cxlM = useMutation({ mutationFn: cxlRef, onSuccess: () => { refresh(); toast.success("Booking cancelled + refunded"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
   const createM = useMutation({
     mutationFn: create,
     onSuccess: () => { refresh(); toast.success("Booking created"); setOpen(false); },
