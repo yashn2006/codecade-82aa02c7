@@ -1,9 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
-import { Search, MapPin, Star, Zap, Calendar, Trophy, Gift, UserPlus, Gamepad2, ArrowRight, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring,
+  useMotionTemplate, useVelocity, useAnimationFrame, wrap,
+} from "framer-motion";
+import {
+  Search, MapPin, Star, Zap, Calendar, Trophy, Gift, UserPlus, Gamepad2,
+  ArrowRight, ArrowUpRight, Sparkles, PlayCircle, Joystick, Headphones, Cpu, Crown,
+} from "lucide-react";
 import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,10 +18,10 @@ export const Route = createFileRoute("/discover")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Discover Gaming Cafés — CoreCade" },
-      { name: "description", content: "Find gaming cafés near you. Book a seat. Game on. India's largest gaming café network." },
-      { property: "og:title", content: "Discover Gaming Cafés — CoreCade" },
-      { property: "og:description", content: "Find gaming cafés near you. Book a seat. Game on." },
+      { title: "CoreCade — Enter the Arena" },
+      { name: "description", content: "India's cinematic gaming café network. Find arenas. Book seats. Game on." },
+      { property: "og:title", content: "CoreCade — Enter the Arena" },
+      { property: "og:description", content: "India's cinematic gaming café network. Find arenas. Book seats. Game on." },
     ],
   }),
   component: DiscoverPage,
@@ -27,6 +33,9 @@ type Cafe = {
   description: string | null; cover_url: string | null;
 };
 
+/* =================================================================
+   ROOT
+================================================================= */
 function DiscoverPage() {
   const fn = useServerFn(listPublicCafes);
   const { data: cafes = [] } = useQuery<Cafe[]>({ queryKey: ["public-cafes"], queryFn: () => fn() });
@@ -55,108 +64,220 @@ function DiscoverPage() {
   }, [cafes, query, city]);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#05050F] text-white">
-      <GalaxyBackdrop />
+    <div className="relative min-h-screen overflow-x-hidden bg-[#04030c] text-white antialiased selection:bg-fuchsia-500/40 selection:text-white">
+      <NeonCursor />
+      <NebulaCanvas />
+      <GrainOverlay />
+      <ScrollProgress />
       <Navbar signedIn={signedIn} />
-      <Hero query={query} setQuery={setQuery} cities={cities} city={city} setCity={setCity} />
-      <StatsBar />
-      <CafesSection cafes={filtered} loading={!cafes.length} />
-      <HowItWorks />
-      <WhyCorecade />
+
+      <CinematicHero query={query} setQuery={setQuery} cities={cities} city={city} setCity={setCity} />
+      <MarqueeStrip />
+      <PinnedManifesto />
+      <ArenaShowcase cafes={filtered} loading={!cafes.length} />
+      <ParallaxStats />
+      <RitualSection />
+      <PerksSection />
+      <FinalCTA />
       <Footer />
     </div>
   );
 }
 
-/* ---------------- 3D Galaxy Backdrop ---------------- */
-function GalaxyBackdrop() {
-  const stars = useMemo(
-    () => Array.from({ length: 220 }, () => ({
-      x: Math.random() * 100, y: Math.random() * 100,
-      s: Math.random() * 1.6 + 0.3, d: Math.random() * 6 + 2,
-      o: Math.random() * 0.7 + 0.2,
-    })),
-    [],
-  );
+/* =================================================================
+   NEON CURSOR (desktop only)
+================================================================= */
+function NeonCursor() {
+  const x = useMotionValue(-200);
+  const y = useMotionValue(-200);
+  const sx = useSpring(x, { stiffness: 350, damping: 30, mass: 0.4 });
+  const sy = useSpring(y, { stiffness: 350, damping: 30, mass: 0.4 });
+  const [hover, setHover] = useState(false);
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => { x.set(e.clientX); y.set(e.clientY); };
+    const over = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      setHover(!!t?.closest("a,button,[data-cursor]"));
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseover", over);
+    return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseover", over); };
+  }, [x, y]);
+
   return (
-    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-      {/* base */}
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at top, #0f0826 0%, #05050F 60%)" }} />
-      {/* grid */}
-      <div
-        className="absolute inset-0 opacity-[0.035]"
-        style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)",
-          backgroundSize: "44px 44px",
-        }}
-      />
-      {/* stars */}
-      {stars.map((s, i) => (
-        <span
-          key={i}
-          className="absolute rounded-full bg-white"
+    <>
+      <motion.div
+        aria-hidden
+        style={{ x: sx, y: sy }}
+        className="pointer-events-none fixed left-0 top-0 z-[100] hidden md:block"
+      >
+        <motion.div
+          animate={{ scale: hover ? 2.4 : 1, opacity: hover ? 0.9 : 0.7 }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          className="-translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
-            top: `${s.y}%`, left: `${s.x}%`,
-            width: s.s, height: s.s, opacity: s.o,
-            boxShadow: s.s > 1.2 ? "0 0 6px rgba(255,255,255,.8)" : undefined,
-            animation: `twinkle ${s.d}s ease-in-out ${Math.random() * 4}s infinite alternate`,
+            width: 18, height: 18,
+            background: "radial-gradient(circle, #ff52e0 0%, #7b2fff 55%, transparent 75%)",
+            filter: "blur(2px)",
+            boxShadow: "0 0 30px rgba(255,82,224,.8), 0 0 60px rgba(123,47,255,.5)",
           }}
         />
-      ))}
-      {/* glowing orbs */}
-      <FloatingOrb className="left-[-10%] top-[10%] h-[520px] w-[520px]" color="oklch(0.65 0.25 295 / 0.45)" duration={18} />
-      <FloatingOrb className="right-[-12%] top-[40%] h-[460px] w-[460px]" color="oklch(0.7 0.2 240 / 0.40)" duration={22} delay={-6} />
-      <FloatingOrb className="left-[30%] bottom-[-10%] h-[600px] w-[600px]" color="oklch(0.7 0.26 335 / 0.40)" duration={26} delay={-12} />
+      </motion.div>
+      <motion.div
+        aria-hidden
+        style={{ x, y }}
+        className="pointer-events-none fixed left-0 top-0 z-[101] hidden md:block"
+      >
+        <div className="-translate-x-1/2 -translate-y-1/2 rounded-full bg-white" style={{ width: 4, height: 4 }} />
+      </motion.div>
+    </>
+  );
+}
 
-      <style>{`
-        @keyframes twinkle { from { opacity: .15 } to { opacity: 1 } }
-      `}</style>
+/* =================================================================
+   NEBULA CANVAS — animated particle field reacting to mouse
+================================================================= */
+function NebulaCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current; if (!c) return;
+    const ctx = c.getContext("2d"); if (!ctx) return;
+    let raf = 0; const DPR = Math.min(2, window.devicePixelRatio || 1);
+    const mouse = { x: -9999, y: -9999 };
+    const resize = () => {
+      c.width = window.innerWidth * DPR; c.height = window.innerHeight * DPR;
+      c.style.width = "100vw"; c.style.height = "100vh";
+    };
+    resize(); window.addEventListener("resize", resize);
+    const onMove = (e: MouseEvent) => { mouse.x = e.clientX * DPR; mouse.y = e.clientY * DPR; };
+    window.addEventListener("mousemove", onMove);
+
+    const N = 140;
+    type P = { x: number; y: number; vx: number; vy: number; r: number; h: number };
+    const parts: P[] = Array.from({ length: N }, () => ({
+      x: Math.random() * c.width, y: Math.random() * c.height,
+      vx: (Math.random() - 0.5) * 0.35 * DPR, vy: (Math.random() - 0.5) * 0.35 * DPR,
+      r: (Math.random() * 1.6 + 0.4) * DPR,
+      h: Math.random() < 0.5 ? 290 : 320, // violet / magenta hues
+    }));
+
+    const tick = () => {
+      ctx.clearRect(0, 0, c.width, c.height);
+      // soft tint
+      const grad = ctx.createRadialGradient(c.width * 0.5, c.height * 0.3, 0, c.width * 0.5, c.height * 0.3, c.width * 0.7);
+      grad.addColorStop(0, "rgba(40,12,80,0.35)");
+      grad.addColorStop(1, "rgba(4,3,12,0)");
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, c.width, c.height);
+
+      for (const p of parts) {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > c.width) p.vx *= -1;
+        if (p.y < 0 || p.y > c.height) p.vy *= -1;
+        // mouse repulse
+        const dx = p.x - mouse.x, dy = p.y - mouse.y;
+        const d2 = dx * dx + dy * dy;
+        const R = 160 * DPR;
+        if (d2 < R * R) {
+          const d = Math.sqrt(d2) || 1;
+          const f = (1 - d / R) * 0.9;
+          p.x += (dx / d) * f * 3; p.y += (dy / d) * f * 3;
+        }
+        ctx.beginPath();
+        ctx.fillStyle = `hsla(${p.h}, 95%, 70%, .85)`;
+        ctx.shadowBlur = 14 * DPR; ctx.shadowColor = `hsla(${p.h}, 95%, 65%, .9)`;
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      }
+      // connect lines
+      ctx.shadowBlur = 0;
+      for (let i = 0; i < N; i++) {
+        for (let j = i + 1; j < N; j++) {
+          const a = parts[i], b = parts[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          const max = 110 * DPR;
+          if (d < max) {
+            ctx.strokeStyle = `hsla(305, 90%, 70%, ${(1 - d / max) * 0.18})`;
+            ctx.lineWidth = 0.6 * DPR;
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); };
+  }, []);
+  return (
+    <div className="pointer-events-none fixed inset-0 z-0">
+      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at top, #1a0838 0%, #04030c 55%, #000 100%)" }} />
+      <canvas ref={ref} className="absolute inset-0" />
+      <div
+        className="absolute inset-0 opacity-[0.05]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px)",
+          backgroundSize: "56px 56px",
+          maskImage: "radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 100%)",
+          WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 100%)",
+        }}
+      />
     </div>
   );
 }
 
-function FloatingOrb({ className = "", color, duration = 20, delay = 0 }: { className?: string; color: string; duration?: number; delay?: number }) {
+function GrainOverlay() {
   return (
-    <motion.div
-      className={`absolute rounded-full blur-[110px] ${className}`}
-      style={{ background: `radial-gradient(circle, ${color}, transparent 65%)` }}
-      animate={{ x: [0, 40, -20, 0], y: [0, -30, 20, 0] }}
-      transition={{ duration, delay, repeat: Infinity, ease: "easeInOut" }}
+    <div className="pointer-events-none fixed inset-0 z-[2] opacity-[0.07] mix-blend-overlay"
+      style={{
+        backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+      }}
     />
   );
 }
 
-/* ---------------- Navbar ---------------- */
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const w = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+  return (
+    <motion.div className="fixed top-0 left-0 z-[60] h-[2px] origin-left"
+      style={{ width: w, background: "linear-gradient(90deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 0 14px #ff52e0" }} />
+  );
+}
+
+/* =================================================================
+   NAVBAR
+================================================================= */
 function Navbar({ signedIn }: { signedIn: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
-    onScroll();
-    window.addEventListener("scroll", onScroll);
+    onScroll(); window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   return (
     <motion.nav
-      initial={{ y: -60, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? "border-b border-white/10 bg-[#05050F]/70 backdrop-blur-xl" : "bg-transparent"
+      initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
+        scrolled ? "border-b border-white/10 bg-[#04030c]/70 backdrop-blur-2xl" : "bg-transparent"
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-        <Link to="/discover" className="group flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-lg" style={{ background: "linear-gradient(135deg, #7b2fff, #2d8eff)", boxShadow: "0 0 22px rgba(123,47,255,.55)" }}>
-            <Gamepad2 className="h-5 w-5 text-white" />
+        <Link to="/discover" className="group flex items-center gap-2.5">
+          <div className="relative grid h-9 w-9 place-items-center rounded-xl"
+               style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 0 24px rgba(255,82,224,.55)" }}>
+            <Joystick className="h-5 w-5 text-white" />
+            <span className="absolute inset-0 rounded-xl ring-1 ring-white/30" />
           </div>
-          <span className="font-display text-lg font-black tracking-wider text-white" style={{ textShadow: "0 0 18px rgba(123,47,255,.7)", letterSpacing: "0.18em" }}>
+          <span className="font-display text-lg font-black tracking-[0.2em] text-white" style={{ textShadow: "0 0 22px rgba(255,82,224,.55)" }}>
             CORECADE
           </span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           {signedIn ? (
             <Link to="/portal">
-              <Button size="sm" className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400">
+              <Button size="sm" className="border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white hover:opacity-95">
                 My Portal <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -166,8 +287,8 @@ function Navbar({ signedIn }: { signedIn: boolean }) {
                 <Button size="sm" variant="ghost" className="border border-white/20 bg-transparent text-white hover:bg-white/10">Login</Button>
               </Link>
               <Link to="/auth">
-                <Button size="sm" className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 shadow-[0_0_24px_rgba(123,47,255,.45)]">
-                  Sign Up
+                <Button size="sm" className="border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white shadow-[0_0_28px_rgba(255,82,224,.5)]">
+                  Enter Arena
                 </Button>
               </Link>
             </>
@@ -178,74 +299,113 @@ function Navbar({ signedIn }: { signedIn: boolean }) {
   );
 }
 
-/* ---------------- Hero ---------------- */
-function Hero({
+/* =================================================================
+   CINEMATIC HERO
+================================================================= */
+function CinematicHero({
   query, setQuery, cities, city, setCity,
 }: { query: string; setQuery: (s: string) => void; cities: string[]; city: string; setCity: (c: string) => void }) {
-  const words = ["FIND", "YOUR", "ARENA"];
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const yTitle = useTransform(scrollYProgress, [0, 1], [0, -180]);
+  const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.85]);
+  const yBg = useTransform(scrollYProgress, [0, 1], [0, 250]);
+
   return (
-    <section className="relative z-10 mx-auto max-w-7xl px-5 pt-32 pb-16 sm:px-8 sm:pt-40">
-      <div className="mx-auto max-w-4xl text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.28em] text-violet-300 backdrop-blur"
-        >
-          <Sparkles className="h-3 w-3" /> India's gaming café universe
-        </motion.div>
-        <h1 className="mt-6 font-display text-[2.5rem] font-black leading-[0.95] tracking-tight sm:text-7xl md:text-8xl">
-          {words.map((w, i) => (
-            <motion.span
-              key={w}
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 + i * 0.12, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-2 inline-block"
-              style={i === 2 ? {
-                background: "linear-gradient(135deg, #c084fc, #7b2fff, #2d8eff)",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                textShadow: "0 0 60px rgba(123,47,255,.4)",
-              } : undefined}
-            >
-              {w}
-            </motion.span>
+    <section ref={ref} className="relative z-10 min-h-[100svh] pt-28 sm:pt-36">
+      {/* parallax hero layers */}
+      <motion.div style={{ y: yBg }} className="pointer-events-none absolute inset-0 -z-10">
+        {/* halo */}
+        <div className="absolute left-1/2 top-[28%] h-[680px] w-[680px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+             style={{ background: "radial-gradient(circle, rgba(255,82,224,.30), rgba(123,47,255,.15) 40%, transparent 70%)", filter: "blur(60px)" }} />
+        {/* concentric rings (no globe) */}
+        <svg className="absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-[55%] opacity-40" width="1200" height="800" viewBox="-600 -400 1200 800">
+          {[120, 200, 290, 390, 500, 620].map((r, i) => (
+            <motion.circle
+              key={r} cx="0" cy="0" r={r} fill="none" stroke="url(#ringG)" strokeWidth="1"
+              initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.5 }}
+              transition={{ duration: 1.4 + i * 0.15, ease: "easeOut", delay: 0.2 + i * 0.05 }}
+            />
           ))}
-        </h1>
-        <motion.p
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}
-          className="mx-auto mt-6 max-w-xl text-base text-white/70 sm:text-lg"
+          <defs>
+            <linearGradient id="ringG" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#ff52e0" stopOpacity="0.9" />
+              <stop offset="0.5" stopColor="#7b2fff" stopOpacity="0.5" />
+              <stop offset="1" stopColor="#2d8eff" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+        </svg>
+        {/* corner glyphs */}
+        <CornerGlyphs />
+      </motion.div>
+
+      <motion.div style={{ y: yTitle, opacity, scale }} className="relative mx-auto max-w-7xl px-5 sm:px-8">
+        {/* eyebrow */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          className="mx-auto flex w-fit items-center gap-3 rounded-full border border-white/15 bg-white/[0.04] px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.32em] text-fuchsia-200 backdrop-blur-xl"
         >
-          Discover gaming cafés near you. Book a seat. <span className="text-white">Game on.</span>
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-fuchsia-400 opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-fuchsia-400" />
+          </span>
+          INDIA · GAMING CAFÉ NETWORK · ONLINE
+        </motion.div>
+
+        {/* MASSIVE TYPE */}
+        <div className="mt-8 text-center">
+          <SplitTitle text="ENTER" delay={0.1} />
+          <div className="-mt-3 sm:-mt-6 md:-mt-10">
+            <SplitTitle text="THE" delay={0.3} italic />
+          </div>
+          <div className="-mt-3 sm:-mt-6 md:-mt-10">
+            <SplitTitle text="ARENA" delay={0.5} gradient />
+          </div>
+        </div>
+
+        <motion.p
+          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}
+          className="mx-auto mt-8 max-w-xl text-center text-base text-white/65 sm:text-lg"
+        >
+          Find India's best gaming cafés. Lock in your rig. <span className="text-white">Step inside the network.</span>
         </motion.p>
 
-        {/* Search bar */}
+        {/* search */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}
+          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05 }}
           className="relative mx-auto mt-10 max-w-2xl"
         >
-          <div className="group relative overflow-hidden rounded-2xl border border-violet-500/30 bg-white/[0.04] backdrop-blur-xl"
-               style={{ boxShadow: "0 0 40px rgba(123,47,255,.25), inset 0 1px 0 rgba(255,255,255,.08)" }}>
-            <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 animate-pulse text-violet-300" />
+          <div className="absolute -inset-[1px] rounded-2xl opacity-80 blur-sm"
+               style={{ background: "conic-gradient(from 0deg,#ff52e0,#7b2fff,#2d8eff,#ff52e0)", animation: "spin 8s linear infinite" }} />
+          <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#0a0720]/80 backdrop-blur-xl">
+            <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-fuchsia-300" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by café, city, area or PIN code…"
-              className="w-full bg-transparent py-5 pl-14 pr-5 text-base text-white placeholder:text-white/40 focus:outline-none"
+              placeholder="Search by café, city, area or PIN…"
+              className="w-full bg-transparent py-5 pl-14 pr-32 text-base text-white placeholder:text-white/40 focus:outline-none"
             />
+            <Link to="/auth">
+              <button className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white sm:inline-flex"
+                      style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff)", boxShadow: "0 0 22px rgba(255,82,224,.5)" }}>
+                Enter <ArrowRight className="h-4 w-4" />
+              </button>
+            </Link>
           </div>
         </motion.div>
 
-        {/* City pills */}
+        {/* city pills */}
         <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}
-          className="mt-5 flex flex-wrap justify-center gap-2"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.25 }}
+          className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2"
         >
           {cities.slice(0, 10).map((c) => (
             <button
-              key={c}
-              onClick={() => setCity(c)}
+              key={c} onClick={() => setCity(c)}
               className={`rounded-full border px-4 py-1.5 text-xs font-medium transition ${
                 city === c
-                  ? "border-violet-400/60 bg-violet-500/20 text-white shadow-[0_0_18px_rgba(123,47,255,.4)]"
+                  ? "border-fuchsia-400/60 bg-fuchsia-500/20 text-white shadow-[0_0_18px_rgba(255,82,224,.4)]"
                   : "border-white/10 bg-white/[0.03] text-white/60 hover:border-white/30 hover:text-white"
               }`}
             >
@@ -253,31 +413,295 @@ function Hero({
             </button>
           ))}
         </motion.div>
-      </div>
+
+        {/* scroll cue */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
+          className="mx-auto mt-14 flex w-fit flex-col items-center gap-2 font-mono text-[10px] uppercase tracking-[0.32em] text-white/40"
+        >
+          <span>Scroll</span>
+          <motion.div animate={{ y: [0, 8, 0], opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.8, repeat: Infinity }}
+                      className="h-6 w-[2px] rounded-full bg-gradient-to-b from-fuchsia-400 to-transparent" />
+        </motion.div>
+      </motion.div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </section>
   );
 }
 
-/* ---------------- Stats Bar ---------------- */
-function StatsBar() {
-  const stats = [
-    { v: 120, suf: "+", label: "Cafés" },
-    { v: 50000, suf: "+", label: "Sessions" },
-    { v: 10000, suf: "+", label: "Gamers" },
-    { v: 15, suf: "", label: "Cities" },
+function SplitTitle({ text, delay = 0, gradient = false, italic = false }: { text: string; delay?: number; gradient?: boolean; italic?: boolean }) {
+  return (
+    <h1
+      className="font-display text-[18vw] font-black leading-[0.85] tracking-[-0.04em] sm:text-[16vw] md:text-[15vw] lg:text-[14rem]"
+      style={italic ? { fontStyle: "italic", fontWeight: 300, letterSpacing: "-0.06em" } : undefined}
+    >
+      {text.split("").map((ch, i) => (
+        <motion.span
+          key={i}
+          initial={{ y: "100%", opacity: 0, rotateX: -60 }}
+          animate={{ y: "0%", opacity: 1, rotateX: 0 }}
+          transition={{ delay: delay + i * 0.06, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          className="inline-block"
+          style={gradient ? {
+            background: "linear-gradient(135deg,#ff52e0 0%,#c084fc 40%,#7b2fff 70%,#2d8eff 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            filter: "drop-shadow(0 0 40px rgba(255,82,224,.35))",
+          } : undefined}
+        >
+          {ch}
+        </motion.span>
+      ))}
+    </h1>
+  );
+}
+
+function CornerGlyphs() {
+  const items = [
+    { c: "top-24 left-6", t: "N 28.61°" },
+    { c: "top-24 right-6", t: "E 77.20°" },
+    { c: "bottom-10 left-6", t: "SECTOR · 07" },
+    { c: "bottom-10 right-6", t: "GRID · 4K" },
   ];
   return (
-    <section className="relative z-10 mx-auto mt-10 max-w-7xl px-5 sm:px-8">
-      <div className="grid grid-cols-2 gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl sm:grid-cols-4 sm:gap-6">
-        {stats.map((s, i) => (
-          <CountStat key={s.label} target={s.v} suffix={s.suf} label={s.label} delay={i * 0.1} />
+    <>
+      {items.map((g) => (
+        <div key={g.t} className={`absolute ${g.c} hidden font-mono text-[10px] uppercase tracking-[0.32em] text-white/35 md:block`}>
+          + {g.t}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/* =================================================================
+   VELOCITY MARQUEE
+================================================================= */
+function MarqueeStrip() {
+  const baseX = useMotionValue(0);
+  const { scrollY } = useScroll();
+  const scrollVel = useVelocity(scrollY);
+  const smoothVel = useSpring(scrollVel, { damping: 50, stiffness: 400 });
+  const velFactor = useTransform(smoothVel, [0, 1000], [0, 5], { clamp: false });
+  const baseVelocity = -1.6;
+  useAnimationFrame((_, delta) => {
+    let move = baseVelocity * (delta / 1000) * 100;
+    move += velFactor.get();
+    baseX.set(wrap(-25, -75, baseX.get() + move * 0.01));
+  });
+  const x = useMotionTemplate`${baseX}%`;
+  const items = ["FIND YOUR ARENA", "★", "BOOK A RIG", "★", "GAME ON", "★", "ENTER CORECADE", "★"];
+  return (
+    <section className="relative z-10 mt-24 overflow-hidden border-y border-white/10 bg-gradient-to-b from-transparent via-fuchsia-950/20 to-transparent py-6">
+      <motion.div style={{ x }} className="flex whitespace-nowrap font-display text-5xl font-black uppercase tracking-tight sm:text-7xl">
+        {Array.from({ length: 6 }).map((_, k) => (
+          <span key={k} className="flex shrink-0 items-center">
+            {items.map((it, i) => (
+              <span key={`${k}-${i}`} className={`mx-6 ${it === "★" ? "text-fuchsia-400" : ""}`}
+                    style={it !== "★" ? {
+                      WebkitTextStroke: "1.5px rgba(255,255,255,0.85)",
+                      WebkitTextFillColor: "transparent",
+                    } : undefined}>{it}</span>
+            ))}
+          </span>
         ))}
-      </div>
+      </motion.div>
     </section>
   );
 }
 
-function CountStat({ target, suffix, label, delay }: { target: number; suffix: string; label: string; delay: number }) {
+/* =================================================================
+   PINNED MANIFESTO (sticky scroll word reveal)
+================================================================= */
+function PinnedManifesto() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const text = "A NETWORK BUILT FOR GAMERS. EVERY ARENA. EVERY CITY. ONE TAP AWAY.";
+  const words = text.split(" ");
+
+  return (
+    <section ref={ref} className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
+      <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-fuchsia-300">/ Manifesto</div>
+      <p className="mt-6 flex flex-wrap font-display text-3xl font-black leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+        {words.map((w, i) => {
+          const start = i / words.length;
+          const end = start + 1 / words.length;
+          return <RevealWord key={i} progress={scrollYProgress} range={[start * 0.85, end * 0.85 + 0.05]} word={w} />;
+        })}
+      </p>
+    </section>
+  );
+}
+function RevealWord({ progress, range, word }: { progress: any; range: [number, number]; word: string }) {
+  const opacity = useTransform(progress, range, [0.18, 1]);
+  const y = useTransform(progress, range, [10, 0]);
+  return (
+    <motion.span style={{ opacity, y }} className="mr-3">{word}</motion.span>
+  );
+}
+
+/* =================================================================
+   ARENA SHOWCASE
+================================================================= */
+function ArenaShowcase({ cafes, loading }: { cafes: Cafe[]; loading: boolean }) {
+  return (
+    <section className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
+      <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-fuchsia-300">/ Featured Arenas</div>
+          <h2 className="mt-3 font-display text-4xl font-black tracking-tight sm:text-6xl">
+            Pick a <span style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Battleground</span>
+          </h2>
+          <p className="mt-3 max-w-md text-sm text-white/60">
+            {cafes.length} arena{cafes.length !== 1 && "s"} live. Hover, tilt, and step in.
+          </p>
+        </div>
+        <Link to="/auth" className="group inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-5 py-2.5 text-sm text-white/80 hover:bg-white/[0.08]">
+          View all <ArrowUpRight className="h-4 w-4 transition group-hover:rotate-45" />
+        </Link>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-[420px] animate-pulse rounded-3xl border border-white/10 bg-white/[0.03]" />
+            ))}
+          </div>
+        ) : cafes.length === 0 ? (
+          <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-16 text-center">
+            <motion.div animate={{ y: [0, -10, 0], rotate: [0, 6, -6, 0] }} transition={{ duration: 4, repeat: Infinity }}
+              className="mx-auto grid h-24 w-24 place-items-center rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur">
+              <Gamepad2 className="h-12 w-12 text-fuchsia-300" />
+            </motion.div>
+            <p className="mt-6 font-display text-xl text-white/80">No arenas online here yet</p>
+            <p className="mt-2 text-sm text-white/50">Try another city or clear the search.</p>
+          </motion.div>
+        ) : (
+          <motion.div key="grid" layout className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {cafes.slice(0, 12).map((c, i) => (<ArenaCard key={c.id} cafe={c} index={i} />))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+function ArenaCard({ cafe, index }: { cafe: Cafe; index: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mx = useMotionValue(0), my = useMotionValue(0);
+  const rx = useSpring(useTransform(my, [-0.5, 0.5], [12, -12]), { stiffness: 280, damping: 22 });
+  const ry = useSpring(useTransform(mx, [-0.5, 0.5], [-14, 14]), { stiffness: 280, damping: 22 });
+  const spotX = useMotionValue(-200), spotY = useMotionValue(-200);
+  const spot = useMotionTemplate`radial-gradient(380px circle at ${spotX}px ${spotY}px, rgba(255,82,224,.22), transparent 60%)`;
+
+  const onMove = (e: React.MouseEvent) => {
+    const r = ref.current?.getBoundingClientRect(); if (!r) return;
+    mx.set((e.clientX - r.left) / r.width - 0.5);
+    my.set((e.clientY - r.top) / r.height - 0.5);
+    spotX.set(e.clientX - r.left); spotY.set(e.clientY - r.top);
+  };
+
+  return (
+    <motion.div
+      layout ref={ref} onMouseMove={onMove}
+      onMouseLeave={() => { mx.set(0); my.set(0); spotX.set(-200); spotY.set(-200); }}
+      initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }}
+      transition={{ delay: index * 0.06, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      style={{ rotateX: rx, rotateY: ry, transformPerspective: 1100, transformStyle: "preserve-3d" }}
+      whileHover={{ y: -8 }}
+      data-cursor
+      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(14,9,32,0.7)] backdrop-blur-xl transition-colors hover:border-fuchsia-400/40"
+    >
+      {/* spotlight */}
+      <motion.div className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: spot }} />
+      {/* conic glow border on hover */}
+      <div className="pointer-events-none absolute -inset-[1px] rounded-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+           style={{ background: "conic-gradient(from var(--a,0deg),#ff52e0,#7b2fff,#2d8eff,#ff52e0)", WebkitMask: "linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0)", WebkitMaskComposite: "xor" as any, padding: "1px" }} />
+
+      <div className="relative h-48 overflow-hidden">
+        {cafe.cover_url ? (
+          <img src={cafe.cover_url} alt={cafe.name} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-110" />
+        ) : (
+          <div className="h-full w-full" style={{ background: "linear-gradient(135deg,#ff52e0 0%,#7b2fff 40%,#2d8eff 80%)", backgroundSize: "200% 200%", animation: "gradShift 8s ease infinite" }} />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,7,26,0.95)] via-[rgba(10,7,26,0.35)] to-transparent" />
+        <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 backdrop-blur">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          </span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">LIVE</span>
+        </div>
+        <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-2.5 py-1 backdrop-blur">
+          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+          <span className="font-mono text-[10px] text-white/90">4.7</span>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 p-5" style={{ transform: "translateZ(40px)" }}>
+          <h3 className="font-display text-2xl font-bold leading-tight">{cafe.name}</h3>
+          <div className="mt-1 flex items-center gap-1.5 text-sm text-fuchsia-200/90">
+            <MapPin className="h-3.5 w-3.5" /> {cafe.city ?? "—"}{cafe.state ? `, ${cafe.state}` : ""}
+          </div>
+        </div>
+        {/* shine sweep */}
+        <div className="pointer-events-none absolute inset-0 -translate-x-full transition-transform duration-1000 group-hover:translate-x-full"
+             style={{ background: "linear-gradient(110deg,transparent 40%,rgba(255,255,255,.16) 50%,transparent 60%)" }} />
+      </div>
+
+      <div className="relative z-10 p-5" style={{ transform: "translateZ(20px)" }}>
+        {cafe.description && <p className="line-clamp-2 text-sm text-white/65">{cafe.description}</p>}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Chip icon={Cpu}>PC · Console</Chip>
+          <Chip icon={Headphones}>Studio Audio</Chip>
+          <Chip>₹ from ₹60/hr</Chip>
+        </div>
+        <Link to="/c/$slug" params={{ slug: cafe.slug }}
+          className="group/btn relative mt-5 inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 font-semibold text-white transition"
+          style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 12px 36px -10px rgba(255,82,224,.55)" }}>
+          <span className="relative z-10">Step Inside</span>
+          <ArrowRight className="relative z-10 h-4 w-4 transition group-hover/btn:translate-x-1" />
+          <span className="absolute inset-0 -translate-x-full bg-white/20 transition-transform duration-500 group-hover/btn:translate-x-0" />
+        </Link>
+      </div>
+      <style>{`@keyframes gradShift { 0%,100% { background-position: 0% 50% } 50% { background-position: 100% 50% } }`}</style>
+    </motion.div>
+  );
+}
+function Chip({ icon: Icon, children }: { icon?: any; children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 font-mono text-[10px] text-white/75">
+      {Icon ? <Icon className="h-3 w-3" /> : null}{children}
+    </span>
+  );
+}
+
+/* =================================================================
+   PARALLAX STATS
+================================================================= */
+function ParallaxStats() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], [60, -60]);
+  const stats = [
+    { v: 120, suf: "+", label: "Arenas", icon: Gamepad2 },
+    { v: 50000, suf: "+", label: "Sessions", icon: Zap },
+    { v: 10000, suf: "+", label: "Gamers", icon: Crown },
+    { v: 15, suf: "", label: "Cities", icon: MapPin },
+  ];
+  return (
+    <section ref={ref} className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
+      <motion.div style={{ y }} className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-fuchsia-950/40 via-[#0a0720]/80 to-blue-950/40 p-8 backdrop-blur-xl sm:p-12">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-fuchsia-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+          {stats.map((s, i) => (
+            <CountStat key={s.label} target={s.v} suffix={s.suf} label={s.label} icon={s.icon} delay={i * 0.08} />
+          ))}
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+function CountStat({ target, suffix, label, icon: Icon, delay }: { target: number; suffix: string; label: string; icon: any; delay: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [n, setN] = useState(0);
   useEffect(() => {
@@ -285,7 +709,7 @@ function CountStat({ target, suffix, label, delay }: { target: number; suffix: s
       if (e.isIntersecting) {
         const start = performance.now();
         const tick = (t: number) => {
-          const p = Math.min(1, (t - start) / 1400);
+          const p = Math.min(1, (t - start) / 1600);
           const eased = 1 - Math.pow(1 - p, 3);
           setN(Math.floor(target * eased));
           if (p < 1) requestAnimationFrame(tick);
@@ -298,183 +722,60 @@ function CountStat({ target, suffix, label, delay }: { target: number; suffix: s
     return () => obs.disconnect();
   }, [target, delay]);
   return (
-    <div ref={ref} className="text-center sm:text-left">
-      <div className="font-display text-3xl font-black sm:text-5xl" style={{ background: "linear-gradient(135deg, #ffd86b, #ffae3c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+    <div ref={ref} className="relative">
+      <Icon className="mb-3 h-5 w-5 text-fuchsia-300" />
+      <div className="font-display text-4xl font-black sm:text-5xl"
+           style={{ background: "linear-gradient(135deg,#fff,#ff52e0)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
         {n.toLocaleString("en-IN")}{suffix}
       </div>
-      <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-white/60">{label}</div>
+      <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.28em] text-white/55">{label}</div>
     </div>
   );
 }
 
-/* ---------------- Cafes Grid ---------------- */
-function CafesSection({ cafes, loading }: { cafes: Cafe[]; loading: boolean }) {
-  return (
-    <section className="relative z-10 mx-auto mt-20 max-w-7xl px-5 sm:px-8">
-      <div className="text-center">
-        <h2 className="relative inline-block font-display text-3xl font-black tracking-tight sm:text-4xl">
-          FEATURED ARENAS
-          <span className="absolute -bottom-2 left-1/2 h-[3px] w-32 -translate-x-1/2 rounded-full" style={{ background: "linear-gradient(90deg, transparent, #7b2fff, transparent)", boxShadow: "0 0 16px rgba(123,47,255,.7)" }} />
-        </h2>
-        <p className="mt-4 text-sm text-white/60">{cafes.length} arena{cafes.length !== 1 && "s"} ready to play</p>
-      </div>
-
-      <AnimatePresence mode="wait">
-        {loading ? (
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-[360px] animate-pulse rounded-3xl border border-white/10 bg-white/[0.03]" />
-            ))}
-          </div>
-        ) : cafes.length === 0 ? (
-          <motion.div
-            key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="mt-16 text-center"
-          >
-            <motion.div
-              animate={{ y: [0, -10, 0], rotate: [0, 8, -8, 0] }}
-              transition={{ duration: 4, repeat: Infinity }}
-              className="mx-auto grid h-24 w-24 place-items-center rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur"
-            >
-              <Gamepad2 className="h-12 w-12 text-violet-300" />
-            </motion.div>
-            <p className="mt-6 font-display text-xl text-white/80">No arenas found in this area yet</p>
-            <p className="mt-2 text-sm text-white/50">Try a different city or clear the search.</p>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="grid"
-            layout
-            className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {cafes.slice(0, 12).map((c, i) => (
-              <CafeCard key={c.id} cafe={c} index={i} />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-}
-
-function CafeCard({ cafe, index }: { cafe: Cafe; index: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const rx = useSpring(useTransform(my, [-0.5, 0.5], [10, -10]), { stiffness: 280, damping: 22 });
-  const ry = useSpring(useTransform(mx, [-0.5, 0.5], [-12, 12]), { stiffness: 280, damping: 22 });
-
-  const onMove = (e: React.MouseEvent) => {
-    const r = ref.current?.getBoundingClientRect();
-    if (!r) return;
-    mx.set((e.clientX - r.left) / r.width - 0.5);
-    my.set((e.clientY - r.top) / r.height - 0.5);
-  };
-
-  return (
-    <motion.div
-      layout
-      ref={ref}
-      onMouseMove={onMove}
-      onMouseLeave={() => { mx.set(0); my.set(0); }}
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-      style={{ rotateX: rx, rotateY: ry, transformPerspective: 1000, transformStyle: "preserve-3d" }}
-      whileHover={{ scale: 1.02, y: -6 }}
-      className="group relative overflow-hidden rounded-3xl border border-violet-500/20 bg-[rgba(19,15,42,0.7)] backdrop-blur-xl transition-all hover:border-violet-400/50 hover:shadow-[0_24px_60px_-12px_rgba(123,47,255,.5)]"
-    >
-      {/* Cover */}
-      <div className="relative h-44 overflow-hidden">
-        {cafe.cover_url ? (
-          <img src={cafe.cover_url} alt={cafe.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-        ) : (
-          <div className="h-full w-full animate-gradient-shift" style={{ background: "linear-gradient(135deg, #7b2fff 0%, #2d8eff 50%, #ec4899 100%)", backgroundSize: "200% 200%" }} />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(19,15,42,0.95)] via-transparent to-transparent" />
-        <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 backdrop-blur">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          </span>
-          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">OPEN</span>
-        </div>
-        {/* shine sweep */}
-        <div className="pointer-events-none absolute inset-0 -translate-x-full transition-transform duration-700 group-hover:translate-x-full" style={{ background: "linear-gradient(110deg, transparent 40%, rgba(255,255,255,.18) 50%, transparent 60%)" }} />
-      </div>
-
-      {/* Body */}
-      <div className="p-5" style={{ transform: "translateZ(20px)" }}>
-        <h3 className="font-display text-xl font-bold text-white">{cafe.name}</h3>
-        <div className="mt-1.5 flex items-center gap-1.5 text-sm text-violet-300/80">
-          <MapPin className="h-3.5 w-3.5" />
-          {cafe.city ?? "—"}{cafe.state ? `, ${cafe.state}` : ""}
-        </div>
-        {cafe.description && (
-          <p className="mt-3 line-clamp-2 text-sm text-white/60">{cafe.description}</p>
-        )}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-white/5 px-2.5 py-1 font-mono text-[10px] text-white/70">PC · Console</span>
-          <span className="rounded-full bg-amber-500/10 px-2.5 py-1 font-mono text-[10px] text-amber-300">₹ from ₹60/hr</span>
-          <span className="flex items-center gap-1 rounded-full bg-white/5 px-2.5 py-1 font-mono text-[10px] text-white/70">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> 4.7
-          </span>
-        </div>
-        <Link
-          to="/c/$slug" params={{ slug: cafe.slug }}
-          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-white transition hover:shadow-[0_0_24px_rgba(123,47,255,.55)]"
-          style={{ background: "linear-gradient(135deg, #7b2fff, #ec4899)" }}
-        >
-          Book Now <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-      <style>{`
-        @keyframes gradient-shift { 0%,100% { background-position: 0% 50% } 50% { background-position: 100% 50% } }
-        .animate-gradient-shift { animation: gradient-shift 8s ease infinite }
-      `}</style>
-    </motion.div>
-  );
-}
-
-/* ---------------- How It Works ---------------- */
-function HowItWorks() {
+/* =================================================================
+   RITUAL — sticky steps
+================================================================= */
+function RitualSection() {
   const steps = [
-    { icon: UserPlus, title: "Create Account", desc: "Free 60-second signup" },
-    { icon: Search, title: "Find Your Café", desc: "Browse arenas near you" },
-    { icon: Calendar, title: "Book a Seat", desc: "Pick a device & time" },
-    { icon: Gamepad2, title: "Game On", desc: "Walk in. Play. Win." },
+    { n: "01", icon: UserPlus, t: "Create your handle", d: "Free 60-second signup. Pick a callsign. You're in." },
+    { n: "02", icon: Search, t: "Scout an arena", d: "Live map of every CoreCade café near you, vibes included." },
+    { n: "03", icon: Calendar, t: "Lock your rig", d: "Pick a device, pick a time slot. Confirmed in seconds." },
+    { n: "04", icon: PlayCircle, t: "Press start", d: "Walk in. Game on. Earn loyalty with every session." },
   ];
-  const { scrollYProgress } = useScroll();
-  const lineProgress = useTransform(scrollYProgress, [0.4, 0.7], [0, 1]);
-
   return (
-    <section className="relative z-10 mx-auto mt-28 max-w-7xl px-5 sm:px-8">
-      <div className="text-center">
-        <h2 className="font-display text-3xl font-black sm:text-4xl">HOW IT WORKS</h2>
-        <p className="mt-3 text-sm text-white/60">Four steps from zero to game-on</p>
-      </div>
-      <div className="relative mt-16">
-        {/* connector line */}
-        <svg className="absolute left-0 right-0 top-10 mx-auto hidden h-1 max-w-4xl sm:block" viewBox="0 0 800 4" preserveAspectRatio="none">
-          <motion.line x1="40" y1="2" x2="760" y2="2" stroke="url(#g)" strokeWidth="2" strokeDasharray="6 6" pathLength={1} style={{ pathLength: lineProgress }} />
-          <defs><linearGradient id="g"><stop offset="0" stopColor="#7b2fff" /><stop offset="1" stopColor="#2d8eff" /></linearGradient></defs>
-        </svg>
-        <div className="relative grid gap-8 sm:grid-cols-4">
+    <section className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
+      <div className="grid gap-12 lg:grid-cols-[1fr_2fr]">
+        <div className="lg:sticky lg:top-32 lg:self-start">
+          <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-fuchsia-300">/ The Ritual</div>
+          <h2 className="mt-3 font-display text-4xl font-black tracking-tight sm:text-6xl">
+            Four moves<br />to <span style={{ background: "linear-gradient(135deg,#ff52e0,#2d8eff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>game on</span>.
+          </h2>
+          <p className="mt-4 max-w-sm text-white/60">
+            Zero friction. Pure entry. The exact path every CoreCade gamer takes — from first tap to first kill.
+          </p>
+        </div>
+        <div className="relative space-y-6">
+          {/* vertical line */}
+          <div className="absolute left-6 top-0 hidden h-full w-px bg-gradient-to-b from-fuchsia-500/60 via-violet-500/30 to-transparent sm:block" />
           {steps.map((s, i) => (
             <motion.div
-              key={s.title}
-              initial={{ opacity: 0, y: 30, rotateY: -30 }}
-              whileInView={{ opacity: 1, y: 0, rotateY: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.12, duration: 0.6 }}
-              className="text-center"
+              key={s.n}
+              initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ delay: i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="group relative flex gap-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-xl transition hover:border-fuchsia-400/40 hover:bg-white/[0.06] sm:p-7"
             >
-              <div className="mx-auto grid h-20 w-20 place-items-center rounded-2xl border border-violet-500/30 bg-[#0c0a24]/80 backdrop-blur-xl" style={{ boxShadow: "0 0 30px rgba(123,47,255,.3)" }}>
-                <s.icon className="h-9 w-9 text-violet-300" />
+              <div className="relative grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+                   style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff)", boxShadow: "0 0 22px rgba(255,82,224,.45)" }}>
+                <s.icon className="h-6 w-6 text-white" />
               </div>
-              <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.22em] text-violet-300">Step {i + 1}</div>
-              <div className="mt-1 font-display text-lg font-bold">{s.title}</div>
-              <div className="mt-1 text-sm text-white/60">{s.desc}</div>
+              <div className="flex-1">
+                <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-fuchsia-300">Step {s.n}</div>
+                <div className="mt-1 font-display text-2xl font-bold">{s.t}</div>
+                <p className="mt-2 text-sm text-white/65">{s.d}</p>
+              </div>
+              <ArrowUpRight className="hidden h-5 w-5 self-center text-white/30 transition group-hover:rotate-45 group-hover:text-white sm:block" />
             </motion.div>
           ))}
         </div>
@@ -483,63 +784,97 @@ function HowItWorks() {
   );
 }
 
-/* ---------------- Why CoreCade ---------------- */
-function WhyCorecade() {
-  const items = [
-    { icon: Zap, title: "Instant Booking", desc: "Confirm a seat in seconds — no calls, no waiting." },
-    { icon: Trophy, title: "Real-Time Availability", desc: "Live device status across every café in the network." },
-    { icon: Gift, title: "Loyalty Rewards", desc: "Earn points every session. Redeem at any CoreCade café." },
-  ];
+/* =================================================================
+   PERKS BENTO
+================================================================= */
+function PerksSection() {
   return (
-    <section className="relative z-10 mx-auto mt-28 max-w-7xl px-5 sm:px-8">
+    <section className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
       <div className="text-center">
-        <h2 className="font-display text-3xl font-black sm:text-4xl">WHY <span style={{ background: "linear-gradient(135deg, #c084fc, #2d8eff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>CORECADE</span></h2>
+        <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-fuchsia-300">/ Why CoreCade</div>
+        <h2 className="mt-3 font-display text-4xl font-black tracking-tight sm:text-6xl">
+          Built for the <span className="italic" style={{ background: "linear-gradient(135deg,#ff52e0,#2d8eff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>grind</span>.
+        </h2>
       </div>
-      <div className="mt-12 grid gap-6 sm:grid-cols-3">
-        {items.map((it, i) => <TiltFeature key={it.title} item={it} delay={i * 0.1} />)}
+      <div className="mt-12 grid gap-5 sm:grid-cols-6">
+        <Perk className="sm:col-span-3" icon={Zap} title="Instant booking" desc="Confirm a seat in seconds. No calls. No waiting." accent="from-fuchsia-500 to-rose-500" />
+        <Perk className="sm:col-span-3" icon={Trophy} title="Realtime status" desc="Live device map across the entire network." accent="from-violet-500 to-fuchsia-500" />
+        <Perk className="sm:col-span-2" icon={Gift} title="Loyalty XP" desc="Earn points. Redeem anywhere." accent="from-blue-500 to-violet-500" />
+        <Perk className="sm:col-span-2" icon={Crown} title="Tournaments" desc="Compete weekly. Stack the bracket." accent="from-amber-500 to-fuchsia-500" />
+        <Perk className="sm:col-span-2" icon={Cpu} title="Top-tier rigs" desc="Curated PCs, consoles, sims." accent="from-emerald-500 to-blue-500" />
+      </div>
+    </section>
+  );
+}
+function Perk({ className = "", icon: Icon, title, desc, accent }: { className?: string; icon: any; title: string; desc: string; accent: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mx = useMotionValue(-200), my = useMotionValue(-200);
+  const bg = useMotionTemplate`radial-gradient(280px circle at ${mx}px ${my}px, rgba(255,82,224,.18), transparent 60%)`;
+  return (
+    <motion.div
+      ref={ref} data-cursor
+      onMouseMove={(e) => { const r = ref.current?.getBoundingClientRect(); if (!r) return; mx.set(e.clientX - r.left); my.set(e.clientY - r.top); }}
+      onMouseLeave={() => { mx.set(-200); my.set(-200); }}
+      initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+      className={`group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur-xl transition hover:border-fuchsia-400/40 ${className}`}
+    >
+      <motion.div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: bg }} />
+      <div className={`grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br ${accent}`} style={{ boxShadow: "0 0 22px rgba(255,82,224,.35)" }}>
+        <Icon className="h-6 w-6 text-white" />
+      </div>
+      <h3 className="mt-5 font-display text-xl font-bold">{title}</h3>
+      <p className="mt-2 text-sm text-white/65">{desc}</p>
+    </motion.div>
+  );
+}
+
+/* =================================================================
+   FINAL CTA
+================================================================= */
+function FinalCTA() {
+  return (
+    <section className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
+      <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 p-10 text-center sm:p-20"
+           style={{ background: "radial-gradient(ellipse at top, rgba(255,82,224,.25), transparent 60%), linear-gradient(180deg,#10082a,#04030c)" }}>
+        <div className="pointer-events-none absolute inset-0 opacity-30"
+             style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.4) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.4) 1px,transparent 1px)", backgroundSize: "44px 44px", maskImage: "radial-gradient(ellipse 60% 50% at 50% 50%,#000,transparent)", WebkitMaskImage: "radial-gradient(ellipse 60% 50% at 50% 50%,#000,transparent)" }} />
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                    className="font-mono text-[10px] uppercase tracking-[0.32em] text-fuchsia-300">/ Ready Player One</motion.div>
+        <h2 className="relative mt-5 font-display text-5xl font-black leading-[0.95] tracking-tight sm:text-7xl md:text-8xl">
+          Your arena<br />
+          <span className="italic font-light" style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            is waiting.
+          </span>
+        </h2>
+        <p className="mx-auto mt-6 max-w-md text-white/65">Join 10,000+ gamers across India already playing on CoreCade.</p>
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <Link to="/auth">
+            <button data-cursor className="group inline-flex items-center gap-2 rounded-full px-7 py-4 font-semibold text-white"
+                    style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 0 40px rgba(255,82,224,.55)" }}>
+              Create Free Account <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+            </button>
+          </Link>
+          <Link to="/auth">
+            <button data-cursor className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-7 py-4 font-semibold text-white backdrop-blur hover:bg-white/10">
+              I have an account
+            </button>
+          </Link>
+        </div>
       </div>
     </section>
   );
 }
 
-function TiltFeature({ item, delay }: { item: { icon: any; title: string; desc: string }; delay: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const rx = useSpring(useTransform(my, [-0.5, 0.5], [12, -12]), { stiffness: 240, damping: 20 });
-  const ry = useSpring(useTransform(mx, [-0.5, 0.5], [-15, 15]), { stiffness: 240, damping: 20 });
-  return (
-    <motion.div
-      ref={ref}
-      onMouseMove={(e) => {
-        const r = ref.current?.getBoundingClientRect(); if (!r) return;
-        mx.set((e.clientX - r.left) / r.width - 0.5);
-        my.set((e.clientY - r.top) / r.height - 0.5);
-      }}
-      onMouseLeave={() => { mx.set(0); my.set(0); }}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay, duration: 0.6 }}
-      style={{ rotateX: rx, rotateY: ry, transformPerspective: 1000, transformStyle: "preserve-3d" }}
-      className="rounded-3xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur-xl transition-colors hover:border-violet-400/40"
-    >
-      <div className="grid h-12 w-12 place-items-center rounded-xl" style={{ background: "linear-gradient(135deg, #7b2fff, #2d8eff)", boxShadow: "0 0 20px rgba(123,47,255,.45)", transform: "translateZ(30px)" }}>
-        <item.icon className="h-6 w-6 text-white" />
-      </div>
-      <h3 className="mt-5 font-display text-xl font-bold" style={{ transform: "translateZ(20px)" }}>{item.title}</h3>
-      <p className="mt-2 text-sm text-white/60" style={{ transform: "translateZ(10px)" }}>{item.desc}</p>
-    </motion.div>
-  );
-}
-
-/* ---------------- Footer ---------------- */
+/* =================================================================
+   FOOTER
+================================================================= */
 function Footer() {
   return (
-    <footer className="relative z-10 mt-32 border-t border-white/10 bg-[#05050F]/80 px-5 py-12 backdrop-blur sm:px-8">
+    <footer className="relative z-10 mt-24 border-t border-white/10 px-5 py-12 sm:px-8">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 sm:flex-row">
         <div className="text-center sm:text-left">
-          <div className="font-display text-lg font-black tracking-wider" style={{ letterSpacing: "0.18em" }}>CORECADE</div>
+          <div className="font-display text-lg font-black tracking-[0.2em]">CORECADE</div>
           <p className="mt-1 text-xs text-white/50">The gaming café universe, unified.</p>
         </div>
         <nav className="flex flex-wrap items-center justify-center gap-5 text-xs text-white/60">
@@ -548,7 +883,7 @@ function Footer() {
           <Link to="/auth" className="hover:text-white">Login</Link>
           <Link to="/" className="hover:text-white">Owners</Link>
         </nav>
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">© 2026 CoreCade</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">© 2026 CoreCade</div>
       </div>
     </footer>
   );
