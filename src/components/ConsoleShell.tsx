@@ -8,6 +8,7 @@ import { AuroraBackground } from "@/components/AuroraBackground";
 import { HeroBackdrop3D } from "@/components/HeroBackdrop3D";
 import { BrandLockup } from "@/components/Brand";
 import { NotificationBell } from "@/components/NotificationBell";
+import { CommandPalette } from "@/components/CommandPalette";
 
 export type NavItem = {
   label: string;
@@ -58,6 +59,7 @@ export function ConsoleShell({
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       <AuroraBackground intensity={intensity} />
+      <CommandPalette />
 
       <div className="flex min-h-screen">
         {/* === Desktop sidebar === */}

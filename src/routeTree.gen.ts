@@ -23,6 +23,7 @@ import { Route as AuthenticatedCafeSlugRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminRevenueRouteImport } from './routes/_authenticated/admin.revenue'
+import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
 import { Route as AuthenticatedAdminLeadsRouteImport } from './routes/_authenticated/admin.leads'
 import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
 import { Route as AuthenticatedAdminConfigRouteImport } from './routes/_authenticated/admin.config'
@@ -34,6 +35,7 @@ import { Route as CSlugTournamentsIdRouteImport } from './routes/c.$slug.tournam
 import { Route as AuthenticatedCafeSlugWalletRouteImport } from './routes/_authenticated/cafe.$slug.wallet'
 import { Route as AuthenticatedCafeSlugTournamentsRouteImport } from './routes/_authenticated/cafe.$slug.tournaments'
 import { Route as AuthenticatedCafeSlugStaffRouteImport } from './routes/_authenticated/cafe.$slug.staff'
+import { Route as AuthenticatedCafeSlugReportsRouteImport } from './routes/_authenticated/cafe.$slug.reports'
 import { Route as AuthenticatedCafeSlugPosRouteImport } from './routes/_authenticated/cafe.$slug.pos'
 import { Route as AuthenticatedCafeSlugPageRouteImport } from './routes/_authenticated/cafe.$slug.page'
 import { Route as AuthenticatedCafeSlugMenuRouteImport } from './routes/_authenticated/cafe.$slug.menu'
@@ -118,6 +120,12 @@ const AuthenticatedAdminRevenueRoute =
     path: '/revenue',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminReportsRoute =
+  AuthenticatedAdminReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminLeadsRoute = AuthenticatedAdminLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -178,6 +186,12 @@ const AuthenticatedCafeSlugStaffRoute =
   AuthenticatedCafeSlugStaffRouteImport.update({
     id: '/staff',
     path: '/staff',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugReportsRoute =
+  AuthenticatedCafeSlugReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
     getParentRoute: () => AuthenticatedCafeSlugRoute,
   } as any)
 const AuthenticatedCafeSlugPosRoute =
@@ -268,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/admin/config': typeof AuthenticatedAdminConfigRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/leads': typeof AuthenticatedAdminLeadsRoute
+  '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/revenue': typeof AuthenticatedAdminRevenueRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -284,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/cafe/$slug/menu': typeof AuthenticatedCafeSlugMenuRoute
   '/cafe/$slug/page': typeof AuthenticatedCafeSlugPageRoute
   '/cafe/$slug/pos': typeof AuthenticatedCafeSlugPosRoute
+  '/cafe/$slug/reports': typeof AuthenticatedCafeSlugReportsRoute
   '/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
   '/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
@@ -305,6 +321,7 @@ export interface FileRoutesByTo {
   '/admin/config': typeof AuthenticatedAdminConfigRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/leads': typeof AuthenticatedAdminLeadsRoute
+  '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/revenue': typeof AuthenticatedAdminRevenueRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -320,6 +337,7 @@ export interface FileRoutesByTo {
   '/cafe/$slug/menu': typeof AuthenticatedCafeSlugMenuRoute
   '/cafe/$slug/page': typeof AuthenticatedCafeSlugPageRoute
   '/cafe/$slug/pos': typeof AuthenticatedCafeSlugPosRoute
+  '/cafe/$slug/reports': typeof AuthenticatedCafeSlugReportsRoute
   '/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
   '/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
@@ -344,6 +362,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/config': typeof AuthenticatedAdminConfigRoute
   '/_authenticated/admin/health': typeof AuthenticatedAdminHealthRoute
   '/_authenticated/admin/leads': typeof AuthenticatedAdminLeadsRoute
+  '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/admin/revenue': typeof AuthenticatedAdminRevenueRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -360,6 +379,7 @@ export interface FileRoutesById {
   '/_authenticated/cafe/$slug/menu': typeof AuthenticatedCafeSlugMenuRoute
   '/_authenticated/cafe/$slug/page': typeof AuthenticatedCafeSlugPageRoute
   '/_authenticated/cafe/$slug/pos': typeof AuthenticatedCafeSlugPosRoute
+  '/_authenticated/cafe/$slug/reports': typeof AuthenticatedCafeSlugReportsRoute
   '/_authenticated/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
   '/_authenticated/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/_authenticated/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
@@ -384,6 +404,7 @@ export interface FileRouteTypes {
     | '/admin/config'
     | '/admin/health'
     | '/admin/leads'
+    | '/admin/reports'
     | '/admin/revenue'
     | '/admin/settings'
     | '/admin/users'
@@ -400,6 +421,7 @@ export interface FileRouteTypes {
     | '/cafe/$slug/menu'
     | '/cafe/$slug/page'
     | '/cafe/$slug/pos'
+    | '/cafe/$slug/reports'
     | '/cafe/$slug/staff'
     | '/cafe/$slug/tournaments'
     | '/cafe/$slug/wallet'
@@ -421,6 +443,7 @@ export interface FileRouteTypes {
     | '/admin/config'
     | '/admin/health'
     | '/admin/leads'
+    | '/admin/reports'
     | '/admin/revenue'
     | '/admin/settings'
     | '/admin/users'
@@ -436,6 +459,7 @@ export interface FileRouteTypes {
     | '/cafe/$slug/menu'
     | '/cafe/$slug/page'
     | '/cafe/$slug/pos'
+    | '/cafe/$slug/reports'
     | '/cafe/$slug/staff'
     | '/cafe/$slug/tournaments'
     | '/cafe/$slug/wallet'
@@ -459,6 +483,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/config'
     | '/_authenticated/admin/health'
     | '/_authenticated/admin/leads'
+    | '/_authenticated/admin/reports'
     | '/_authenticated/admin/revenue'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/users'
@@ -475,6 +500,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cafe/$slug/menu'
     | '/_authenticated/cafe/$slug/page'
     | '/_authenticated/cafe/$slug/pos'
+    | '/_authenticated/cafe/$slug/reports'
     | '/_authenticated/cafe/$slug/staff'
     | '/_authenticated/cafe/$slug/tournaments'
     | '/_authenticated/cafe/$slug/wallet'
@@ -592,6 +618,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRevenueRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/reports': {
+      id: '/_authenticated/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AuthenticatedAdminReportsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/leads': {
       id: '/_authenticated/admin/leads'
       path: '/leads'
@@ -667,6 +700,13 @@ declare module '@tanstack/react-router' {
       path: '/staff'
       fullPath: '/cafe/$slug/staff'
       preLoaderRoute: typeof AuthenticatedCafeSlugStaffRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/reports': {
+      id: '/_authenticated/cafe/$slug/reports'
+      path: '/reports'
+      fullPath: '/cafe/$slug/reports'
+      preLoaderRoute: typeof AuthenticatedCafeSlugReportsRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
     }
     '/_authenticated/cafe/$slug/pos': {
@@ -763,6 +803,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminConfigRoute: typeof AuthenticatedAdminConfigRoute
   AuthenticatedAdminHealthRoute: typeof AuthenticatedAdminHealthRoute
   AuthenticatedAdminLeadsRoute: typeof AuthenticatedAdminLeadsRoute
+  AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedAdminRevenueRoute: typeof AuthenticatedAdminRevenueRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
@@ -776,6 +817,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminConfigRoute: AuthenticatedAdminConfigRoute,
   AuthenticatedAdminHealthRoute: AuthenticatedAdminHealthRoute,
   AuthenticatedAdminLeadsRoute: AuthenticatedAdminLeadsRoute,
+  AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
   AuthenticatedAdminRevenueRoute: AuthenticatedAdminRevenueRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
@@ -812,6 +854,7 @@ interface AuthenticatedCafeSlugRouteChildren {
   AuthenticatedCafeSlugMenuRoute: typeof AuthenticatedCafeSlugMenuRoute
   AuthenticatedCafeSlugPageRoute: typeof AuthenticatedCafeSlugPageRoute
   AuthenticatedCafeSlugPosRoute: typeof AuthenticatedCafeSlugPosRoute
+  AuthenticatedCafeSlugReportsRoute: typeof AuthenticatedCafeSlugReportsRoute
   AuthenticatedCafeSlugStaffRoute: typeof AuthenticatedCafeSlugStaffRoute
   AuthenticatedCafeSlugTournamentsRoute: typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   AuthenticatedCafeSlugWalletRoute: typeof AuthenticatedCafeSlugWalletRoute
@@ -830,6 +873,7 @@ const AuthenticatedCafeSlugRouteChildren: AuthenticatedCafeSlugRouteChildren = {
   AuthenticatedCafeSlugMenuRoute: AuthenticatedCafeSlugMenuRoute,
   AuthenticatedCafeSlugPageRoute: AuthenticatedCafeSlugPageRoute,
   AuthenticatedCafeSlugPosRoute: AuthenticatedCafeSlugPosRoute,
+  AuthenticatedCafeSlugReportsRoute: AuthenticatedCafeSlugReportsRoute,
   AuthenticatedCafeSlugStaffRoute: AuthenticatedCafeSlugStaffRoute,
   AuthenticatedCafeSlugTournamentsRoute:
     AuthenticatedCafeSlugTournamentsRouteWithChildren,
@@ -880,13 +924,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
