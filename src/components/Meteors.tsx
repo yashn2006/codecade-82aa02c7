@@ -18,7 +18,7 @@ export function Meteors({ count = 18, className = "" }: { count?: number; classN
         duration: 3 + Math.random() * 6, // s
         size: 0.5 + Math.random() * 1.5, // px
       })),
-    [count],
+    [effectiveCount],
   );
 
   return (
