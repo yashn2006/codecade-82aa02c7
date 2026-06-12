@@ -13,6 +13,7 @@ import {
 import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import corecadeLogo from "@/assets/corecade-logo.png.asset.json";
 
 export const Route = createFileRoute("/discover")({
   ssr: false,
@@ -75,7 +76,7 @@ function DiscoverPage() {
       <ScrollProgress />
       <Navbar signedIn={signedIn} email={email} />
 
-      <CinematicHero query={query} setQuery={setQuery} cities={cities} city={city} setCity={setCity} />
+      <CinematicHero query={query} setQuery={setQuery} cities={cities} city={city} setCity={setCity} cafes={cafes} />
       <MarqueeStrip />
       <PinnedManifesto />
       <ArenaShowcase cafes={filtered} loading={!cafes.length} />
@@ -271,11 +272,12 @@ function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
         <Link to="/discover" className="group flex items-center gap-2.5">
-          <div className="relative grid h-9 w-9 place-items-center rounded-xl"
-               style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 0 24px rgba(255,82,224,.55)" }}>
-            <Joystick className="h-5 w-5 text-white" />
-            <span className="absolute inset-0 rounded-xl ring-1 ring-white/30" />
-          </div>
+          <img
+            src={corecadeLogo.url}
+            alt="CoreCade"
+            className="h-9 w-auto select-none drop-shadow-[0_0_22px_rgba(255,82,224,.55)]"
+            draggable={false}
+          />
           <span className="font-display text-lg font-black tracking-[0.2em] text-white" style={{ textShadow: "0 0 22px rgba(255,82,224,.55)" }}>
             CORECADE
           </span>
@@ -343,8 +345,8 @@ function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }
    CINEMATIC HERO
 ================================================================= */
 function CinematicHero({
-  query, setQuery, cities, city, setCity,
-}: { query: string; setQuery: (s: string) => void; cities: string[]; city: string; setCity: (c: string) => void }) {
+  query, setQuery, cities, city, setCity, cafes,
+}: { query: string; setQuery: (s: string) => void; cities: string[]; city: string; setCity: (c: string) => void; cafes: Cafe[] }) {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const yTitle = useTransform(scrollYProgress, [0, 1], [0, -180]);
@@ -412,28 +414,8 @@ function CinematicHero({
         </motion.p>
 
         {/* search */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05 }}
-          className="relative mx-auto mt-10 max-w-2xl"
-        >
-          <div className="absolute -inset-[1px] rounded-2xl opacity-80 blur-sm"
-               style={{ background: "conic-gradient(from 0deg,#ff52e0,#7b2fff,#2d8eff,#ff52e0)", animation: "spin 8s linear infinite" }} />
-          <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#0a0720]/80 backdrop-blur-xl">
-            <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-fuchsia-300" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by café, city, area or PIN…"
-              className="w-full bg-transparent py-5 pl-14 pr-32 text-base text-white placeholder:text-white/40 focus:outline-none"
-            />
-            <Link to="/auth">
-              <button className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white sm:inline-flex"
-                      style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff)", boxShadow: "0 0 22px rgba(255,82,224,.5)" }}>
-                Enter <ArrowRight className="h-4 w-4" />
-              </button>
-            </Link>
-          </div>
-        </motion.div>
+        <SearchBox query={query} setQuery={setQuery} cafes={cafes} />
+
 
         {/* city pills */}
         <motion.div
