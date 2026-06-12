@@ -170,19 +170,33 @@ function BookingsPage() {
                           </>
                         )}
                         {(b.status === "confirmed" || b.status === "pending") && (
-                          <Button size="icon" variant="ghost" title="Mark no-show" onClick={() => { if (confirm("Mark as no-show?")) setM.mutate({ data: { id: b.id, status: "no_show" } }); }}>
-                            <UserX className="h-4 w-4 text-amber-400" />
-                          </Button>
+                          <>
+                            <Button size="icon" variant="ghost" title="Mark no-show" onClick={() => { if (confirm("Mark as no-show?")) setM.mutate({ data: { id: b.id, status: "no_show" } }); }}>
+                              <UserX className="h-4 w-4 text-amber-400" />
+                            </Button>
+                            <Button size="icon" variant="ghost" title="Cancel & refund" onClick={() => { if (confirm("Cancel booking and refund deposit?")) cxlM.mutate({ data: { id: b.id } }); }}>
+                              <Undo2 className="h-4 w-4 text-rose-400" />
+                            </Button>
+                          </>
                         )}
                         <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => {
                           const v = prompt("Deposit amount (₹):", String(dep.deposit_amount ?? 0));
                           if (v === null) return;
                           const amount = Math.max(0, Number(v) || 0);
-                          const paid = amount > 0 && confirm("Is this deposit already paid?");
-                          depositM.mutate({ data: { id: b.id, deposit_amount: amount, deposit_paid: paid } });
+                          const paid = amount > 0 && confirm("Mark already paid (cash)? Cancel = deduct from wallet.");
+                          if (amount > 0 && !paid) {
+                            payM.mutate({ data: { id: b.id, amount } });
+                          } else {
+                            depositM.mutate({ data: { id: b.id, deposit_amount: amount, deposit_paid: paid } });
+                          }
                         }}>
                           <IndianRupee className="h-3 w-3" /> Deposit
                         </Button>
+                        {dep.deposit_paid && (
+                          <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs text-emerald-400" onClick={() => { if (confirm("Refund deposit to wallet?")) refM.mutate({ data: { id: b.id } }); }}>
+                            <Wallet className="h-3 w-3" /> Refund
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
