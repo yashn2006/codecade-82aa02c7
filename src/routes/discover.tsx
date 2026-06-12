@@ -43,9 +43,13 @@ function DiscoverPage() {
   const [query, setQuery] = useState("");
   const [city, setCity] = useState<string>("all");
   const [signedIn, setSignedIn] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
+    supabase.auth.getUser().then(({ data }) => {
+      setSignedIn(!!data.user);
+      setEmail(data.user?.email ?? null);
+    });
   }, []);
 
   const cities = useMemo(() => {
@@ -69,7 +73,7 @@ function DiscoverPage() {
       <NebulaCanvas />
       <GrainOverlay />
       <ScrollProgress />
-      <Navbar signedIn={signedIn} />
+      <Navbar signedIn={signedIn} email={email} />
 
       <CinematicHero query={query} setQuery={setQuery} cities={cities} city={city} setCity={setCity} />
       <MarqueeStrip />
@@ -248,13 +252,15 @@ function ScrollProgress() {
 /* =================================================================
    NAVBAR
 ================================================================= */
-function Navbar({ signedIn }: { signedIn: boolean }) {
+function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }) {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     onScroll(); window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  const initial = (email?.[0] ?? "G").toUpperCase();
   return (
     <motion.nav
       initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
@@ -276,11 +282,45 @@ function Navbar({ signedIn }: { signedIn: boolean }) {
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           {signedIn ? (
-            <Link to="/portal">
-              <Button size="sm" className="border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white hover:opacity-95">
-                My Portal <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            </Link>
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                onBlur={() => setTimeout(() => setMenuOpen(false), 160)}
+                className="group flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 py-1 pl-1 pr-3 backdrop-blur-xl transition hover:border-fuchsia-400/50 hover:bg-white/10"
+              >
+                <span
+                  className="grid h-8 w-8 place-items-center rounded-full font-display text-sm font-black text-white"
+                  style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 0 18px rgba(255,82,224,.55)" }}
+                >{initial}</span>
+                <span className="hidden text-xs font-medium text-white/90 sm:inline max-w-[140px] truncate">{email ?? "Account"}</span>
+              </button>
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                    transition={{ duration: 0.18 }}
+                    className="absolute right-0 top-[calc(100%+8px)] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#0b0820]/95 backdrop-blur-2xl shadow-[0_24px_60px_-12px_rgba(255,82,224,.35)]"
+                  >
+                    <div className="border-b border-white/10 px-4 py-3">
+                      <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-fuchsia-300">Signed in</div>
+                      <div className="mt-0.5 truncate text-sm font-medium text-white">{email}</div>
+                    </div>
+                    <Link to="/portal" className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/90 transition hover:bg-white/5">
+                      <Gamepad2 className="h-4 w-4 text-fuchsia-300" /> My Portal
+                    </Link>
+                    <Link to="/portal" className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/90 transition hover:bg-white/5">
+                      <Calendar className="h-4 w-4 text-blue-300" /> My Bookings
+                    </Link>
+                    <button
+                      onMouseDown={async () => { await supabase.auth.signOut(); window.location.href = "/discover"; }}
+                      className="flex w-full items-center gap-2 border-t border-white/10 px-4 py-2.5 text-sm text-rose-300 transition hover:bg-rose-500/10"
+                    >
+                      <ArrowUpRight className="h-4 w-4 rotate-90" /> Sign out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <>
               <Link to="/auth">
