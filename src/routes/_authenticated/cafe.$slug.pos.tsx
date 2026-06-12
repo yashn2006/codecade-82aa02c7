@@ -224,9 +224,14 @@ function POSPage() {
                       </Button>
                     )}
                     {o.status === "open" && (
-                      <Button size="sm" variant="ghost" onClick={() => voidIt.mutate({ data: { id: o.id } })}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+                      <>
+                        <Button size="icon" variant="ghost" title="Split bill" onClick={() => setSplitFor({ id: o.id, total: tot })}>
+                          <Split className="h-3.5 w-3.5 text-azure" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => voidIt.mutate({ data: { id: o.id } })}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
