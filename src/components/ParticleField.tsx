@@ -66,7 +66,9 @@ export function ParticleField({ density = 60 }: { density?: number }) {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [density]);
+  }, [density, isMobile]);
+
+  if (isMobile) return null;
 
   return (
     <canvas
