@@ -111,7 +111,13 @@ function PageEditor() {
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
         <div className="space-y-1"><Label>Tagline</Label><Input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="The fastest rigs in town" /></div>
-        <div className="space-y-1"><Label>Hero image URL</Label><Input value={form.hero_url} onChange={(e) => setForm({ ...form, hero_url: e.target.value })} placeholder="https://…" /></div>
+        <div className="space-y-1">
+          <Label>Hero image</Label>
+          <div className="flex gap-2">
+            <Input value={form.hero_url} onChange={(e) => setForm({ ...form, hero_url: e.target.value })} placeholder="Paste URL or upload…" />
+            <ImageUploader cafeId={cafeId} folder="hero" label="Upload" onUploaded={(url) => setForm((c) => ({ ...c, hero_url: url }))} />
+          </div>
+        </div>
         <div className="space-y-1"><Label>About</Label><Textarea rows={5} value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value })} /></div>
 
         {/* Theme picker */}
