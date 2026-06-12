@@ -11,7 +11,8 @@ const CafeInput = z.object({
   phone: z.string().max(20).optional().nullable(),
   email: z.string().email().max(200).optional().nullable().or(z.literal("")),
   description: z.string().max(1000).optional().nullable(),
-  owner_email: z.string().email().max(200),
+  // Optional — only super admins may set a different owner. Café owners auto-own.
+  owner_email: z.string().email().max(200).optional().nullable(),
 });
 
 export const listMyCafes = createServerFn({ method: "GET" })
@@ -105,26 +106,36 @@ export const createCafe = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CafeInput.parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "super_admin",
+      _user_id: context.userId, _role: "super_admin",
     });
-    if (!isAdmin) throw new Error("Forbidden");
+    const { data: isOwner } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId, _role: "cafe_owner",
+    });
+    if (!isAdmin && !isOwner) throw new Error("Forbidden — only café owners or admins can create cafés.");
 
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    // Find or invite owner
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("email", data.owner_email)
-      .maybeSingle();
-    let ownerId = profile?.id;
-    if (!ownerId) {
-      const { data: invited, error: invErr } =
-        await supabaseAdmin.auth.admin.inviteUserByEmail(data.owner_email);
-      if (invErr) throw new Error(invErr.message);
-      ownerId = invited.user?.id;
+
+    // Resolve owner. Café owners always own their own cafés.
+    let ownerId: string | undefined;
+    if (isAdmin && data.owner_email) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles").select("id").eq("email", data.owner_email).maybeSingle();
+      ownerId = profile?.id;
+      if (!ownerId) {
+        const { data: invited, error: invErr } =
+          await supabaseAdmin.auth.admin.inviteUserByEmail(data.owner_email);
+        if (invErr) throw new Error(invErr.message);
+        ownerId = invited.user?.id;
+      }
+    } else {
+      ownerId = context.userId;
     }
     if (!ownerId) throw new Error("Could not resolve owner");
+
+    // Unique slug guard
+    const { data: clash } = await supabaseAdmin
+      .from("cafes").select("id").eq("slug", data.slug).maybeSingle();
+    if (clash) throw new Error("That slug is taken — pick another.");
 
     const { data: cafe, error } = await supabaseAdmin
       .from("cafes")
@@ -139,14 +150,14 @@ export const createCafe = createServerFn({ method: "POST" })
         email: data.email || null,
         description: data.description || null,
       })
-      .select()
-      .single();
+      .select().single();
     if (error) throw new Error(error.message);
 
-    // grant cafe_owner role scoped to this cafe
-    await supabaseAdmin
-      .from("user_roles")
+    // Ensure cafe_owner role exists (scoped + global) — ignore duplicates
+    await supabaseAdmin.from("user_roles")
       .insert({ user_id: ownerId, role: "cafe_owner", cafe_id: cafe.id });
+    await supabaseAdmin.from("user_roles")
+      .insert({ user_id: ownerId, role: "cafe_owner", cafe_id: null });
 
     return cafe;
   });
@@ -181,4 +192,68 @@ export const updateCafe = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// Owner dashboard: per-café stats for everything the signed-in user owns.
+export const getOwnerDashboard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: cafes } = await supabaseAdmin
+      .from("cafes")
+      .select("id, slug, name, city, is_active, created_at")
+      .eq("owner_id", context.userId)
+      .order("created_at", { ascending: true });
+
+    const list = cafes ?? [];
+    if (list.length === 0) {
+      return { cafes: [], totals: { revenue: 0, revenueToday: 0, bookings: 0, activeSessions: 0, devices: 0, customers: 0 } };
+    }
+    const ids = list.map((c) => c.id);
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+
+    const [devicesRes, customersRes, sessionsActiveRes, sessionsAllRes, sessionsTodayRes, bookingsRes] = await Promise.all([
+      supabaseAdmin.from("devices").select("id, cafe_id").in("cafe_id", ids),
+      supabaseAdmin.from("customers").select("id, cafe_id").in("cafe_id", ids),
+      supabaseAdmin.from("sessions").select("id, cafe_id").in("cafe_id", ids).eq("status", "active"),
+      supabaseAdmin.from("sessions").select("cafe_id, amount").in("cafe_id", ids).not("amount", "is", null),
+      supabaseAdmin.from("sessions").select("cafe_id, amount").in("cafe_id", ids).gte("started_at", startOfDay.toISOString()),
+      supabaseAdmin.from("bookings").select("id, cafe_id, status").in("cafe_id", ids),
+    ]);
+
+    const count = (rows: { cafe_id: string }[] | null) => {
+      const m = new Map<string, number>();
+      (rows ?? []).forEach((r) => m.set(r.cafe_id, (m.get(r.cafe_id) ?? 0) + 1));
+      return m;
+    };
+    const sum = (rows: { cafe_id: string; amount: number | null }[] | null) => {
+      const m = new Map<string, number>();
+      (rows ?? []).forEach((r) => m.set(r.cafe_id, (m.get(r.cafe_id) ?? 0) + (r.amount ?? 0)));
+      return m;
+    };
+
+    const dev = count(devicesRes.data); const cust = count(customersRes.data);
+    const act = count(sessionsActiveRes.data); const book = count(bookingsRes.data);
+    const rev = sum(sessionsAllRes.data); const revToday = sum(sessionsTodayRes.data);
+
+    const perCafe = list.map((c) => ({
+      id: c.id, slug: c.slug, name: c.name, city: c.city, is_active: c.is_active,
+      devices: dev.get(c.id) ?? 0,
+      customers: cust.get(c.id) ?? 0,
+      activeSessions: act.get(c.id) ?? 0,
+      bookings: book.get(c.id) ?? 0,
+      revenue: rev.get(c.id) ?? 0,
+      revenueToday: revToday.get(c.id) ?? 0,
+    }));
+
+    const totals = perCafe.reduce((a, c) => ({
+      revenue: a.revenue + c.revenue,
+      revenueToday: a.revenueToday + c.revenueToday,
+      bookings: a.bookings + c.bookings,
+      activeSessions: a.activeSessions + c.activeSessions,
+      devices: a.devices + c.devices,
+      customers: a.customers + c.customers,
+    }), { revenue: 0, revenueToday: 0, bookings: 0, activeSessions: 0, devices: 0, customers: 0 });
+
+    return { cafes: perCafe, totals };
   });

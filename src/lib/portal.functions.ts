@@ -121,11 +121,11 @@ export const getMyPortalSummary = createServerFn({ method: "GET" })
       .eq("user_id", context.userId);
     const customerIds = (customers ?? []).map((c) => c.id);
 
-    let bookings: { id: string; status: string; duration_minutes: number; scheduled_at: string }[] = [];
+    let bookings: { id: string; status: string; duration_minutes: number; scheduled_at: string; cafe_id: string }[] = [];
     if (customerIds.length) {
       const { data } = await context.supabase
         .from("bookings")
-        .select("id, status, duration_minutes, scheduled_at")
+        .select("id, status, duration_minutes, scheduled_at, cafe_id")
         .in("customer_id", customerIds);
       bookings = data ?? [];
     }
@@ -136,14 +136,26 @@ export const getMyPortalSummary = createServerFn({ method: "GET" })
     ).length;
     const walletTotal = (customers ?? []).reduce((s, c) => s + (c.wallet_balance ?? 0), 0);
 
+    // "Cafés visited" = distinct cafés the user has actually booked at (not just signed up at)
+    const visitedSet = new Set(
+      bookings
+        .filter((b) => ["confirmed", "completed"].includes(b.status))
+        .map((b) => b.cafe_id),
+    );
+
+    // Wallets — only show cafés where the user actually has activity OR a non-zero balance
+    const activeWallets = (customers ?? []).filter(
+      (c) => (c.wallet_balance ?? 0) > 0 || bookings.some((b) => b.cafe_id === c.cafe_id),
+    );
+
     return {
-      wallets: customers ?? [],
+      wallets: activeWallets,
       walletTotal,
       totalBookings: bookings.length,
       totalHours: Math.round(totalHours * 10) / 10,
       completed,
       upcoming,
-      cafesVisited: new Set((customers ?? []).map((c) => c.cafe_id)).size,
+      cafesVisited: visitedSet.size,
     };
   });
 
