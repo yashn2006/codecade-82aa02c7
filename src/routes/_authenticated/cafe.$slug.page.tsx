@@ -186,9 +186,10 @@ function PageEditor() {
         {/* Gallery */}
         <div>
           <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-primary" /> Gallery</Label>
-          <div className="mt-2 flex gap-2">
-            <Input value={form.galleryInput} onChange={(e) => setForm({ ...form, galleryInput: e.target.value })} placeholder="https://image-url.jpg" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGallery(); } }} />
-            <Button type="button" variant="outline" onClick={addGallery}>Add</Button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Input value={form.galleryInput} onChange={(e) => setForm({ ...form, galleryInput: e.target.value })} placeholder="Paste image URL…" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGallery(); } }} className="flex-1 min-w-[180px]" />
+            <Button type="button" variant="outline" onClick={addGallery}>Add URL</Button>
+            <ImageUploader cafeId={cafeId} folder="gallery" label="Upload image" onUploaded={(url) => setForm((c) => ({ ...c, gallery: [...c.gallery, url] }))} />
           </div>
           {form.gallery.length > 0 && (
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -202,7 +203,7 @@ function PageEditor() {
               ))}
             </div>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground">Paste hosted image URLs. (Direct uploads coming with storage setup.)</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Upload directly to your café gallery bucket, or paste a hosted image URL.</p>
         </div>
 
         <Button type="submit" className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
