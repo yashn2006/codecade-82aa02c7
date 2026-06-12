@@ -130,7 +130,7 @@ export function BookingFlow({
   };
 
   const slots = useMemo(() => {
-    const out: { iso: string; label: string; disabled: boolean; past: boolean }[] = [];
+    const out: { iso: string; label: string; disabled: boolean; past: boolean; bookedMinutes: number }[] = [];
     const now = Date.now();
     for (let h = 9; h < 24; h++) {
       for (let m = 0; m < 60; m += 30) {
@@ -139,16 +139,21 @@ export function BookingFlow({
         const past = dt.getTime() < now;
         const slotEnd = dt.getTime() + duration * 60_000;
         let disabled = past;
+        let bookedMinutes = 0;
         for (const b of scheduleQ.data ?? []) {
           if (b.device_id !== device?.id) continue;
           const bs = new Date(b.scheduled_at).getTime();
           const be = bs + b.duration_minutes * 60_000;
-          if (bs < slotEnd && be > dt.getTime()) { disabled = true; break; }
+          if (bs < slotEnd && be > dt.getTime()) {
+            disabled = true;
+            if (b.duration_minutes > bookedMinutes) bookedMinutes = b.duration_minutes;
+            break;
+          }
         }
         out.push({
           iso,
           label: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
-          disabled, past,
+          disabled, past, bookedMinutes,
         });
       }
     }
