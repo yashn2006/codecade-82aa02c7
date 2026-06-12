@@ -1,0 +1,30 @@
+name = "corecade"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Nitro (via @lovable.dev/vite-tanstack-config) builds to .output/ with the
+# Cloudflare preset — this points Workers/Pages at the generated entry.
+main = ".output/server/index.mjs"
+
+# Static assets emitted by the build
+[assets]
+directory = ".output/public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# ----------------------------------------------------------------------------
+# Public env (safe to commit). Real secrets are set in the Cloudflare dashboard
+# under Workers & Pages → corecade → Settings → Variables (mark as "Secret").
+# ----------------------------------------------------------------------------
+[vars]
+# Public Supabase URL (also exposed to the browser as VITE_SUPABASE_URL at build time)
+# SUPABASE_URL = "https://nggaiqniweggifcjtoio.supabase.co"
+
+# ----------------------------------------------------------------------------
+# Production overrides (optional)
+# ----------------------------------------------------------------------------
+[env.production]
+name = "corecade"
+
+[observability]
+enabled = true
