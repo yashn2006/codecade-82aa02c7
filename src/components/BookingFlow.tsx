@@ -130,7 +130,7 @@ export function BookingFlow({
   };
 
   const slots = useMemo(() => {
-    const out: { iso: string; label: string; disabled: boolean; past: boolean }[] = [];
+    const out: { iso: string; label: string; disabled: boolean; past: boolean; bookedMinutes: number }[] = [];
     const now = Date.now();
     for (let h = 9; h < 24; h++) {
       for (let m = 0; m < 60; m += 30) {
@@ -139,16 +139,21 @@ export function BookingFlow({
         const past = dt.getTime() < now;
         const slotEnd = dt.getTime() + duration * 60_000;
         let disabled = past;
+        let bookedMinutes = 0;
         for (const b of scheduleQ.data ?? []) {
           if (b.device_id !== device?.id) continue;
           const bs = new Date(b.scheduled_at).getTime();
           const be = bs + b.duration_minutes * 60_000;
-          if (bs < slotEnd && be > dt.getTime()) { disabled = true; break; }
+          if (bs < slotEnd && be > dt.getTime()) {
+            disabled = true;
+            if (b.duration_minutes > bookedMinutes) bookedMinutes = b.duration_minutes;
+            break;
+          }
         }
         out.push({
           iso,
           label: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
-          disabled, past,
+          disabled, past, bookedMinutes,
         });
       }
     }
@@ -466,20 +471,29 @@ export function BookingFlow({
                 {step === 2 && (
                   <div>
                     <h3 className="mb-1 font-display text-lg font-bold">Lock your slot</h3>
-                    <p className="mb-4 text-xs text-white/50">
-                      Strikethrough = booked or past · {date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
+                    <p className="mb-3 text-xs text-white/50">
+                      {date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
                     </p>
+                    <div className="mb-4 flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-white/50">
+                      <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Free</span>
+                      <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-400/70" /> Booked</span>
+                      <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white/20" /> Past</span>
+                    </div>
 
                     {scheduleQ.isLoading ? (
                       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
                         {Array.from({ length: 24 }).map((_, i) => (
-                          <div key={i} className="h-12 animate-pulse rounded-lg bg-white/5" />
+                          <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />
                         ))}
                       </div>
                     ) : (
                       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
                         {slots.map((s, i) => {
                           const selected = time === s.iso;
+                          const isBooked = s.disabled && !s.past;
+                          const bookedLabel = s.bookedMinutes >= 60
+                            ? `${(s.bookedMinutes / 60) % 1 === 0 ? s.bookedMinutes / 60 : (s.bookedMinutes / 60).toFixed(1)}h`
+                            : `${s.bookedMinutes}m`;
                           return (
                             <motion.button
                               key={s.iso}
@@ -490,9 +504,11 @@ export function BookingFlow({
                               whileHover={!s.disabled ? { scale: 1.08, y: -2 } : {}}
                               whileTap={!s.disabled ? { scale: 0.95 } : {}}
                               onClick={() => setTime(s.iso)}
+                              title={isBooked ? `Booked for ${bookedLabel}` : s.past ? "Past slot" : "Available"}
                               className={cn(
-                                "relative rounded-lg border px-2 py-3 font-mono text-xs font-bold transition-all",
-                                s.disabled && "cursor-not-allowed border-white/5 bg-white/[0.02] text-white/20 line-through",
+                                "relative flex h-14 flex-col items-center justify-center rounded-lg border px-2 py-2 font-mono text-xs font-bold transition-all",
+                                s.past && "cursor-not-allowed border-white/5 bg-white/[0.02] text-white/20 line-through",
+                                isBooked && "cursor-not-allowed border-red-500/30 bg-red-500/10 text-red-300/80",
                                 !s.disabled && !selected && "border-white/10 bg-white/5 text-white hover:border-primary/60 hover:bg-primary/10 hover:text-primary",
                                 selected && "border-primary bg-primary text-primary-foreground shadow-[0_0_22px_oklch(0.7_0.26_335/0.9)] scale-110",
                               )}
@@ -504,7 +520,12 @@ export function BookingFlow({
                                   transition={{ duration: 1.2, repeat: Infinity }}
                                 />
                               )}
-                              {s.label}
+                              <span>{s.label}</span>
+                              {isBooked && (
+                                <span className="mt-0.5 font-mono text-[8px] uppercase tracking-[0.16em] text-red-300/90">
+                                  Booked {bookedLabel}
+                                </span>
+                              )}
                             </motion.button>
                           );
                         })}
