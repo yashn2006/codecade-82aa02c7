@@ -227,16 +227,22 @@ function WalletPage() {
               });
             }}
             className="space-y-3"
+            id="wallet-form"
           >
             <div className="rounded-xl border border-border/40 p-3 text-xs text-muted-foreground">
               Current balance: <span className="font-mono text-foreground">₹{sel?.balance}</span>
             </div>
             <div className="space-y-1"><Label>Amount (₹)</Label><Input name="amount" type="number" min={1} required autoFocus /></div>
             <div className="space-y-1"><Label>Note (optional)</Label><Input name="note" placeholder="Cash, UPI, refund…" /></div>
-            <DialogFooter>
+            <DialogFooter className="flex-col gap-2 sm:flex-row">
               <Button type="submit" disabled={m.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
-                {m.isPending ? "Saving…" : sel?.sign === 1 ? "Add" : "Deduct"}
+                {m.isPending ? "Saving…" : sel?.sign === 1 ? "Add (cash)" : "Deduct"}
               </Button>
+              {sel?.sign === 1 && rzpCfgQ.data?.enabled && (
+                <Button type="button" variant="outline" onClick={payRazorpay} disabled={rzpBusy} className="gap-2">
+                  <CreditCard className="h-4 w-4" /> {rzpBusy ? "Opening…" : "Pay with Razorpay"}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </DialogContent>
