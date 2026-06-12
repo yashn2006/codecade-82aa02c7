@@ -189,7 +189,7 @@ export function ConsoleMockup() {
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.7 + i * 0.12 }}
-                      className="grid grid-cols-[60px_1fr_72px_60px] items-center gap-2 px-3 py-1.5 text-[11px]"
+                      className="grid grid-cols-[52px_1fr_60px_52px] sm:grid-cols-[60px_1fr_72px_60px] items-center gap-2 px-3 py-1.5 text-[10px] sm:text-[11px]"
                     >
                       <span className="font-mono text-violet-300">{r.d}</span>
                       <span className="truncate text-white/80">{r.c}</span>
