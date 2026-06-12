@@ -7,7 +7,8 @@ import {
   ShieldCheck, Plus, Trash2, Mail, Sparkles, Activity, CalendarRange, Users as UsersIcon, Wallet, Check,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
-import { listStaff, inviteStaff, removeStaff } from "@/lib/staff.functions";
+import { listStaff, inviteStaff, removeStaff, updateStaffPermissions, STAFF_PERMS, type StaffPerm } from "@/lib/staff.functions";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,7 @@ function StaffPage() {
   const list = useServerFn(listStaff);
   const invite = useServerFn(inviteStaff);
   const remove = useServerFn(removeStaff);
+  const updateP = useServerFn(updateStaffPermissions);
 
   const q = useQuery({ queryKey: ["staff", cafeId], queryFn: () => list({ data: { cafe_id: cafeId! } }), enabled: !!cafeId });
   const qc = useQueryClient();
@@ -57,6 +59,11 @@ function StaffPage() {
   const removeM = useMutation({
     mutationFn: remove,
     onSuccess: () => { toast.success("Removed"); qc.invalidateQueries({ queryKey: ["staff", cafeId] }); },
+  });
+  const updateM = useMutation({
+    mutationFn: updateP,
+    onSuccess: () => { toast.success("Permissions updated"); qc.invalidateQueries({ queryKey: ["staff", cafeId] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const [open, setOpen] = useState(false);
   const [perms, setPerms] = useState<PermKey[]>(["sessions", "bookings"]);
