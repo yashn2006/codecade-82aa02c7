@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw redirect({ to: "/auth" });
-    if (user.email?.toLowerCase() !== SUPER_ADMIN_EMAIL) {
+    if (!user.email || !SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase())) {
       throw redirect({ to: "/portal" });
     }
     const { data: roles } = await supabase
