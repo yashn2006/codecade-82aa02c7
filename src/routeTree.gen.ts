@@ -30,6 +30,7 @@ import { Route as AuthenticatedAdminCafesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedAdminAnnouncementsRouteImport } from './routes/_authenticated/admin.announcements'
 import { Route as AuthenticatedCafeSlugIndexRouteImport } from './routes/_authenticated/cafe.$slug.index'
+import { Route as CSlugTournamentsIdRouteImport } from './routes/c.$slug.tournaments.$id'
 import { Route as AuthenticatedCafeSlugWalletRouteImport } from './routes/_authenticated/cafe.$slug.wallet'
 import { Route as AuthenticatedCafeSlugTournamentsRouteImport } from './routes/_authenticated/cafe.$slug.tournaments'
 import { Route as AuthenticatedCafeSlugStaffRouteImport } from './routes/_authenticated/cafe.$slug.staff'
@@ -156,6 +157,11 @@ const AuthenticatedCafeSlugIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedCafeSlugRoute,
   } as any)
+const CSlugTournamentsIdRoute = CSlugTournamentsIdRouteImport.update({
+  id: '/tournaments/$id',
+  path: '/tournaments/$id',
+  getParentRoute: () => CSlugRoute,
+} as any)
 const AuthenticatedCafeSlugWalletRoute =
   AuthenticatedCafeSlugWalletRouteImport.update({
     id: '/wallet',
@@ -255,7 +261,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
-  '/c/$slug': typeof CSlugRoute
+  '/c/$slug': typeof CSlugRouteWithChildren
   '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
@@ -281,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
   '/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
+  '/c/$slug/tournaments/$id': typeof CSlugTournamentsIdRoute
   '/cafe/$slug/': typeof AuthenticatedCafeSlugIndexRoute
   '/cafe/$slug/tournaments/$id': typeof AuthenticatedCafeSlugTournamentsIdRoute
 }
@@ -291,7 +298,7 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
-  '/c/$slug': typeof CSlugRoute
+  '/c/$slug': typeof CSlugRouteWithChildren
   '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
@@ -316,6 +323,7 @@ export interface FileRoutesByTo {
   '/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
   '/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
+  '/c/$slug/tournaments/$id': typeof CSlugTournamentsIdRoute
   '/cafe/$slug': typeof AuthenticatedCafeSlugIndexRoute
   '/cafe/$slug/tournaments/$id': typeof AuthenticatedCafeSlugTournamentsIdRoute
 }
@@ -329,7 +337,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/owner': typeof AuthenticatedOwnerRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
-  '/c/$slug': typeof CSlugRoute
+  '/c/$slug': typeof CSlugRouteWithChildren
   '/_authenticated/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/cafes': typeof AuthenticatedAdminCafesRoute
@@ -355,6 +363,7 @@ export interface FileRoutesById {
   '/_authenticated/cafe/$slug/staff': typeof AuthenticatedCafeSlugStaffRoute
   '/_authenticated/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/_authenticated/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
+  '/c/$slug/tournaments/$id': typeof CSlugTournamentsIdRoute
   '/_authenticated/cafe/$slug/': typeof AuthenticatedCafeSlugIndexRoute
   '/_authenticated/cafe/$slug/tournaments/$id': typeof AuthenticatedCafeSlugTournamentsIdRoute
 }
@@ -394,6 +403,7 @@ export interface FileRouteTypes {
     | '/cafe/$slug/staff'
     | '/cafe/$slug/tournaments'
     | '/cafe/$slug/wallet'
+    | '/c/$slug/tournaments/$id'
     | '/cafe/$slug/'
     | '/cafe/$slug/tournaments/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -429,6 +439,7 @@ export interface FileRouteTypes {
     | '/cafe/$slug/staff'
     | '/cafe/$slug/tournaments'
     | '/cafe/$slug/wallet'
+    | '/c/$slug/tournaments/$id'
     | '/cafe/$slug'
     | '/cafe/$slug/tournaments/$id'
   id:
@@ -467,6 +478,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cafe/$slug/staff'
     | '/_authenticated/cafe/$slug/tournaments'
     | '/_authenticated/cafe/$slug/wallet'
+    | '/c/$slug/tournaments/$id'
     | '/_authenticated/cafe/$slug/'
     | '/_authenticated/cafe/$slug/tournaments/$id'
   fileRoutesById: FileRoutesById
@@ -477,7 +489,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SetupRoute: typeof SetupRoute
-  CSlugRoute: typeof CSlugRoute
+  CSlugRoute: typeof CSlugRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -628,6 +640,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cafe/$slug/'
       preLoaderRoute: typeof AuthenticatedCafeSlugIndexRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/c/$slug/tournaments/$id': {
+      id: '/c/$slug/tournaments/$id'
+      path: '/tournaments/$id'
+      fullPath: '/c/$slug/tournaments/$id'
+      preLoaderRoute: typeof CSlugTournamentsIdRouteImport
+      parentRoute: typeof CSlugRoute
     }
     '/_authenticated/cafe/$slug/wallet': {
       id: '/_authenticated/cafe/$slug/wallet'
@@ -840,13 +859,23 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface CSlugRouteChildren {
+  CSlugTournamentsIdRoute: typeof CSlugTournamentsIdRoute
+}
+
+const CSlugRouteChildren: CSlugRouteChildren = {
+  CSlugTournamentsIdRoute: CSlugTournamentsIdRoute,
+}
+
+const CSlugRouteWithChildren = CSlugRoute._addFileChildren(CSlugRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SetupRoute: SetupRoute,
-  CSlugRoute: CSlugRoute,
+  CSlugRoute: CSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
