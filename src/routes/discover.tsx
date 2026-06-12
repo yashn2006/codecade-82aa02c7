@@ -215,11 +215,11 @@ function NebulaCanvas() {
     };
     tick();
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); window.removeEventListener("mousemove", onMove); };
-  }, []);
+  }, [isMobileLike]);
   return (
     <div className="pointer-events-none fixed inset-0 z-0">
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at top, #1a0838 0%, #04030c 55%, #000 100%)" }} />
-      <canvas ref={ref} className="absolute inset-0" />
+      {!isMobileLike && <canvas ref={ref} className="absolute inset-0" />}
       <div
         className="absolute inset-0 opacity-[0.05]"
         style={{

@@ -1,13 +1,16 @@
 import { useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * Pure-CSS meteor shower. Slants left→right with neon trails.
  * Sits inside any `relative` container with overflow-hidden.
  */
 export function Meteors({ count = 18, className = "" }: { count?: number; className?: string }) {
+  const isMobile = useIsMobile();
+  const effectiveCount = isMobile ? 0 : count;
   const meteors = useMemo(
     () =>
-      Array.from({ length: count }).map((_, i) => ({
+      Array.from({ length: effectiveCount }).map((_, i) => ({
         id: i,
         top: Math.random() * 60 - 20, // %
         left: Math.random() * 100, // %

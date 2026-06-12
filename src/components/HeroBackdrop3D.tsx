@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * Immersive 3D hero backdrop for owner console headers.
@@ -7,6 +8,14 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
  * scan grid, drifting particles, and a holographic gradient.
  */
 export function HeroBackdrop3D() {
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return (
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at top, rgba(120,40,200,.25), transparent 60%)" }} />
+      </div>
+    );
+  }
   const ref = useRef<HTMLDivElement>(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
