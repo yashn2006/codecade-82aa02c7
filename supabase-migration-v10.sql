@@ -10,6 +10,9 @@ ALTER TABLE public.orders
   ADD COLUMN IF NOT EXISTS split_label text;
 CREATE INDEX IF NOT EXISTS idx_orders_parent ON public.orders(parent_order_id);
 
+-- Allow synthetic line items (split shares) that don't tie to a menu item
+ALTER TABLE public.order_items ALTER COLUMN item_id DROP NOT NULL;
+
 -- ============== Device commands queue ==============
 CREATE TABLE IF NOT EXISTS public.device_commands (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
