@@ -174,7 +174,7 @@ function Hero() {
 
           <motion.h1
             initial="hidden" animate="visible" custom={1} variants={fadeUp}
-            className="mt-6 font-display font-extrabold leading-[0.92] tracking-[-0.045em] text-[3rem] sm:text-[4.5rem] xl:text-[6rem]"
+            className="mt-6 font-display font-extrabold leading-[0.92] tracking-[-0.045em] text-[2.5rem] sm:text-[4.5rem] xl:text-[6rem]"
           >
             <span className="block text-foreground/95">The OS that runs</span>
             <span className="relative block">
