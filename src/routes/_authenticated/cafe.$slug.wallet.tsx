@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Wallet, Plus, Minus, Receipt, Download, FileText } from "lucide-react";
+import { Wallet, Plus, Minus, Receipt, Download, FileText, CreditCard } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listCustomers } from "@/lib/customers.functions";
 import { adjustWallet, listWalletTransactions, exportWalletCSV } from "@/lib/wallet.functions";
+import { createTopupOrder, verifyTopupPayment, getRazorpayConfig } from "@/lib/razorpay.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,20 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { PrintableStatement, type StatementTx } from "@/components/PrintableStatement";
+
+declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void } } }
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (window.Razorpay) return resolve(true);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/wallet")({
   head: () => ({
