@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   Zap, Shield, BarChart3, Users, Cpu, ArrowRight, Check,
   Activity, Sparkles, Terminal, Gamepad2,
@@ -35,6 +35,12 @@ const fadeUp = {
 };
 
 function Landing() {
+  useEffect(() => {
+    // Ensure landing always opens at the top (override any scroll restoration)
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, []);
   return (
     <div className="relative min-h-screen overflow-hidden">
       <Header />

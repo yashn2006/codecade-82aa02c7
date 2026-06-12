@@ -19,6 +19,7 @@ type RzpOptions = {
   key: string; amount: number; currency: string; order_id: string;
   name: string; description: string;
   handler: (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void;
+  prefill?: { name?: string; email?: string; contact?: string };
   modal?: { ondismiss?: () => void };
   theme?: { color?: string };
 };

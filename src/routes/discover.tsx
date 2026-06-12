@@ -13,6 +13,7 @@ import {
 import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import corecadeLogo from "@/assets/corecade-logo.png.asset.json";
 
 export const Route = createFileRoute("/discover")({
   ssr: false,
@@ -75,7 +76,7 @@ function DiscoverPage() {
       <ScrollProgress />
       <Navbar signedIn={signedIn} email={email} />
 
-      <CinematicHero query={query} setQuery={setQuery} cities={cities} city={city} setCity={setCity} />
+      <CinematicHero query={query} setQuery={setQuery} cities={cities} city={city} setCity={setCity} cafes={cafes} />
       <MarqueeStrip />
       <PinnedManifesto />
       <ArenaShowcase cafes={filtered} loading={!cafes.length} />
@@ -271,11 +272,12 @@ function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
         <Link to="/discover" className="group flex items-center gap-2.5">
-          <div className="relative grid h-9 w-9 place-items-center rounded-xl"
-               style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 0 24px rgba(255,82,224,.55)" }}>
-            <Joystick className="h-5 w-5 text-white" />
-            <span className="absolute inset-0 rounded-xl ring-1 ring-white/30" />
-          </div>
+          <img
+            src={corecadeLogo.url}
+            alt="CoreCade"
+            className="h-9 w-auto select-none drop-shadow-[0_0_22px_rgba(255,82,224,.55)]"
+            draggable={false}
+          />
           <span className="font-display text-lg font-black tracking-[0.2em] text-white" style={{ textShadow: "0 0 22px rgba(255,82,224,.55)" }}>
             CORECADE
           </span>
@@ -343,8 +345,8 @@ function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }
    CINEMATIC HERO
 ================================================================= */
 function CinematicHero({
-  query, setQuery, cities, city, setCity,
-}: { query: string; setQuery: (s: string) => void; cities: string[]; city: string; setCity: (c: string) => void }) {
+  query, setQuery, cities, city, setCity, cafes,
+}: { query: string; setQuery: (s: string) => void; cities: string[]; city: string; setCity: (c: string) => void; cafes: Cafe[] }) {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const yTitle = useTransform(scrollYProgress, [0, 1], [0, -180]);
@@ -412,28 +414,8 @@ function CinematicHero({
         </motion.p>
 
         {/* search */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05 }}
-          className="relative mx-auto mt-10 max-w-2xl"
-        >
-          <div className="absolute -inset-[1px] rounded-2xl opacity-80 blur-sm"
-               style={{ background: "conic-gradient(from 0deg,#ff52e0,#7b2fff,#2d8eff,#ff52e0)", animation: "spin 8s linear infinite" }} />
-          <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#0a0720]/80 backdrop-blur-xl">
-            <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-fuchsia-300" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by café, city, area or PIN…"
-              className="w-full bg-transparent py-5 pl-14 pr-32 text-base text-white placeholder:text-white/40 focus:outline-none"
-            />
-            <Link to="/auth">
-              <button className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white sm:inline-flex"
-                      style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff)", boxShadow: "0 0 22px rgba(255,82,224,.5)" }}>
-                Enter <ArrowRight className="h-4 w-4" />
-              </button>
-            </Link>
-          </div>
-        </motion.div>
+        <SearchBox query={query} setQuery={setQuery} cafes={cafes} />
+
 
         {/* city pills */}
         <motion.div
@@ -466,6 +448,139 @@ function CinematicHero({
       </motion.div>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </section>
+  );
+}
+
+/* =================================================================
+   SEARCH BOX with live autocomplete (café · city · area · PIN)
+================================================================= */
+function SearchBox({
+  query, setQuery, cafes,
+}: { query: string; setQuery: (s: string) => void; cafes: Cafe[] }) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [] as { kind: "cafe" | "city" | "area" | "pin"; label: string; sub?: string; slug?: string }[];
+    const out: { kind: "cafe" | "city" | "area" | "pin"; label: string; sub?: string; slug?: string }[] = [];
+    const seenCity = new Set<string>();
+    for (const c of cafes) {
+      if (c.name?.toLowerCase().includes(q)) {
+        out.push({ kind: "cafe", label: c.name, sub: [c.city, c.state].filter(Boolean).join(", "), slug: c.slug });
+      }
+    }
+    for (const c of cafes) {
+      const city = c.city?.trim();
+      if (city && !seenCity.has(city.toLowerCase()) && city.toLowerCase().includes(q)) {
+        seenCity.add(city.toLowerCase());
+        out.push({ kind: "city", label: city, sub: c.state ?? undefined });
+      }
+    }
+    if (/^\d{2,6}$/.test(q)) {
+      out.push({ kind: "pin", label: `PIN ${q}`, sub: "Search arenas by postal code" });
+    }
+    return out.slice(0, 8);
+  }, [query, cafes]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  useEffect(() => { setActive(0); }, [query]);
+
+  const choose = (s: { label: string; slug?: string }) => {
+    setQuery(s.label);
+    setOpen(false);
+    if (s.slug) {
+      // jump to arena grid
+      requestAnimationFrame(() => {
+        document.getElementById("arenas")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  };
+
+  return (
+    <motion.div
+      ref={wrapRef}
+      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05 }}
+      className="relative mx-auto mt-10 max-w-2xl"
+    >
+      <div className="absolute -inset-[1px] rounded-2xl opacity-80 blur-sm"
+           style={{ background: "conic-gradient(from 0deg,#ff52e0,#7b2fff,#2d8eff,#ff52e0)", animation: "spin 8s linear infinite" }} />
+      <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#0a0720]/80 backdrop-blur-xl">
+        <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-fuchsia-300" />
+        <input
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (!open || suggestions.length === 0) return;
+            if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => (a + 1) % suggestions.length); }
+            if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => (a - 1 + suggestions.length) % suggestions.length); }
+            if (e.key === "Enter") { e.preventDefault(); choose(suggestions[active]); }
+            if (e.key === "Escape") setOpen(false);
+          }}
+          placeholder="Search by café, city, area or PIN…"
+          className="w-full bg-transparent py-5 pl-14 pr-32 text-base text-white placeholder:text-white/40 focus:outline-none"
+        />
+        <button
+          onClick={() => { if (suggestions[0]) choose(suggestions[0]); }}
+          className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white sm:inline-flex"
+          style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff)", boxShadow: "0 0 22px rgba(255,82,224,.5)" }}
+        >
+          Search <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {open && query.trim() && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-2xl border border-white/10 bg-[#0b0820]/95 backdrop-blur-2xl shadow-[0_24px_60px_-12px_rgba(255,82,224,.35)]"
+          >
+            {suggestions.length === 0 ? (
+              <div className="px-5 py-6 text-center">
+                <div className="text-sm font-medium text-white/80">No arenas match "{query}"</div>
+                <div className="mt-1 text-xs text-white/40">Try a different city, area, or café name.</div>
+              </div>
+            ) : (
+              <ul className="max-h-80 overflow-y-auto py-1">
+                {suggestions.map((s, i) => {
+                  const Icon = s.kind === "cafe" ? Gamepad2 : s.kind === "pin" ? Search : MapPin;
+                  return (
+                    <li key={`${s.kind}-${s.label}-${i}`}>
+                      <button
+                        onMouseEnter={() => setActive(i)}
+                        onMouseDown={(e) => { e.preventDefault(); choose(s); }}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition ${
+                          active === i ? "bg-fuchsia-500/15" : "hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-fuchsia-300">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-white">{s.label}</span>
+                          {s.sub && <span className="block truncate text-[11px] text-white/40">{s.sub}</span>}
+                        </span>
+                        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/30">{s.kind}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -584,7 +699,7 @@ function RevealWord({ progress, range, word }: { progress: any; range: [number, 
 ================================================================= */
 function ArenaShowcase({ cafes, loading }: { cafes: Cafe[]; loading: boolean }) {
   return (
-    <section className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
+    <section id="arenas" className="relative z-10 mx-auto mt-32 max-w-7xl px-5 sm:px-8">
       <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.32em] text-fuchsia-300">/ Featured Arenas</div>

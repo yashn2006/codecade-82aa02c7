@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import { PrintableStatement, type StatementTx } from "@/components/PrintableStatement";
 
-declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void } } }
+// Razorpay window type is declared once in src/components/BookingFlow.tsx
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
