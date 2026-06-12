@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Wallet, Plus, Minus, Receipt, Download } from "lucide-react";
+import { Wallet, Plus, Minus, Receipt, Download, FileText } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listCustomers } from "@/lib/customers.functions";
 import { adjustWallet, listWalletTransactions, exportWalletCSV } from "@/lib/wallet.functions";
@@ -15,6 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { PrintableStatement, type StatementTx } from "@/components/PrintableStatement";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/wallet")({
   head: () => ({
@@ -54,6 +55,13 @@ function WalletPage() {
   });
 
   const [sel, setSel] = useState<null | { id: string; name: string; balance: number; sign: 1 | -1 }>(null);
+  const [statementFor, setStatementFor] = useState<null | { id: string; name: string; phone: string | null; balance: number }>(null);
+
+  const stmtTxQ = useQuery({
+    queryKey: ["wallet-tx", "customer", statementFor?.id],
+    queryFn: () => lTx({ data: { customer_id: statementFor!.id } }),
+    enabled: !!statementFor,
+  });
 
   if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
 
@@ -93,11 +101,14 @@ function WalletPage() {
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Balance</div>
                   <div className="font-display text-xl font-bold text-gradient">₹{c.wallet_balance}</div>
                 </div>
-                <Button size="icon" variant="outline" onClick={() => setSel({ id: c.id, name: c.full_name, balance: c.wallet_balance, sign: 1 })}>
+                <Button size="icon" variant="outline" onClick={() => setSel({ id: c.id, name: c.full_name, balance: c.wallet_balance, sign: 1 })} title="Add">
                   <Plus className="h-4 w-4" />
                 </Button>
-                <Button size="icon" variant="outline" onClick={() => setSel({ id: c.id, name: c.full_name, balance: c.wallet_balance, sign: -1 })}>
+                <Button size="icon" variant="outline" onClick={() => setSel({ id: c.id, name: c.full_name, balance: c.wallet_balance, sign: -1 })} title="Deduct">
                   <Minus className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="outline" onClick={() => setStatementFor({ id: c.id, name: c.full_name, phone: c.phone, balance: c.wallet_balance })} title="Print statement">
+                  <FileText className="h-4 w-4" />
                 </Button>
               </div>
             </div>
