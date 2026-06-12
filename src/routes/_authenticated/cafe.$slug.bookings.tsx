@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarRange, Plus, Check, X, UserX, IndianRupee } from "lucide-react";
+import { CalendarRange, Plus, Check, X, UserX, IndianRupee, Wallet, Undo2 } from "lucide-react";
 import { useState } from "react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
-import { listBookings, updateBookingStatus, createBookingForCustomer, markBookingDeposit } from "@/lib/bookings.functions";
+import { listBookings, updateBookingStatus, createBookingForCustomer, markBookingDeposit, payBookingDeposit, refundBookingDeposit, cancelBookingWithRefund } from "@/lib/bookings.functions";
 import { listDevices } from "@/lib/devices.functions";
 import { listCustomers } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,12 @@ function BookingsPage() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["bookings", cafeId] });
   const setM = useMutation({ mutationFn: setStatus, onSuccess: () => { refresh(); toast.success("Updated"); } });
   const depositM = useMutation({ mutationFn: deposit, onSuccess: () => { refresh(); toast.success("Deposit updated"); } });
+  const payDep = useServerFn(payBookingDeposit);
+  const refDep = useServerFn(refundBookingDeposit);
+  const cxlRef = useServerFn(cancelBookingWithRefund);
+  const payM = useMutation({ mutationFn: payDep, onSuccess: () => { refresh(); toast.success("Deposit paid from wallet"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
+  const refM = useMutation({ mutationFn: refDep, onSuccess: () => { refresh(); toast.success("Deposit refunded"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
+  const cxlM = useMutation({ mutationFn: cxlRef, onSuccess: () => { refresh(); toast.success("Booking cancelled + refunded"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
   const createM = useMutation({
     mutationFn: create,
     onSuccess: () => { refresh(); toast.success("Booking created"); setOpen(false); },
@@ -164,19 +170,33 @@ function BookingsPage() {
                           </>
                         )}
                         {(b.status === "confirmed" || b.status === "pending") && (
-                          <Button size="icon" variant="ghost" title="Mark no-show" onClick={() => { if (confirm("Mark as no-show?")) setM.mutate({ data: { id: b.id, status: "no_show" } }); }}>
-                            <UserX className="h-4 w-4 text-amber-400" />
-                          </Button>
+                          <>
+                            <Button size="icon" variant="ghost" title="Mark no-show" onClick={() => { if (confirm("Mark as no-show?")) setM.mutate({ data: { id: b.id, status: "no_show" } }); }}>
+                              <UserX className="h-4 w-4 text-amber-400" />
+                            </Button>
+                            <Button size="icon" variant="ghost" title="Cancel & refund" onClick={() => { if (confirm("Cancel booking and refund deposit?")) cxlM.mutate({ data: { id: b.id } }); }}>
+                              <Undo2 className="h-4 w-4 text-rose-400" />
+                            </Button>
+                          </>
                         )}
                         <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => {
                           const v = prompt("Deposit amount (₹):", String(dep.deposit_amount ?? 0));
                           if (v === null) return;
                           const amount = Math.max(0, Number(v) || 0);
-                          const paid = amount > 0 && confirm("Is this deposit already paid?");
-                          depositM.mutate({ data: { id: b.id, deposit_amount: amount, deposit_paid: paid } });
+                          const paid = amount > 0 && confirm("Mark already paid (cash)? Cancel = deduct from wallet.");
+                          if (amount > 0 && !paid) {
+                            payM.mutate({ data: { id: b.id, amount } });
+                          } else {
+                            depositM.mutate({ data: { id: b.id, deposit_amount: amount, deposit_paid: paid } });
+                          }
                         }}>
                           <IndianRupee className="h-3 w-3" /> Deposit
                         </Button>
+                        {dep.deposit_paid && (
+                          <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs text-emerald-400" onClick={() => { if (confirm("Refund deposit to wallet?")) refM.mutate({ data: { id: b.id } }); }}>
+                            <Wallet className="h-3 w-3" /> Refund
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );

@@ -167,3 +167,50 @@ export const customerCreateBooking = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
+
+export const payBookingDeposit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), amount: z.number().int().min(1) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("pay_booking_deposit", {
+      _booking_id: data.id, _amount: data.amount,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const refundBookingDeposit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("refund_booking_deposit", { _booking_id: data.id });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const cancelBookingWithRefund = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Refund first (no-op if not paid)
+    await context.supabase.rpc("refund_booking_deposit", { _booking_id: data.id });
+    const { error } = await context.supabase
+      .from("bookings").update({ status: "cancelled" }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const runNoShowSweep = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId, _role: "super_admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data, error } = await supabaseAdmin.rpc("auto_flag_no_shows");
+    if (error) throw new Error(error.message);
+    return { flagged: data as number };
+  });
