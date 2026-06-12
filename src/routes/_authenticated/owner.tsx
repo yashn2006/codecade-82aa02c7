@@ -22,10 +22,19 @@ export const Route = createFileRoute("/_authenticated/owner")({
     ],
   }),
   beforeLoad: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw redirect({ to: "/auth" });
+    // Gate: must have cafe_owner (or super_admin) role
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .in("role", ["cafe_owner", "super_admin"]);
+    if (!roles || roles.length === 0) {
+      throw redirect({ to: "/portal" });
+    }
     // Auto-redirect single-café owners straight into their console
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
       const { data } = await supabase
         .from("cafes")
         .select("slug")
@@ -36,7 +45,6 @@ export const Route = createFileRoute("/_authenticated/owner")({
         throw redirect({ to: "/cafe/$slug", params: { slug: data[0].slug } });
       }
     } catch (e) {
-      // re-throw redirects, swallow other errors so the hub still renders
       if (e && typeof e === "object" && "to" in e) throw e;
     }
   },
