@@ -187,7 +187,9 @@ function MatchCard({ m, onPick }: { m: Match; onPick: (w: "a" | "b") => void }) 
               <Label>Credit to customer</Label>
               <select name="customer_id" required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
                 <option value="">— select customer —</option>
-                {(cusQ.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.full_name} {c.phone ? `· ${c.phone}` : ""}</option>)}
+                {(cusQ.data ?? []).map((c: { id: string; full_name: string; phone: string | null }) => (
+                  <option key={c.id} value={c.id}>{c.full_name} {c.phone ? `· ${c.phone}` : ""}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-1">
@@ -203,6 +205,23 @@ function MatchCard({ m, onPick }: { m: Match; onPick: (w: "a" | "b") => void }) 
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+type Match = { id: string; round: number; match_index: number; team_a: string; team_b: string; score_a: number | null; score_b: number | null; winner: string | null };
+function MatchCard({ m, onPick }: { m: Match; onPick: (w: "a" | "b") => void }) {
+  const [scoreA, setScoreA] = useState<string>(m.score_a?.toString() ?? "");
+  const [scoreB, setScoreB] = useState<string>(m.score_b?.toString() ?? "");
+  const ready = m.team_a && m.team_b && m.team_a !== "BYE" && m.team_b !== "BYE";
+  return (
+    <div className="w-56 rounded-xl border border-border/60 bg-card/60 p-2 backdrop-blur">
+      <Row team={m.team_a} score={scoreA} setScore={setScoreA} winner={m.winner === m.team_a} canPick={!!ready && !m.winner} onPick={() => onPick("a")} />
+      <div className="my-1 text-center text-[9px] font-mono uppercase tracking-wider text-muted-foreground">vs</div>
+      <Row team={m.team_b} score={scoreB} setScore={setScoreB} winner={m.winner === m.team_b} canPick={!!ready && !m.winner} onPick={() => onPick("b")} />
+      {m.winner && (
+        <Badge className="mt-2 w-full justify-center gap-1 bg-primary/20 text-primary"><Crown className="h-3 w-3" />{m.winner}</Badge>
+      )}
     </div>
   );
 }
