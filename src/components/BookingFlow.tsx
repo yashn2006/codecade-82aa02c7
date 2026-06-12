@@ -134,22 +134,68 @@ export function BookingFlow({
     enabled: open && step >= 2,
   });
 
+  const [paymentMethod, setPaymentMethod] = useState<"pay_online" | "pay_at_cafe" | "cash">("pay_at_cafe");
+
+  const createOrderFn = useServerFn(createBookingOrder);
+  const verifyPayFn = useServerFn(verifyBookingPayment);
+
+  const finishSuccess = () => {
+    setBurst(true);
+    setTimeout(() => {
+      toast.success("Booking confirmed! Check My Bookings.");
+      onBooked?.();
+      reset();
+      onOpenChange(false);
+    }, 900);
+  };
+
   const book = useMutation({
     mutationFn: bookFn,
-    onSuccess: () => {
-      setBurst(true);
-      setTimeout(() => {
-        toast.success("Booking confirmed! Check My Bookings.");
-        onBooked?.();
-        reset();
-        onOpenChange(false);
-      }, 900);
+    onSuccess: async (row) => {
+      if (paymentMethod !== "pay_online") {
+        finishSuccess();
+        return;
+      }
+      try {
+        const ok = await loadRazorpay();
+        if (!ok || !window.Razorpay) throw new Error("Could not load Razorpay");
+        const order = await createOrderFn({ data: { booking_id: (row as { id: string }).id } });
+        const rzp = new window.Razorpay({
+          key: order.key_id,
+          amount: order.amount * 100,
+          currency: order.currency,
+          order_id: order.order_id,
+          name: cafe.name,
+          description: `Booking · ${device?.name ?? ""}`,
+          theme: { color: "#e94db1" },
+          handler: async (resp) => {
+            try {
+              await verifyPayFn({
+                data: {
+                  booking_id: order.booking_id,
+                  razorpay_order_id: resp.razorpay_order_id,
+                  razorpay_payment_id: resp.razorpay_payment_id,
+                  razorpay_signature: resp.razorpay_signature,
+                },
+              });
+              finishSuccess();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Payment verification failed");
+            }
+          },
+          modal: { ondismiss: () => toast("Payment cancelled — booking still pending.") },
+        });
+        rzp.open();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Payment failed to start");
+      }
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Booking failed"),
   });
 
   const reset = () => {
     setStep(0); setDevice(null); setTime(null); setDuration(60); setDate(new Date()); setBurst(false);
+    setPaymentMethod("pay_at_cafe");
   };
 
   const slots = useMemo(() => {
