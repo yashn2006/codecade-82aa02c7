@@ -47,8 +47,8 @@ function SettingsPanel() {
     { icon: Shield, title: "Security", desc: "Roles, super-admin grants, audit log.", to: "/admin/users" as const, cta: "Manage roles" },
     { icon: Globe, title: "Public landing", desc: "Hero stats, testimonials and the marketing page.", to: "/" as const, cta: "View landing" },
     { icon: Mail, title: "Lead inbox", desc: "Inbound contacts from the marketing site.", to: "/admin/leads" as const, cta: "Open inbox" },
-    { icon: Database, title: "Data & backups", desc: "Database snapshots and exports — coming soon.", cta: "Coming soon" },
-    { icon: KeyRound, title: "API keys", desc: "Issue and rotate API tokens — coming soon.", cta: "Coming soon" },
+    { icon: Database, title: "Data & backups", desc: "Download JSON snapshots of every key table.", to: "/admin/backups" as const, cta: "Open backups" },
+    { icon: KeyRound, title: "API keys", desc: "View & rotate Supabase, Razorpay and Lovable AI keys.", to: "/admin/api-keys" as const, cta: "Manage keys" },
   ];
 
   return (
