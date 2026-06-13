@@ -203,65 +203,261 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 function CreateCafeButton() {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(0);
+  const [openDays, setOpenDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 0]);
+  const [openTime, setOpenTime] = useState("10:00");
+  const [closeTime, setCloseTime] = useState("23:00");
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+
   const qc = useQueryClient();
   const create = useServerFn(createCafe);
   const m = useMutation({
     mutationFn: create,
     onSuccess: () => {
-      toast.success("Café created — opening console");
+      toast.success("🎉 Café created — welcome to CoreCade!");
       qc.invalidateQueries({ queryKey: ["owner-dashboard"] });
       qc.invalidateQueries({ queryKey: ["my-owned-cafes"] });
       setOpen(false);
+      setStep(0);
+      setName(""); setSlug("");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
+  const reset = () => {
+    setStep(0); setName(""); setSlug("");
+    setOpenDays([1, 2, 3, 4, 5, 6, 0]); setOpenTime("10:00"); setCloseTime("23:00");
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); setOpen(v); }}>
       <DialogTrigger asChild>
         <Button className="gap-2 text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
           <Plus className="h-4 w-4" /> Create café
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Launch a new café</DialogTitle>
-          <DialogDescription>You become the owner automatically. Slug must be unique (used in your public URL).</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-2xl">
+        {/* Header with gradient */}
+        <div className="relative overflow-hidden rounded-t-lg border-b border-border/40 bg-card/60 px-6 pb-5 pt-6 backdrop-blur">
+          <div
+            className="pointer-events-none absolute -right-24 -top-20 h-48 w-48 rounded-full opacity-60 blur-[70px]"
+            style={{ background: "radial-gradient(circle, oklch(0.7 0.26 335 / 0.7), transparent 70%)" }}
+          />
+          <Building2 className="pointer-events-none absolute right-4 top-3 h-24 w-24 text-primary/10" aria-hidden />
+          <div className="relative">
+            <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Launch a new café</div>
+            <DialogTitle className="mt-1 font-display text-3xl font-extrabold tracking-tight">
+              {step === 0 && <>Tell us about your <span className="text-gradient-hot">café</span></>}
+              {step === 1 && <>When are you <span className="text-gradient-hot">open</span>?</>}
+              {step === 2 && <>How can players <span className="text-gradient-hot">reach you</span>?</>}
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-xs text-muted-foreground">
+              Step {step + 1} of 3 · You become the owner automatically
+            </DialogDescription>
+            {/* Progress dots */}
+            <div className="mt-4 flex gap-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <motion.div
+                    initial={false}
+                    animate={{ width: step >= i ? "100%" : "0%" }}
+                    transition={{ duration: 0.35 }}
+                    className="h-full"
+                    style={{ background: "var(--gradient-brand-hot)" }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <form
-          className="space-y-3"
+          className="space-y-5 px-6 py-5"
           onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             m.mutate({
               data: {
-                name: String(fd.get("name")),
-                slug: String(fd.get("slug")).toLowerCase().trim(),
+                name: name || String(fd.get("name") || ""),
+                slug: (slug || String(fd.get("slug") || "")).toLowerCase().trim(),
                 city: String(fd.get("city") || "") || null,
                 state: String(fd.get("state") || "") || null,
                 address: String(fd.get("address") || "") || null,
                 phone: String(fd.get("phone") || "") || null,
                 email: String(fd.get("email") || "") || null,
                 description: String(fd.get("description") || "") || null,
+                open_time: openTime || null,
+                close_time: closeTime || null,
+                open_days: openDays.length ? openDays : null,
                 owner_email: null,
               },
             });
           }}
         >
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 space-y-1"><Label>Café name *</Label><Input name="name" required minLength={2} maxLength={120} placeholder="Pixel Arcade" /></div>
-            <div className="col-span-2 space-y-1"><Label>Slug *</Label><Input name="slug" required pattern="[a-z0-9-]+" placeholder="pixel-arcade" /></div>
-            <div className="space-y-1"><Label>City</Label><Input name="city" /></div>
-            <div className="space-y-1"><Label>State</Label><Input name="state" /></div>
-            <div className="col-span-2 space-y-1"><Label>Address</Label><Input name="address" /></div>
-            <div className="space-y-1"><Label>Phone</Label><Input name="phone" /></div>
-            <div className="space-y-1"><Label>Public email</Label><Input name="email" type="email" /></div>
-            <div className="col-span-2 space-y-1"><Label>Description</Label><Textarea name="description" rows={2} /></div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={m.isPending} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
-              {m.isPending ? "Creating…" : "Create café"}
+          {/* Step 0 — Identity */}
+          {step === 0 && (
+            <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Café name *</Label>
+                <Input
+                  name="name" required minLength={2} maxLength={120}
+                  placeholder="Pixel Arcade"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (!slug) setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""));
+                  }}
+                  className="h-12 text-lg"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Public URL *</Label>
+                <div className="flex items-center overflow-hidden rounded-md border border-border bg-background">
+                  <span className="select-none border-r border-border bg-card/60 px-3 py-3 font-mono text-xs text-muted-foreground">corecade.app/c/</span>
+                  <Input
+                    name="slug" required pattern="[a-z0-9-]+"
+                    placeholder="pixel-arcade"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                    className="h-12 border-0 font-mono text-base focus-visible:ring-0"
+                  />
+                </div>
+                <p className="font-mono text-[10px] text-muted-foreground">Lowercase letters, numbers, dashes. Must be unique.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Pitch line (optional)</Label>
+                <Textarea name="description" rows={2} maxLength={1000}
+                  placeholder="India's loudest LAN café. 32 RTX rigs, cold coffee, and a Valorant league every Saturday."
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 1 — Hours & days */}
+          {step === 1 && (
+            <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Opens at</Label>
+                  <div className="relative">
+                    <Input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} className="h-12 pl-10 font-mono text-lg" />
+                    <Activity className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Closes at</Label>
+                  <div className="relative">
+                    <Input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="h-12 pl-10 font-mono text-lg" />
+                    <Activity className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary rotate-180" />
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-card/40 p-3 text-xs text-muted-foreground">
+                Closing earlier than opening is treated as overnight (e.g. 18:00 → 03:00).
+              </div>
+              <div className="space-y-2">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Days open</Label>
+                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                  {[
+                    { d: 1, l: "Mon" }, { d: 2, l: "Tue" }, { d: 3, l: "Wed" }, { d: 4, l: "Thu" },
+                    { d: 5, l: "Fri" }, { d: 6, l: "Sat" }, { d: 0, l: "Sun" },
+                  ].map(({ d, l }) => {
+                    const on = openDays.includes(d);
+                    return (
+                      <motion.button
+                        key={d}
+                        type="button"
+                        whileTap={{ scale: 0.94 }}
+                        onClick={() => setOpenDays((prev) => on ? prev.filter(x => x !== d) : [...prev, d])}
+                        className={`relative h-16 rounded-xl border text-center transition-all ${
+                          on
+                            ? "border-primary bg-primary/15 text-foreground shadow-[0_0_22px_-8px_oklch(0.7_0.26_335/0.9)]"
+                            : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        }`}
+                      >
+                        <div className="font-mono text-[10px] uppercase tracking-[0.18em]">{l}</div>
+                        <div className="mt-1 font-display text-lg font-bold">{on ? "●" : "○"}</div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => setOpenDays([1, 2, 3, 4, 5, 6, 0])}
+                    className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                    All week
+                  </button>
+                  <button type="button" onClick={() => setOpenDays([1, 2, 3, 4, 5])}
+                    className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                    Weekdays
+                  </button>
+                  <button type="button" onClick={() => setOpenDays([6, 0])}
+                    className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                    Weekends
+                  </button>
+                </div>
+                <p className="font-mono text-[10px] text-muted-foreground">
+                  Open {openDays.length} day{openDays.length === 1 ? "" : "s"} a week · {openTime} – {closeTime}
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 2 — Contact */}
+          {step === 2 && (
+            <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">City</Label>
+                <Input name="city" placeholder="Bengaluru" className="h-11" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">State</Label>
+                <Input name="state" placeholder="Karnataka" className="h-11" />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Address</Label>
+                <Input name="address" placeholder="Shop 12, MG Road" className="h-11" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Phone</Label>
+                <Input name="phone" placeholder="+91 98765 43210" className="h-11" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Public email</Label>
+                <Input name="email" type="email" placeholder="hi@cafe.com" className="h-11" />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Footer nav */}
+          <DialogFooter className="flex-row gap-2 border-t border-border/40 pt-4 sm:justify-between">
+            <Button
+              type="button" variant="ghost"
+              disabled={step === 0}
+              onClick={() => setStep((s) => Math.max(0, s - 1))}
+              className="text-muted-foreground hover:bg-white/5"
+            >
+              Back
             </Button>
+            {step < 2 ? (
+              <Button
+                type="button"
+                disabled={step === 0 && (!name || !slug)}
+                onClick={() => setStep((s) => Math.min(2, s + 1))}
+                className="gap-2 text-primary-foreground"
+                style={{ background: "var(--gradient-brand-hot)" }}
+              >
+                Continue <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                type="submit" disabled={m.isPending}
+                className="gap-2 text-primary-foreground"
+                style={{ background: "var(--gradient-brand-hot)" }}
+              >
+                {m.isPending ? "Launching…" : "🚀 Launch café"}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
