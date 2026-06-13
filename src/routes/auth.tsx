@@ -267,20 +267,21 @@ function AuthPage() {
                       </button>
                     )}
                   </div>
-                  <FieldShell icon={<Lock className="h-4 w-4" />} valid={password.length > 0 && pwValid}>
+                  <FieldShell icon={<Lock className="h-4 w-4" />}>
                     <Input
                       id="password"
                       type={showPw ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="h-12 border-0 bg-transparent pl-10 pr-10 focus-visible:ring-0"
+                      className="h-12 border-0 bg-transparent pl-10 pr-12 focus-visible:ring-0"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPw((s) => !s)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
-                      aria-label="Toggle password visibility"
+                      onTouchEnd={(e) => { e.preventDefault(); setShowPw((s) => !s); }}
+                      className="absolute right-2 top-1/2 z-10 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:text-foreground active:bg-white/5"
+                      aria-label={showPw ? "Hide password" : "Show password"}
                     >
                       {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
