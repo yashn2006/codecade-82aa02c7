@@ -161,6 +161,11 @@ export function BookingFlow({
         const ok = await loadRazorpay();
         if (!ok || !window.Razorpay) throw new Error("Could not load Razorpay");
         const order = await createOrderFn({ data: { booking_id: (row as { id: string }).id } });
+        // Close the booking dialog FIRST so Radix releases pointer-events / focus trap,
+        // otherwise the Razorpay checkout overlay is unclickable.
+        onOpenChange(false);
+        // Wait a tick for Radix to fully unmount before opening Razorpay's overlay.
+        await new Promise((r) => setTimeout(r, 60));
         const rzp = new window.Razorpay({
           key: order.key_id,
           amount: order.amount * 100,
@@ -179,12 +184,17 @@ export function BookingFlow({
                   razorpay_signature: resp.razorpay_signature,
                 },
               });
-              finishSuccess();
+              setBurst(true);
+              setTimeout(() => {
+                toast.success("Payment received! Booking confirmed.");
+                onBooked?.();
+                reset();
+              }, 400);
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "Payment verification failed");
             }
           },
-          modal: { ondismiss: () => toast("Payment cancelled — booking still pending.") },
+          modal: { ondismiss: () => toast("Payment cancelled — booking still pending. Pay from My Bookings.") },
         });
         rzp.open();
       } catch (e) {
