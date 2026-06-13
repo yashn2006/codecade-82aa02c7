@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, Cpu, CalendarRange, ShoppingBag, Users, Wallet,
   Trophy, BookOpen, LineChart, Globe, BadgeCheck, Receipt, UsersRound, ArrowRight, Building2,
-  Plus, TrendingUp, Activity, IndianRupee,
+  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -71,13 +71,24 @@ function OwnerHub() {
       badge="Owner"
       title="Your Cafés"
       subtitle="Revenue, bookings and every console section across all your cafés."
-      nav={[{ label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true }]}
+      nav={[
+        { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true },
+        { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true },
+      ]}
     >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">
           {cafes.length} café{cafes.length === 1 ? "" : "s"} owned · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}
         </div>
-        <CreateCafeButton />
+        <div className="flex items-center gap-2">
+          <Link
+            to="/owner/help"
+            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-sm font-semibold backdrop-blur hover:border-primary/50 hover:bg-card"
+          >
+            <LifeBuoy className="h-4 w-4 text-primary" /> Help Center
+          </Link>
+          <CreateCafeButton />
+        </div>
       </div>
 
       {/* Totals strip */}
