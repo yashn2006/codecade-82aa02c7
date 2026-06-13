@@ -15,6 +15,25 @@ import { supabase } from "@/lib/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
+  // If a signed-in user lands here (e.g. Supabase OAuth redirected to a path
+  // that isn't a real route), bounce them to their dashboard instead of
+  // showing a dead-end 404.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled || !user) return;
+      const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
+      const { data: roles } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id);
+      const set = new Set((roles ?? []).map((r) => r.role));
+      const isSuperAdmin = set.has("super_admin") && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+      const dest = isSuperAdmin ? "/admin" : set.has("cafe_owner") ? "/owner" : "/portal";
+      window.location.replace(dest);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -35,6 +54,7 @@ function NotFoundComponent() {
     </div>
   );
 }
+
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
@@ -130,10 +150,50 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    // Track the last known user id so we only invalidate router/queries on
+    // an ACTUAL identity change. Without this, Supabase fires SIGNED_IN on
+    // initial mount / token refresh / tab focus, and router.invalidate()
+    // cancels in-flight loaders → empty dashboards on first paint AND a
+    // visible "auto-refresh" a couple seconds after every section click.
+    let lastUserId: string | null | undefined = undefined;
+
+    const routeByRoleIfNeeded = async () => {
+      const path = window.location.pathname;
+      // Only auto-route from places where the user can't be (or shouldn't stay)
+      const shouldRoute = path === "/" || path === "/auth" || path === "/login" || path === "/signup";
+      if (!shouldRoute) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
+      const { data: roles } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id);
+      const set = new Set((roles ?? []).map((r) => r.role));
+      const isSuperAdmin = set.has("super_admin") && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+      const dest = isSuperAdmin ? "/admin" : set.has("cafe_owner") ? "/owner" : "/portal";
+      router.navigate({ to: dest, replace: true });
+    };
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const currentId = session?.user?.id ?? null;
+      // First event after mount: just record state, don't invalidate.
+      if (lastUserId === undefined) {
+        lastUserId = currentId;
+        if (event === "SIGNED_IN" && currentId) routeByRoleIfNeeded();
+        return;
+      }
+      // Same identity (token refresh, tab focus, etc.) → no-op.
+      if (currentId === lastUserId && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      lastUserId = currentId;
+
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      if (event === "SIGNED_OUT") {
+        queryClient.cancelQueries();
+        queryClient.clear();
+      } else {
+        queryClient.invalidateQueries();
+      }
+      if (event === "SIGNED_IN" && currentId) routeByRoleIfNeeded();
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
@@ -145,3 +205,4 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+
