@@ -15,6 +15,25 @@ import { supabase } from "@/lib/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
+  // If a signed-in user lands here (e.g. Supabase OAuth redirected to a path
+  // that isn't a real route), bounce them to their dashboard instead of
+  // showing a dead-end 404.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled || !user) return;
+      const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
+      const { data: roles } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id);
+      const set = new Set((roles ?? []).map((r) => r.role));
+      const isSuperAdmin = set.has("super_admin") && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+      const dest = isSuperAdmin ? "/admin" : set.has("cafe_owner") ? "/owner" : "/portal";
+      window.location.replace(dest);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -35,6 +54,7 @@ function NotFoundComponent() {
     </div>
   );
 }
+
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
