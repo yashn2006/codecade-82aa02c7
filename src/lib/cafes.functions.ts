@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 
+const TimeStr = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM 24h");
 const CafeInput = z.object({
   name: z.string().min(2).max(120),
   slug: z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, "lowercase letters, numbers, dashes only"),
@@ -11,6 +12,9 @@ const CafeInput = z.object({
   phone: z.string().max(20).optional().nullable(),
   email: z.string().email().max(200).optional().nullable().or(z.literal("")),
   description: z.string().max(1000).optional().nullable(),
+  open_time: TimeStr.optional().nullable(),
+  close_time: TimeStr.optional().nullable(),
+  open_days: z.array(z.number().int().min(0).max(6)).max(7).optional().nullable(),
   // Optional — only super admins may set a different owner. Café owners auto-own.
   owner_email: z.string().email().max(200).optional().nullable(),
 });
@@ -149,6 +153,9 @@ export const createCafe = createServerFn({ method: "POST" })
         phone: data.phone || null,
         email: data.email || null,
         description: data.description || null,
+        open_time: data.open_time || null,
+        close_time: data.close_time || null,
+        open_days: data.open_days && data.open_days.length ? data.open_days : null,
       })
       .select().single();
     if (error) throw new Error(error.message);
