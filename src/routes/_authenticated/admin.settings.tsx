@@ -124,7 +124,9 @@ function SettingsPanel() {
                       {isMaintenanceActive({
                         starts_at: c.maintenance_starts_at ?? null,
                         ends_at: c.maintenance_ends_at ?? null,
+                        message: c.maintenance_message ?? null,
                       }) ? " · 🛠 active" : ""}
+
                     </SelectItem>
                   ))}
                 </SelectContent>
