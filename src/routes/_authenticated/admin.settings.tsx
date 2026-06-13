@@ -2,12 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Globe, Mail, Database, KeyRound, ExternalLink, Wrench } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Shield, Globe, Mail, Database, KeyRound, ExternalLink, Wrench, Building2 } from "lucide-react";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { getPlatformMaintenance } from "@/lib/platform.functions";
+import { listAllCafes } from "@/lib/admin.functions";
 import { isMaintenanceActive, maintenanceCountdown } from "@/lib/maintenance";
 import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+
 
 export const Route = createFileRoute("/_authenticated/admin/settings")({
   component: SettingsPanel,
