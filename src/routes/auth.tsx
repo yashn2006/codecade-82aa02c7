@@ -432,16 +432,28 @@ function TiltCard({ children, shake }: { children: React.ReactNode; shake: boole
     ([x, y]) => `radial-gradient(500px circle at ${x} ${y}, oklch(0.74 0.21 15 / 0.18), transparent 50%)`,
   );
 
+  // Detect coarse-pointer (touch) devices and disable the tilt math entirely.
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(hover: none), (pointer: coarse)");
+    const update = () => setIsTouch(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
+
   return (
     <div
       className="relative mx-auto w-full max-w-md"
       style={{ perspective: 1400 }}
-      onMouseMove={(e) => {
+      onMouseMove={isTouch ? undefined : (e) => {
         const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        if (!r.width || !r.height) return;
         mx.set(((e.clientX - (r.left + r.width / 2)) / (r.width / 2)));
         my.set(((e.clientY - (r.top + r.height / 2)) / (r.height / 2)));
       }}
-      onMouseLeave={() => { mx.set(0); my.set(0); }}
+      onMouseLeave={isTouch ? undefined : () => { mx.set(0); my.set(0); }}
     >
       {/* Conic glow */}
       <div className="pointer-events-none absolute -inset-4 rounded-[2rem] opacity-70 blur-2xl"
@@ -449,7 +461,7 @@ function TiltCard({ children, shake }: { children: React.ReactNode; shake: boole
       <motion.div
         animate={shake ? { x: [0, -10, 10, -8, 8, -4, 0] } : { x: 0 }}
         transition={{ duration: 0.55 }}
-        style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
+        style={isTouch ? undefined : { rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
         className="relative rounded-[1.6rem] p-px"
       >
         <div className="rounded-[1.6rem] p-px" style={{ background: "linear-gradient(135deg, oklch(0.74 0.21 15 / 0.7), oklch(0.65 0.25 295 / 0.5) 50%, oklch(0.7 0.26 335 / 0.6))" }}>
@@ -457,8 +469,8 @@ function TiltCard({ children, shake }: { children: React.ReactNode; shake: boole
             {/* Animated grid */}
             <div className="pointer-events-none absolute inset-0 opacity-[0.07]"
                  style={{ backgroundImage: "linear-gradient(oklch(0.74 0.21 15 / 1) 1px, transparent 1px), linear-gradient(90deg, oklch(0.74 0.21 15 / 1) 1px, transparent 1px)", backgroundSize: "28px 28px", maskImage: "radial-gradient(circle at 30% 0%, black, transparent 70%)" }} />
-            <motion.div className="pointer-events-none absolute inset-0" style={{ background: spot }} />
-            <div className="relative" style={{ transform: "translateZ(30px)" }}>
+            {!isTouch && <motion.div className="pointer-events-none absolute inset-0" style={{ background: spot }} />}
+            <div className="relative" style={isTouch ? undefined : { transform: "translateZ(30px)" }}>
               {children}
             </div>
           </div>
