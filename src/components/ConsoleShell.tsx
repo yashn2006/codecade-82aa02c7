@@ -102,9 +102,6 @@ export function ConsoleShell({
             })}
           </nav>
           <div className="border-t border-border/70 p-3">
-            <div className="mb-2 flex justify-end">
-              <NotificationBell />
-            </div>
             <div className="flex items-center gap-2 rounded-xl bg-secondary/60 p-2.5">
               <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground">
                 {(email[0] ?? "?").toUpperCase()}
@@ -127,6 +124,12 @@ export function ConsoleShell({
 
         {/* === Main column === */}
         <div className="flex min-w-0 flex-1 flex-col">
+          {/* Desktop top bar — notification bell lives here so the dropdown
+              has room to open downward instead of clipping at the sidebar. */}
+          <header className="sticky top-0 z-30 hidden h-12 items-center justify-end gap-1 border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl lg:flex">
+            <NotificationBell />
+          </header>
+
           {/* Mobile top bar */}
           <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/70 bg-background/80 px-3 backdrop-blur-xl lg:hidden">
             <div className="flex items-center gap-2">

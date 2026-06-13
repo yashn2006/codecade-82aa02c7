@@ -2,12 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Globe, Mail, Database, KeyRound, ExternalLink, Wrench } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Shield, Globe, Mail, Database, KeyRound, ExternalLink, Wrench, Building2 } from "lucide-react";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { getPlatformMaintenance } from "@/lib/platform.functions";
+import { listAllCafes } from "@/lib/admin.functions";
 import { isMaintenanceActive, maintenanceCountdown } from "@/lib/maintenance";
 import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+
 
 export const Route = createFileRoute("/_authenticated/admin/settings")({
   component: SettingsPanel,
@@ -15,9 +21,27 @@ export const Route = createFileRoute("/_authenticated/admin/settings")({
 
 function SettingsPanel() {
   const fn = useServerFn(getPlatformMaintenance);
+  const cafesFn = useServerFn(listAllCafes);
   const { data, refetch } = useQuery({ queryKey: ["platform-maintenance"], queryFn: () => fn() });
+  const { data: cafes } = useQuery({ queryKey: ["admin-cafes"], queryFn: () => cafesFn() });
+  const [selectedCafeId, setSelectedCafeId] = useState<string>("");
   const active = isMaintenanceActive(data);
   const countdown = maintenanceCountdown(data);
+
+  const selectedCafe = useMemo(
+    () => (cafes ?? []).find((c) => c.id === selectedCafeId) ?? null,
+    [cafes, selectedCafeId],
+  );
+  const selectedCafeWindow = selectedCafe
+    ? {
+        starts_at: selectedCafe.maintenance_starts_at ?? null,
+        ends_at: selectedCafe.maintenance_ends_at ?? null,
+        message: selectedCafe.maintenance_message ?? null,
+        title: null,
+      }
+    : null;
+  const selectedActive = isMaintenanceActive(selectedCafeWindow);
+
 
   const sections = [
     { icon: Shield, title: "Security", desc: "Roles, super-admin grants, audit log.", to: "/admin/users" as const, cta: "Manage roles" },
@@ -70,6 +94,73 @@ function SettingsPanel() {
           />
         </div>
       </motion.div>
+
+      {/* === Per-café maintenance picker === */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 via-card/60 to-fuchsia-500/10 p-5 backdrop-blur"
+      >
+        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-violet-300" />
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-violet-300">Per-café maintenance</div>
+            </div>
+            <h3 className="mt-1 font-display text-xl font-bold">Schedule maintenance for a single café</h3>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              Pick a café — the banner shows only on that café's public page and customer portal.
+              Useful for hardware swaps, AC repair, or staff changeovers.
+            </p>
+            <div className="mt-3 max-w-xs">
+              <Select value={selectedCafeId} onValueChange={setSelectedCafeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a café…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(cafes ?? []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} {c.city ? `· ${c.city}` : ""}
+                      {isMaintenanceActive({
+                        starts_at: c.maintenance_starts_at ?? null,
+                        ends_at: c.maintenance_ends_at ?? null,
+                        message: c.maintenance_message ?? null,
+                      }) ? " · 🛠 active" : ""}
+
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedCafe && selectedActive && (
+              <div className="mt-2 text-xs text-amber-200">
+                Currently in maintenance{selectedCafe.maintenance_message ? ` — ${selectedCafe.maintenance_message}` : ""}.
+              </div>
+            )}
+          </div>
+          {selectedCafe ? (
+            <MaintenanceScheduler
+              scope={{ kind: "cafe", cafeId: selectedCafe.id, cafeName: selectedCafe.name }}
+              current={selectedCafeWindow}
+              onSaved={() => {
+                // refresh cafes list so the dropdown reflects the new state
+                window.location.reload();
+              }}
+              trigger={
+                <Button className="gap-2" variant={selectedActive ? "destructive" : "outline"}>
+                  <Wrench className="h-4 w-4" />
+                  {selectedActive ? "Edit / clear" : "Schedule maintenance"}
+                </Button>
+              }
+            />
+          ) : (
+            <Button disabled variant="outline" className="gap-2">
+              <Wrench className="h-4 w-4" /> Choose a café first
+            </Button>
+          )}
+        </div>
+      </motion.div>
+
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sections.map((s, i) => (
