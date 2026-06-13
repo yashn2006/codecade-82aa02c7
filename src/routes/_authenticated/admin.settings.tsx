@@ -21,9 +21,27 @@ export const Route = createFileRoute("/_authenticated/admin/settings")({
 
 function SettingsPanel() {
   const fn = useServerFn(getPlatformMaintenance);
+  const cafesFn = useServerFn(listAllCafes);
   const { data, refetch } = useQuery({ queryKey: ["platform-maintenance"], queryFn: () => fn() });
+  const { data: cafes } = useQuery({ queryKey: ["admin-cafes"], queryFn: () => cafesFn() });
+  const [selectedCafeId, setSelectedCafeId] = useState<string>("");
   const active = isMaintenanceActive(data);
   const countdown = maintenanceCountdown(data);
+
+  const selectedCafe = useMemo(
+    () => (cafes ?? []).find((c) => c.id === selectedCafeId) ?? null,
+    [cafes, selectedCafeId],
+  );
+  const selectedCafeWindow = selectedCafe
+    ? {
+        starts_at: selectedCafe.maintenance_starts_at ?? null,
+        ends_at: selectedCafe.maintenance_ends_at ?? null,
+        message: selectedCafe.maintenance_message ?? null,
+        title: null,
+      }
+    : null;
+  const selectedActive = isMaintenanceActive(selectedCafeWindow);
+
 
   const sections = [
     { icon: Shield, title: "Security", desc: "Roles, super-admin grants, audit log.", to: "/admin/users" as const, cta: "Manage roles" },
