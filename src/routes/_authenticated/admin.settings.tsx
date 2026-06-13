@@ -47,8 +47,8 @@ function SettingsPanel() {
     { icon: Shield, title: "Security", desc: "Roles, super-admin grants, audit log.", to: "/admin/users" as const, cta: "Manage roles" },
     { icon: Globe, title: "Public landing", desc: "Hero stats, testimonials and the marketing page.", to: "/" as const, cta: "View landing" },
     { icon: Mail, title: "Lead inbox", desc: "Inbound contacts from the marketing site.", to: "/admin/leads" as const, cta: "Open inbox" },
-    { icon: Database, title: "Data & backups", desc: "Database snapshots and exports — coming soon.", cta: "Coming soon" },
-    { icon: KeyRound, title: "API keys", desc: "Issue and rotate API tokens — coming soon.", cta: "Coming soon" },
+    { icon: Database, title: "Data & backups", desc: "Download JSON snapshots of every key table.", to: "/admin/backups" as const, cta: "Open backups" },
+    { icon: KeyRound, title: "API keys", desc: "View & rotate Supabase, Razorpay and Lovable AI keys.", to: "/admin/api-keys" as const, cta: "Manage keys" },
   ];
 
   return (
@@ -174,13 +174,9 @@ function SettingsPanel() {
             <h3 className="relative mt-3 font-display text-lg font-bold">{s.title}</h3>
             <p className="relative mt-1 text-sm text-muted-foreground">{s.desc}</p>
             <div className="relative mt-4">
-              {s.to ? (
-                <Link to={s.to} className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
-                  {s.cta} <ExternalLink className="h-3 w-3" />
-                </Link>
-              ) : (
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{s.cta}</span>
-              )}
+              <Link to={s.to} className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">
+                {s.cta} <ExternalLink className="h-3 w-3" />
+              </Link>
             </div>
           </motion.div>
         ))}

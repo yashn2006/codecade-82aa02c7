@@ -32,7 +32,9 @@ import { Route as AuthenticatedAdminLeadsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
 import { Route as AuthenticatedAdminConfigRouteImport } from './routes/_authenticated/admin.config'
 import { Route as AuthenticatedAdminCafesRouteImport } from './routes/_authenticated/admin.cafes'
+import { Route as AuthenticatedAdminBackupsRouteImport } from './routes/_authenticated/admin.backups'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin.api-keys'
 import { Route as AuthenticatedAdminAnnouncementsRouteImport } from './routes/_authenticated/admin.announcements'
 import { Route as AuthenticatedCafeSlugIndexRouteImport } from './routes/_authenticated/cafe.$slug.index'
 import { Route as CSlugTournamentsIdRouteImport } from './routes/c.$slug.tournaments.$id'
@@ -172,11 +174,23 @@ const AuthenticatedAdminCafesRoute = AuthenticatedAdminCafesRouteImport.update({
   path: '/cafes',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminBackupsRoute =
+  AuthenticatedAdminBackupsRouteImport.update({
+    id: '/backups',
+    path: '/backups',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminApiKeysRoute =
+  AuthenticatedAdminApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAnnouncementsRoute =
   AuthenticatedAdminAnnouncementsRouteImport.update({
     id: '/announcements',
@@ -304,7 +318,9 @@ export interface FileRoutesByFullPath {
   '/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRouteWithChildren
   '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
+  '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
   '/admin/config': typeof AuthenticatedAdminConfigRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
@@ -347,7 +363,9 @@ export interface FileRoutesByTo {
   '/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRouteWithChildren
   '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
+  '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
   '/admin/config': typeof AuthenticatedAdminConfigRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
@@ -392,7 +410,9 @@ export interface FileRoutesById {
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
   '/c/$slug': typeof CSlugRouteWithChildren
   '/_authenticated/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
+  '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/_authenticated/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/_authenticated/admin/cafes': typeof AuthenticatedAdminCafesRoute
   '/_authenticated/admin/config': typeof AuthenticatedAdminConfigRoute
   '/_authenticated/admin/health': typeof AuthenticatedAdminHealthRoute
@@ -438,7 +458,9 @@ export interface FileRouteTypes {
     | '/portal'
     | '/c/$slug'
     | '/admin/announcements'
+    | '/admin/api-keys'
     | '/admin/audit'
+    | '/admin/backups'
     | '/admin/cafes'
     | '/admin/config'
     | '/admin/health'
@@ -481,7 +503,9 @@ export interface FileRouteTypes {
     | '/portal'
     | '/c/$slug'
     | '/admin/announcements'
+    | '/admin/api-keys'
     | '/admin/audit'
+    | '/admin/backups'
     | '/admin/cafes'
     | '/admin/config'
     | '/admin/health'
@@ -525,7 +549,9 @@ export interface FileRouteTypes {
     | '/_authenticated/portal'
     | '/c/$slug'
     | '/_authenticated/admin/announcements'
+    | '/_authenticated/admin/api-keys'
     | '/_authenticated/admin/audit'
+    | '/_authenticated/admin/backups'
     | '/_authenticated/admin/cafes'
     | '/_authenticated/admin/config'
     | '/_authenticated/admin/health'
@@ -732,11 +758,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCafesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/backups': {
+      id: '/_authenticated/admin/backups'
+      path: '/backups'
+      fullPath: '/admin/backups'
+      preLoaderRoute: typeof AuthenticatedAdminBackupsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/audit': {
       id: '/_authenticated/admin/audit'
       path: '/audit'
       fullPath: '/admin/audit'
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/api-keys': {
+      id: '/_authenticated/admin/api-keys'
+      path: '/api-keys'
+      fullPath: '/admin/api-keys'
+      preLoaderRoute: typeof AuthenticatedAdminApiKeysRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/announcements': {
@@ -877,7 +917,9 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAnnouncementsRoute: typeof AuthenticatedAdminAnnouncementsRoute
+  AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
+  AuthenticatedAdminBackupsRoute: typeof AuthenticatedAdminBackupsRoute
   AuthenticatedAdminCafesRoute: typeof AuthenticatedAdminCafesRoute
   AuthenticatedAdminConfigRoute: typeof AuthenticatedAdminConfigRoute
   AuthenticatedAdminHealthRoute: typeof AuthenticatedAdminHealthRoute
@@ -891,7 +933,9 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAnnouncementsRoute: AuthenticatedAdminAnnouncementsRoute,
+  AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
+  AuthenticatedAdminBackupsRoute: AuthenticatedAdminBackupsRoute,
   AuthenticatedAdminCafesRoute: AuthenticatedAdminCafesRoute,
   AuthenticatedAdminConfigRoute: AuthenticatedAdminConfigRoute,
   AuthenticatedAdminHealthRoute: AuthenticatedAdminHealthRoute,
