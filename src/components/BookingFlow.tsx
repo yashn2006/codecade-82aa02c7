@@ -135,7 +135,7 @@ export function BookingFlow({
     enabled: open && step >= 2,
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"pay_online" | "pay_at_cafe" | "cash">("pay_at_cafe");
+  const [paymentMethod, setPaymentMethod] = useState<"pay_online" | "pay_at_cafe">("pay_at_cafe");
 
   const createOrderFn = useServerFn(createBookingOrder);
   const verifyPayFn = useServerFn(verifyBookingPayment);
@@ -641,11 +641,10 @@ export function BookingFlow({
                     {/* Payment method selector */}
                     <div>
                       <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-white/50">Payment method</div>
-                      <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="grid gap-2 sm:grid-cols-2">
                         {([
-                          { id: "pay_online", title: "Pay online now", sub: "UPI · Card · Wallet" },
-                          { id: "pay_at_cafe", title: "Pay at café", sub: "On arrival · card/UPI" },
-                          { id: "cash", title: "Cash at café", sub: "Pay in cash on arrival" },
+                          { id: "pay_online", title: "Pay online now", sub: "UPI · Card · Wallet · Razorpay" },
+                          { id: "pay_at_cafe", title: "Pay at café", sub: "Cash / card / UPI on arrival" },
                         ] as const).map((opt) => {
                           const sel = paymentMethod === opt.id;
                           return (
