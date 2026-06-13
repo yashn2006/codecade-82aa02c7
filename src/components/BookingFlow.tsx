@@ -135,7 +135,7 @@ export function BookingFlow({
     enabled: open && step >= 2,
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"pay_online" | "pay_at_cafe" | "cash">("pay_at_cafe");
+  const [paymentMethod, setPaymentMethod] = useState<"pay_online" | "pay_at_cafe">("pay_at_cafe");
 
   const createOrderFn = useServerFn(createBookingOrder);
   const verifyPayFn = useServerFn(verifyBookingPayment);
@@ -161,6 +161,11 @@ export function BookingFlow({
         const ok = await loadRazorpay();
         if (!ok || !window.Razorpay) throw new Error("Could not load Razorpay");
         const order = await createOrderFn({ data: { booking_id: (row as { id: string }).id } });
+        // Close the booking dialog FIRST so Radix releases pointer-events / focus trap,
+        // otherwise the Razorpay checkout overlay is unclickable.
+        onOpenChange(false);
+        // Wait a tick for Radix to fully unmount before opening Razorpay's overlay.
+        await new Promise((r) => setTimeout(r, 60));
         const rzp = new window.Razorpay({
           key: order.key_id,
           amount: order.amount * 100,
@@ -179,12 +184,17 @@ export function BookingFlow({
                   razorpay_signature: resp.razorpay_signature,
                 },
               });
-              finishSuccess();
+              setBurst(true);
+              setTimeout(() => {
+                toast.success("Payment received! Booking confirmed.");
+                onBooked?.();
+                reset();
+              }, 400);
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "Payment verification failed");
             }
           },
-          modal: { ondismiss: () => toast("Payment cancelled — booking still pending.") },
+          modal: { ondismiss: () => toast("Payment cancelled — booking still pending. Pay from My Bookings.") },
         });
         rzp.open();
       } catch (e) {
@@ -641,11 +651,10 @@ export function BookingFlow({
                     {/* Payment method selector */}
                     <div>
                       <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-white/50">Payment method</div>
-                      <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="grid gap-2 sm:grid-cols-2">
                         {([
-                          { id: "pay_online", title: "Pay online now", sub: "UPI · Card · Wallet" },
-                          { id: "pay_at_cafe", title: "Pay at café", sub: "On arrival · card/UPI" },
-                          { id: "cash", title: "Cash at café", sub: "Pay in cash on arrival" },
+                          { id: "pay_online", title: "Pay online now", sub: "UPI · Card · Wallet · Razorpay" },
+                          { id: "pay_at_cafe", title: "Pay at café", sub: "Cash / card / UPI on arrival" },
                         ] as const).map((opt) => {
                           const sel = paymentMethod === opt.id;
                           return (

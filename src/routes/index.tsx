@@ -660,7 +660,7 @@ function Footer() {
           <span className="font-display font-bold">
             <span className="text-foreground">core</span><span className="text-gradient">cade</span>
           </span>
-          <span>© {new Date().getFullYear()}</span>
+          <span>© {new Date().getFullYear()} CoreCade — Powered by CoreGin. All rights reserved.</span>
         </div>
         <div className="flex gap-6">
           <a href="#features" className="hover:text-foreground">Features</a>
