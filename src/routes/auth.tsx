@@ -552,14 +552,14 @@ function MagneticSubmit({
 
   const handleMove = (e: React.MouseEvent) => {
     const r = ref.current?.getBoundingClientRect();
-    if (!r) return;
+    if (!r || !r.width || !r.height) return;
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
     const dx = e.clientX - cx;
     const dy = e.clientY - cy;
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
 
     if (!valid) {
-      // Magnetic REPULSION when invalid — flee the cursor
       const dist = Math.hypot(dx, dy);
       const near = dist < 200;
       if (near) {
@@ -571,7 +571,6 @@ function MagneticSubmit({
         mx.set(0); my.set(0);
       }
     } else {
-      // Attraction when valid
       mx.set(dx * 0.18);
       my.set(dy * 0.2);
     }
