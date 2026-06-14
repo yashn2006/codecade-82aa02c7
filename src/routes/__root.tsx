@@ -181,11 +181,15 @@ function RootComponent() {
         if (event === "SIGNED_IN" && currentId) routeByRoleIfNeeded();
         return;
       }
-      // Same identity (token refresh, tab focus, etc.) → no-op.
-      if (currentId === lastUserId && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      // Same identity (token refresh, tab focus, USER_UPDATED) → no-op.
+      // USER_UPDATED fires on profile/metadata sync and was causing
+      // router.invalidate() + queryClient.invalidateQueries() while the user
+      // was actively using the app — visible as a "glitchy auto-reload"
+      // a couple seconds after opening any portal.
+      if (currentId === lastUserId) return;
       lastUserId = currentId;
 
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT") return;
       router.invalidate();
       if (event === "SIGNED_OUT") {
         queryClient.cancelQueries();
