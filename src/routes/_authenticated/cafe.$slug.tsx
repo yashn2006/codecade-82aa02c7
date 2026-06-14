@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed, Wrench, LineChart, ChevronRight, Home, LayoutDashboard, Trophy, History, BarChart3 } from "lucide-react";
+import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed, Wrench, LineChart, ChevronRight, Home, LayoutDashboard, Trophy, History, BarChart3, LifeBuoy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
@@ -8,6 +8,7 @@ import { getCafeBySlug } from "@/lib/cafes.functions";
 import { getPlatformMaintenance } from "@/lib/platform.functions";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
+import { TrialBanner } from "@/components/TrialBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { Button } from "@/components/ui/button";
 
@@ -66,11 +67,13 @@ function CafeLayout() {
         { label: "Audit log", icon: History, to: "/cafe/$slug/audit", params: { slug } },
         { label: "Public page", icon: Globe, to: "/cafe/$slug/page", params: { slug } },
         { label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
+        { label: "Support", icon: LifeBuoy, to: "/cafe/$slug/support", params: { slug } },
       ]}
     >
       <CafeBreadcrumbs slug={slug} cafeName={cafe?.name ?? null} />
       <div className="mb-4 space-y-3">
         <MaintenanceBanner window={platform} title="CoreCade network maintenance" />
+        <TrialBanner cafe={cafe as { trial_ends_at?: string | null; subscription_status?: string | null; plan?: string | null } | null | undefined} />
         {cafe && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/30 px-4 py-2.5 backdrop-blur">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -116,6 +119,7 @@ const SECTION_LABELS: Record<string, { label: string; icon: typeof Activity }> =
   audit: { label: "Audit log", icon: History },
   page: { label: "Public page", icon: Globe },
   staff: { label: "Staff", icon: Settings },
+  support: { label: "Support", icon: LifeBuoy },
 };
 
 function CafeBreadcrumbs({ slug, cafeName }: { slug: string; cafeName: string | null }) {
