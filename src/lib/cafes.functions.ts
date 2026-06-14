@@ -208,7 +208,7 @@ export const getOwnerDashboard = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: cafes } = await supabaseAdmin
       .from("cafes")
-      .select("id, slug, name, city, is_active, created_at")
+      .select("id, slug, name, city, is_active, created_at, trial_ends_at, subscription_status, plan")
       .eq("owner_id", context.userId)
       .order("created_at", { ascending: true });
 
@@ -245,6 +245,9 @@ export const getOwnerDashboard = createServerFn({ method: "GET" })
 
     const perCafe = list.map((c) => ({
       id: c.id, slug: c.slug, name: c.name, city: c.city, is_active: c.is_active,
+      trial_ends_at: (c as { trial_ends_at?: string | null }).trial_ends_at ?? null,
+      subscription_status: (c as { subscription_status?: string | null }).subscription_status ?? null,
+      plan: (c as { plan?: string | null }).plan ?? null,
       devices: dev.get(c.id) ?? 0,
       customers: cust.get(c.id) ?? 0,
       activeSessions: act.get(c.id) ?? 0,
