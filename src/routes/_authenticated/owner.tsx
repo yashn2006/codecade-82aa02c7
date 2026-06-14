@@ -10,6 +10,8 @@ import {
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { EmptyState } from "@/components/EmptyState";
+import { TrialBanner } from "@/components/TrialBanner";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,6 +121,10 @@ function OwnerHub() {
             >
               <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full blur-[80px] opacity-50"
                    style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.5), transparent 70%)" }} />
+              <div className="relative">
+                <TrialBanner cafe={cafe} />
+                <OnboardingChecklist cafe={cafe} />
+              </div>
               <div className="relative flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
