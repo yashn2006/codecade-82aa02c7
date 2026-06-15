@@ -241,7 +241,7 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
   const [pwOpen, setPwOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
-  const [actOpen, setActOpen] = useState(false);
+  
   const [recovery, setRecovery] = useState<string | null>(null);
   const delFn = useServerFn(deleteUser);
   const pwFn = useServerFn(setUserPassword);
