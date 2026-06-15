@@ -267,3 +267,37 @@ export const getOwnerDashboard = createServerFn({ method: "GET" })
 
     return { cafes: perCafe, totals };
   });
+
+// Owner (or super admin) deletes their own café. Requires typed-slug confirmation.
+export const ownerDeleteCafe = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      confirm_slug: z.string().min(1).max(60),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: cafe, error: getErr } = await context.supabase
+      .from("cafes")
+      .select("id, slug, owner_id, name")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (getErr) throw new Error(getErr.message);
+    if (!cafe) throw new Error("Café not found");
+
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId, _role: "super_admin",
+    });
+    if (cafe.owner_id !== context.userId && !isAdmin) {
+      throw new Error("Only the café owner can delete this café.");
+    }
+    if (cafe.slug !== data.confirm_slug.trim()) {
+      throw new Error(`Type "${cafe.slug}" exactly to confirm deletion.`);
+    }
+
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { error } = await supabaseAdmin.from("cafes").delete().eq("id", cafe.id);
+    if (error) throw new Error(error.message);
+    return { ok: true, name: cafe.name };
+  });

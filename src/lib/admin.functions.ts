@@ -572,3 +572,143 @@ export const exportDataset = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+
+// ─── Phase 7 — Deep user inspector & moderation ───
+// Lists every user from auth.users (paginated) and joins profile + roles.
+export const adminListUsersFull = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      q: z.string().max(120).optional().nullable(),
+      page: z.number().int().min(1).max(50).default(1),
+      perPage: z.number().int().min(10).max(200).default(100),
+    }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+
+    const { data: page, error } = await supabaseAdmin.auth.admin.listUsers({
+      page: data.page,
+      perPage: data.perPage,
+    });
+    if (error) throw new Error(error.message);
+    const authUsers = page?.users ?? [];
+
+    const ids = authUsers.map((u) => u.id);
+    const [{ data: profiles }, { data: roles }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("id, email, full_name, created_at").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+      supabaseAdmin.from("user_roles").select("user_id, role, cafe_id").in("user_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+    ]);
+    const pMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+    const rMap = new Map<string, Array<{ role: string; cafe_id: string | null }>>();
+    for (const r of roles ?? []) {
+      const arr = rMap.get(r.user_id) ?? [];
+      arr.push({ role: r.role, cafe_id: r.cafe_id });
+      rMap.set(r.user_id, arr);
+    }
+
+    const merged = authUsers.map((u) => {
+      const p = pMap.get(u.id);
+      const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+      return {
+        id: u.id,
+        email: u.email ?? p?.email ?? null,
+        phone: u.phone ?? null,
+        full_name: p?.full_name ?? (typeof meta.full_name === "string" ? meta.full_name : null),
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+        email_confirmed_at: u.email_confirmed_at ?? null,
+        banned_until: (u as { banned_until?: string | null }).banned_until ?? null,
+        providers: (u.identities ?? []).map((i) => i.provider),
+        user_roles: rMap.get(u.id) ?? [],
+      };
+    });
+
+    const q = (data.q ?? "").trim().toLowerCase();
+    const filtered = q
+      ? merged.filter((u) =>
+          (u.email ?? "").toLowerCase().includes(q) ||
+          (u.full_name ?? "").toLowerCase().includes(q) ||
+          u.id.toLowerCase().includes(q))
+      : merged;
+
+    return {
+      users: filtered,
+      page: data.page,
+      perPage: data.perPage,
+      total: filtered.length,
+    };
+  });
+
+// Deep per-user detail: auth record, profile, roles, recent audit, owned cafés.
+export const userDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+
+    const { data: au, error: aErr } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
+    if (aErr) throw new Error(aErr.message);
+    const u = au.user;
+
+    const [{ data: profile }, { data: roles }, { data: ownedCafes }, { data: audit }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
+      supabaseAdmin.from("user_roles").select("role, cafe_id, cafes(name, slug)").eq("user_id", data.user_id),
+      supabaseAdmin.from("cafes").select("id, name, slug, city, is_active, created_at").eq("owner_id", data.user_id),
+      supabaseAdmin.from("audit_logs")
+        .select("id, created_at, action, resource_type, resource_id, meta, cafes(name, slug)")
+        .eq("actor_id", data.user_id)
+        .order("created_at", { ascending: false })
+        .limit(40),
+    ]);
+
+    return {
+      auth: u ? {
+        id: u.id,
+        email: u.email,
+        phone: u.phone,
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at,
+        email_confirmed_at: u.email_confirmed_at,
+        phone_confirmed_at: (u as { phone_confirmed_at?: string | null }).phone_confirmed_at ?? null,
+        banned_until: (u as { banned_until?: string | null }).banned_until ?? null,
+        is_anonymous: (u as { is_anonymous?: boolean }).is_anonymous ?? false,
+        user_metadata: u.user_metadata ?? {},
+        app_metadata: u.app_metadata ?? {},
+        identities: (u.identities ?? []).map((i) => ({
+          provider: i.provider,
+          email: (i.identity_data as { email?: string } | null)?.email ?? null,
+          created_at: i.created_at,
+          last_sign_in_at: i.last_sign_in_at,
+        })),
+      } : null,
+      profile: profile ?? null,
+      roles: roles ?? [],
+      ownedCafes: ownedCafes ?? [],
+      audit: audit ?? [],
+    };
+  });
+
+// Restrict / un-restrict a user (uses Supabase ban duration).
+export const setUserBan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      // "none" = unban; otherwise a Postgres interval like "24h", "7d", "876000h" (~100y permanent)
+      duration: z.enum(["none", "1h", "24h", "7d", "30d", "permanent"]),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    if (data.user_id === context.userId) throw new Error("You cannot ban yourself.");
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const map = { none: "none", "1h": "1h", "24h": "24h", "7d": "168h", "30d": "720h", permanent: "876000h" } as const;
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      ban_duration: map[data.duration],
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

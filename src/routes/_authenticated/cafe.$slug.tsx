@@ -11,6 +11,7 @@ import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { TrialBanner } from "@/components/TrialBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { Button } from "@/components/ui/button";
+import { DeleteCafeButton } from "@/components/DeleteCafeButton";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug")({
   head: () => ({
@@ -82,17 +83,20 @@ function CafeLayout() {
                 ? <span className="text-amber-200">Maintenance active — public bookings paused.</span>
                 : <span>Need to pause for an hour? Schedule maintenance so customers see why.</span>}
             </div>
-            <MaintenanceScheduler
-              scope={{ kind: "cafe", cafeId: (cafe as { id: string }).id, cafeName: cafe.name }}
-              current={cafeMaint}
-              onSaved={() => refetch()}
-              trigger={
-                <Button size="sm" variant={cafeInMaint ? "destructive" : "outline"} className="gap-1.5">
-                  <Wrench className="h-3.5 w-3.5" />
-                  {cafeInMaint ? "Edit maintenance" : "Schedule maintenance"}
-                </Button>
-              }
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <MaintenanceScheduler
+                scope={{ kind: "cafe", cafeId: (cafe as { id: string }).id, cafeName: cafe.name }}
+                current={cafeMaint}
+                onSaved={() => refetch()}
+                trigger={
+                  <Button size="sm" variant={cafeInMaint ? "destructive" : "outline"} className="gap-1.5">
+                    <Wrench className="h-3.5 w-3.5" />
+                    {cafeInMaint ? "Edit maintenance" : "Schedule maintenance"}
+                  </Button>
+                }
+              />
+              <DeleteCafeButton cafeId={(cafe as { id: string }).id} slug={cafe.slug} name={cafe.name} />
+            </div>
           </div>
         )}
       </div>
