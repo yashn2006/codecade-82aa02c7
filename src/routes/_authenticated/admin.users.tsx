@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, Search, X, UserPlus, MoreHorizontal, Trash2, KeyRound, Mail, Copy } from "lucide-react";
+import { Users, Search, X, UserPlus, MoreHorizontal, Trash2, KeyRound, Mail, Copy, Eye, ShieldAlert } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { searchUsers, grantRole, revokeRole, adminCreateUser, deleteUser, setUserPassword, generateRecoveryLink, userActivity } from "@/lib/admin.functions";
+import { adminListUsersFull, grantRole, revokeRole, adminCreateUser, deleteUser, setUserPassword, generateRecoveryLink } from "@/lib/admin.functions";
 import { ExportButton } from "./admin.cafes";
-import { Activity as ActivityIcon } from "lucide-react";
+import { UserDetailDialog } from "@/components/UserDetailDialog";
 
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
@@ -25,23 +25,32 @@ const ROLES = ["super_admin", "cafe_owner", "cafe_staff", "customer"] as const;
 type Role = typeof ROLES[number];
 
 type UserRow = {
-  id: string; full_name: string | null; email: string;
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone?: string | null;
+  created_at?: string;
+  last_sign_in_at?: string | null;
+  email_confirmed_at?: string | null;
+  banned_until?: string | null;
+  providers?: string[];
   user_roles?: Array<{ role: string; cafe_id: string | null }>;
 };
 
 function UsersPanel() {
   const [q, setQ] = useState("");
-  const fn = useServerFn(searchUsers);
+  const [openUserId, setOpenUserId] = useState<string | null>(null);
+  const fn = useServerFn(adminListUsersFull);
   const { data, refetch, isFetching } = useQuery({
-    queryKey: ["admin-users", q],
-    queryFn: () => fn({ data: { q } }),
+    queryKey: ["admin-users-full", q],
+    queryFn: () => fn({ data: { q, page: 1, perPage: 200 } }),
   });
   const grant = useServerFn(grantRole);
   const revoke = useServerFn(revokeRole);
   const qc = useQueryClient();
-  const refresh = () => qc.invalidateQueries({ queryKey: ["admin-users"] });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["admin-users-full"] });
 
-  const users = (data ?? []) as UserRow[];
+  const users = (data?.users ?? []) as UserRow[];
 
   const buckets = useMemo(() => {
     const has = (u: UserRow, r: Role) => (u.user_roles ?? []).some((x) => x.role === r);
@@ -51,8 +60,10 @@ function UsersPanel() {
       cafe_owner: users.filter((u) => has(u, "cafe_owner")),
       cafe_staff: users.filter((u) => has(u, "cafe_staff")),
       customer: users.filter((u) => (u.user_roles ?? []).length === 0 || has(u, "customer")),
+      restricted: users.filter((u) => u.banned_until && new Date(u.banned_until).getTime() > Date.now()),
     };
   }, [users]);
+
 
   return (
     <div>
