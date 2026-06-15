@@ -115,9 +115,15 @@ export function TerminalContact() {
       setStep(0);
       return;
     }
-    setValues((v) => ({ ...v, [current.key]: raw }));
-    if (step < FIELDS.length - 1) setStep(step + 1);
+    const next = { ...values, [current.key]: raw };
+    setValues(next);
     e.currentTarget.value = "";
+    if (step < FIELDS.length - 1) {
+      setStep(step + 1);
+    } else {
+      // Last field: auto-transmit with the freshly captured value
+      transmit({ [current.key]: raw });
+    }
   }
 
   return (
