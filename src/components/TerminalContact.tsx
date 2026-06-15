@@ -51,22 +51,44 @@ export function TerminalContact() {
   const current = FIELDS[Math.min(step, FIELDS.length - 1)];
   const allFilled = FIELDS.every((f) => !f.required || values[f.key].trim().length > 0);
 
-  async function transmit() {
-    if (!allFilled) {
+  async function transmit(override?: Partial<Record<Field, string>>) {
+    const data = { ...values, ...(override || {}) };
+    const filled = FIELDS.every((f) => !f.required || data[f.key].trim().length > 0);
+    if (!filled) {
       toast.error("Fill in name, email and message first.");
       return;
     }
     setSending(true);
     setError(null);
     try {
-      await submit({
-        data: {
-          name: values.name,
-          email: values.email,
-          phone: values.phone || null,
-          message: values.message,
-        },
+      // 1) Formspree (email notification)
+      const fd = new FormData();
+      fd.append("name", data.name);
+      fd.append("email", data.email);
+      fd.append("phone", data.phone || "");
+      fd.append("message", data.message);
+      fd.append("_subject", `New CoreCade lead · ${data.name}`);
+      const res = await fetch("https://formspree.io/f/mpqebaak", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: fd,
       });
+      if (!res.ok) throw new Error(`Formspree responded ${res.status}`);
+
+      // 2) Persist to our backend (best-effort, don't block success)
+      try {
+        await submit({
+          data: {
+            name: data.name,
+            email: data.email,
+            phone: data.phone || null,
+            message: data.message,
+          },
+        });
+      } catch (innerErr) {
+        console.warn("Backend persist failed (email still sent):", innerErr);
+      }
+
       setDone(true);
       toast.success("Transmission successful.");
     } catch (e) {
@@ -93,9 +115,15 @@ export function TerminalContact() {
       setStep(0);
       return;
     }
-    setValues((v) => ({ ...v, [current.key]: raw }));
-    if (step < FIELDS.length - 1) setStep(step + 1);
+    const next = { ...values, [current.key]: raw };
+    setValues(next);
     e.currentTarget.value = "";
+    if (step < FIELDS.length - 1) {
+      setStep(step + 1);
+    } else {
+      // Last field: auto-transmit with the freshly captured value
+      transmit({ [current.key]: raw });
+    }
   }
 
   return (
@@ -259,7 +287,7 @@ export function TerminalContact() {
           </div>
           <button
             type="button"
-            onClick={transmit}
+            onClick={() => transmit()}
             disabled={sending || done || !allFilled}
             className="inline-flex items-center gap-1.5 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 font-mono text-[11px] text-emerald-200 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
