@@ -246,7 +246,6 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
   const delFn = useServerFn(deleteUser);
   const pwFn = useServerFn(setUserPassword);
   const recFn = useServerFn(generateRecoveryLink);
-  const actFn = useServerFn(userActivity);
 
   const dM = useMutation({
     mutationFn: delFn,
@@ -263,11 +262,6 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
     onSuccess: (res) => { setRecovery(res?.url ?? null); setLinkOpen(true); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
-  const aQ = useQuery({
-    queryKey: ["user-activity", user.id],
-    queryFn: () => actFn({ data: { user_id: user.id } }),
-    enabled: actOpen,
-  });
 
   return (
     <>
@@ -276,13 +270,10 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onSelect={() => setActOpen(true)}>
-            <ActivityIcon className="mr-2 h-3.5 w-3.5" /> View activity
-          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setPwOpen(true)}>
             <KeyRound className="mr-2 h-3.5 w-3.5" /> Set password
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => rM.mutate({ data: { email: user.email } })} disabled={rM.isPending}>
+          <DropdownMenuItem onSelect={() => user.email && rM.mutate({ data: { email: user.email } })} disabled={rM.isPending || !user.email}>
             <Mail className="mr-2 h-3.5 w-3.5" /> {rM.isPending ? "Generating…" : "Generate recovery link"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -348,45 +339,6 @@ function UserActions({ user, onChanged }: { user: UserRow; onChanged: () => void
               }}><Copy className="h-4 w-4" /></Button>
             </div>
           ) : <div className="text-sm text-muted-foreground">No link generated.</div>}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={actOpen} onOpenChange={setActOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><ActivityIcon className="h-4 w-4" /> Activity</DialogTitle>
-            <DialogDescription className="truncate">{user.email}</DialogDescription>
-          </DialogHeader>
-          {aQ.isLoading || !aQ.data ? (
-            <div className="grid grid-cols-2 gap-3">
-              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-card/60" />)}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                {Object.entries((aQ.data.summary ?? {}) as Record<string, number>).map(([k, v]) => (
-                  <div key={k} className="rounded-xl border border-border/60 bg-card/40 p-3">
-                    <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{k.replace(/_/g, " ")}</div>
-                    <div className="mt-1 font-display text-lg font-bold">{typeof v === "number" ? v.toLocaleString("en-IN") : String(v)}</div>
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Recent audit</div>
-                <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-border/40">
-                  {(aQ.data.audit ?? []).length === 0 ? (
-                    <div className="p-3 text-xs text-muted-foreground">No audit events.</div>
-                  ) : (aQ.data.audit ?? []).map((r) => (
-                    <div key={r.id} className="flex items-center justify-between border-b border-border/30 px-3 py-1.5 text-xs last:border-0">
-                      <div className="font-mono text-azure">{new Date(r.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
-                      <div className="font-mono">{r.action}</div>
-                      <div className="text-muted-foreground">{(r.cafes as { name?: string } | null)?.name ?? "—"}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
         </DialogContent>
       </Dialog>
     </>
