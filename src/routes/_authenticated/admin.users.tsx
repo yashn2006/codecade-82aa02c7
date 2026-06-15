@@ -83,25 +83,42 @@ function UsersPanel() {
         <CreateUserButton onCreated={refresh} />
       </div>
 
+      <div className="mt-2 text-xs text-muted-foreground">
+        Showing <span className="font-mono text-foreground">{users.length}</span> users from auth.users.
+      </div>
+
       <Tabs defaultValue="all" className="mt-4">
-        <TabsList className="glass-strong rounded-2xl p-1">
+        <TabsList className="glass-strong rounded-2xl p-1 flex-wrap">
           <TabsTrigger value="all">All <Badge variant="secondary" className="ml-2">{buckets.all.length}</Badge></TabsTrigger>
           <TabsTrigger value="super_admin">Super admins <Badge variant="secondary" className="ml-2">{buckets.super_admin.length}</Badge></TabsTrigger>
           <TabsTrigger value="cafe_owner">Café owners <Badge variant="secondary" className="ml-2">{buckets.cafe_owner.length}</Badge></TabsTrigger>
           <TabsTrigger value="cafe_staff">Staff <Badge variant="secondary" className="ml-2">{buckets.cafe_staff.length}</Badge></TabsTrigger>
           <TabsTrigger value="customer">Customers <Badge variant="secondary" className="ml-2">{buckets.customer.length}</Badge></TabsTrigger>
+          <TabsTrigger value="restricted" className="text-destructive">Restricted <Badge variant="destructive" className="ml-2">{buckets.restricted.length}</Badge></TabsTrigger>
         </TabsList>
         {(Object.keys(buckets) as Array<keyof typeof buckets>).map((k) => (
           <TabsContent key={k} value={k} className="mt-4 space-y-2">
             {buckets[k].length === 0 ? (
               <EmptyState icon={Users} title="No users" description="Try a different search or category." />
-            ) : buckets[k].map((u) => (
-              <div key={u.id} className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur">
+            ) : buckets[k].map((u) => {
+              const isBanned = !!(u.banned_until && new Date(u.banned_until).getTime() > Date.now());
+              return (
+              <div key={u.id} className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur transition hover:border-primary/40">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium">{u.full_name || "—"}</div>
-                    <div className="truncate font-mono text-xs text-muted-foreground">{u.email}</div>
-                  </div>
+                  <button className="min-w-0 text-left" onClick={() => setOpenUserId(u.id)}>
+                    <div className="flex items-center gap-2 font-medium">
+                      {u.full_name || u.email || "—"}
+                      {isBanned && <Badge variant="destructive" className="gap-1"><ShieldAlert className="h-3 w-3" />restricted</Badge>}
+                      {u.email_confirmed_at && <Badge variant="outline" className="text-[10px]">verified</Badge>}
+                    </div>
+                    <div className="truncate font-mono text-xs text-muted-foreground">{u.email ?? "—"}</div>
+                    <div className="mt-0.5 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+                      <span className="font-mono">id: {u.id.slice(0, 8)}…</span>
+                      <span>· joined {u.created_at ? new Date(u.created_at).toLocaleDateString("en-IN") : "—"}</span>
+                      <span>· last sign-in {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "never"}</span>
+                      {(u.providers ?? []).length > 0 && <span>· via {(u.providers ?? []).join(", ")}</span>}
+                    </div>
+                  </button>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {(u.user_roles ?? []).map((r, i) => (
                       <Badge key={i} variant="outline" className="gap-1.5">
@@ -117,6 +134,9 @@ function UsersPanel() {
                         ><X className="h-3 w-3" /></button>
                       </Badge>
                     ))}
+                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setOpenUserId(u.id)}>
+                      <Eye className="h-3.5 w-3.5" /> Inspect
+                    </Button>
                     <UserActions user={u} onChanged={refresh} />
                   </div>
                 </div>
@@ -133,11 +153,17 @@ function UsersPanel() {
                   ))}
                 </div>
               </div>
-            ))}
-
+            );})}
           </TabsContent>
         ))}
       </Tabs>
+
+      <UserDetailDialog
+        userId={openUserId}
+        open={!!openUserId}
+        onOpenChange={(v) => !v && setOpenUserId(null)}
+        onChanged={refresh}
+      />
     </div>
   );
 }
