@@ -28,17 +28,24 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [shake, setShake] = useState(false);
+  const redirectingRef = useRef(false);
   const navigate = useNavigate();
+
+  const routeOnce = async () => {
+    if (redirectingRef.current) return;
+    redirectingRef.current = true;
+    await routeByRole(navigate);
+  };
 
   // After Google OAuth redirect (or when an existing session lands on /auth),
   // route the user straight to their dashboard.
   useEffect(() => {
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled && data.session) routeByRole(navigate);
+      if (!cancelled && data.session) routeOnce();
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) routeByRole(navigate);
+      if (event === "SIGNED_IN" && session) routeOnce();
     });
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
   }, [navigate]);
@@ -86,12 +93,12 @@ function AuthPage() {
         });
         if (error) throw error;
         toast.success("Account created. Check your email if confirmation is required.");
-        await routeByRole(navigate);
+        await routeOnce();
       } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back.");
-        await routeByRole(navigate);
+        await routeOnce();
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
