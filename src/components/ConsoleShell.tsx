@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
@@ -29,9 +30,11 @@ export function ConsoleShell({
   intensity?: "default" | "hero" | "immersive";
 }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const safeNav = Array.isArray(nav) ? nav : [];
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
@@ -41,6 +44,8 @@ export function ConsoleShell({
   useEffect(() => { setOpen(false); }, [path]);
 
   const signOut = async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   };
@@ -54,7 +59,7 @@ export function ConsoleShell({
   };
 
   // Top 5 nav items for mobile bottom bar
-  const bottomNav = nav.slice(0, 5);
+  const bottomNav = safeNav.slice(0, 5);
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
@@ -68,7 +73,7 @@ export function ConsoleShell({
             <BrandLockup size={28} badge={badge} />
           </div>
           <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-            {nav.map((item, i) => {
+            {safeNav.map((item, i) => {
               const active = isActive(item);
               return (
                 <Link
@@ -155,12 +160,12 @@ export function ConsoleShell({
           </header>
 
           {/* Main content */}
-          <main className="min-w-0 flex-1 px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10">
+          <main className="min-w-0 flex-1 px-3 pb-24 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/30 px-5 py-7 shadow-pop backdrop-blur-xl sm:px-8 sm:py-9"
+              className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/35 px-4 py-5 shadow-pop backdrop-blur-xl sm:px-6 sm:py-6"
             >
               <HeroBackdrop3D />
               <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
@@ -176,7 +181,7 @@ export function ConsoleShell({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1, duration: 0.6 }}
-                    className="mt-3 truncate font-display text-3xl font-extrabold leading-[1] tracking-[-0.035em] sm:text-4xl lg:text-5xl"
+                    className="mt-3 max-w-full font-display text-3xl font-extrabold leading-tight tracking-normal sm:text-4xl lg:text-5xl"
                   >
                     <span className="text-gradient-hot">{title}</span>
                   </motion.h1>
@@ -259,7 +264,7 @@ export function ConsoleShell({
                 </button>
               </div>
               <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-                {nav.map((item) => {
+                {safeNav.map((item) => {
                   const active = isActive(item);
                   return (
                     <Link
