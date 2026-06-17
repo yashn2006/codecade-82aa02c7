@@ -13,26 +13,22 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/lib/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
 
 function NotFoundComponent() {
+  const router = useRouter();
   // If a signed-in user lands here (e.g. Supabase OAuth redirected to a path
   // that isn't a real route), bounce them to their dashboard instead of
   // showing a dead-end 404.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getSupabaseUserReady(1200);
       if (cancelled || !user) return;
-      const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
-      const { data: roles } = await supabase
-        .from("user_roles").select("role").eq("user_id", user.id);
-      const set = new Set((roles ?? []).map((r) => r.role));
-      const isSuperAdmin = set.has("super_admin") && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
-      const dest = isSuperAdmin ? "/admin" : set.has("cafe_owner") ? "/owner" : "/portal";
-      window.location.replace(dest);
+      router.navigate({ to: await getDashboardPathForUser(user), replace: true });
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -162,15 +158,9 @@ function RootComponent() {
       // Only auto-route from places where the user can't be (or shouldn't stay)
       const shouldRoute = path === "/" || path === "/auth" || path === "/login" || path === "/signup";
       if (!shouldRoute) return;
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getSupabaseUserReady(1200);
       if (!user) return;
-      const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
-      const { data: roles } = await supabase
-        .from("user_roles").select("role").eq("user_id", user.id);
-      const set = new Set((roles ?? []).map((r) => r.role));
-      const isSuperAdmin = set.has("super_admin") && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
-      const dest = isSuperAdmin ? "/admin" : set.has("cafe_owner") ? "/owner" : "/portal";
-      router.navigate({ to: dest, replace: true });
+      router.navigate({ to: await getDashboardPathForUser(user), replace: true });
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {

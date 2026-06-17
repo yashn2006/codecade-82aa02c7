@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandMark } from "@/components/Brand";
 import { toast } from "sonner";
+import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -606,17 +607,8 @@ function MagneticSubmit({
   );
 }
 
-// Only this email may ever route into /admin. Defense-in-depth alongside the
-// route's beforeLoad role gate and DB-level RLS.
-const SUPER_ADMIN_EMAIL = "giganexa2026@gmail.com";
-
 async function routeByRole(navigate: ReturnType<typeof useNavigate>) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getSupabaseUserReady();
   if (!user) { navigate({ to: "/auth" }); return; }
-  const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-  const set = new Set((roles ?? []).map((r) => r.role));
-  const isSuperAdmin = set.has("super_admin") && user.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
-  if (isSuperAdmin) navigate({ to: "/admin" });
-  else if (set.has("cafe_owner")) navigate({ to: "/owner" });
-  else navigate({ to: "/portal" });
+  navigate({ to: await getDashboardPathForUser(user), replace: true });
 }

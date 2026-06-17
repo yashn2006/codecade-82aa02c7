@@ -33,13 +33,14 @@ export function NotificationBell() {
 
   // Realtime subscription
   useEffect(() => {
-    let userId: string | undefined;
+    let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     supabase.auth.getUser().then(({ data }) => {
-      userId = data.user?.id;
+      if (cancelled) return;
+      const userId = data.user?.id;
       if (!userId) return;
       channel = supabase
-        .channel(`notif:${userId}`)
+        .channel(`notif:${userId}:${crypto.randomUUID()}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
@@ -47,7 +48,7 @@ export function NotificationBell() {
         )
         .subscribe();
     });
-    return () => { if (channel) supabase.removeChannel(channel); };
+    return () => { cancelled = true; if (channel) supabase.removeChannel(channel); };
   }, [qc]);
 
   const items = q.data ?? [];

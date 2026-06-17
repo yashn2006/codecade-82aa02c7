@@ -10,7 +10,7 @@ export function useAdminRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
     const channel = supabase
-      .channel("admin-command-center")
+      .channel(`admin-command-center:${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "cafes" }, () => {
         qc.invalidateQueries({ queryKey: ["admin-overview"] });
         qc.invalidateQueries({ queryKey: ["admin-cafes"] });
