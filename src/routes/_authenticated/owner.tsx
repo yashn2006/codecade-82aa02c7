@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { toast } from "sonner";
 import { createCafe, getOwnerDashboard } from "@/lib/cafes.functions";
 import { supabase } from "@/lib/supabase/client";
+import { getSupabaseUserReady } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/_authenticated/owner")({
   ssr: false,
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/owner")({
     ],
   }),
   beforeLoad: async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getSupabaseUserReady();
     if (!user) throw redirect({ to: "/auth" });
     const { data: roles } = await supabase
       .from("user_roles").select("role").eq("user_id", user.id)
