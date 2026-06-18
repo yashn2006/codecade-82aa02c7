@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RedirectingRouteImport } from './routes/redirecting'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -69,6 +70,11 @@ const SetupRoute = SetupRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedirectingRoute = RedirectingRouteImport.update({
+  id: '/redirecting',
+  path: '/redirecting',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/redirecting': typeof RedirectingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
@@ -364,6 +371,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/redirecting': typeof RedirectingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
@@ -411,6 +419,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/redirecting': typeof RedirectingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
@@ -460,6 +469,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/login'
+    | '/redirecting'
     | '/reset-password'
     | '/setup'
     | '/signup'
@@ -507,6 +517,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/login'
+    | '/redirecting'
     | '/reset-password'
     | '/setup'
     | '/signup'
@@ -553,6 +564,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/login'
+    | '/redirecting'
     | '/reset-password'
     | '/setup'
     | '/signup'
@@ -602,6 +614,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DiscoverRoute: typeof DiscoverRoute
   LoginRoute: typeof LoginRoute
+  RedirectingRoute: typeof RedirectingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SetupRoute: typeof SetupRoute
   SignupRoute: typeof SignupRoute
@@ -629,6 +642,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redirecting': {
+      id: '/redirecting'
+      path: '/redirecting'
+      fullPath: '/redirecting'
+      preLoaderRoute: typeof RedirectingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1075,6 +1095,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DiscoverRoute: DiscoverRoute,
   LoginRoute: LoginRoute,
+  RedirectingRoute: RedirectingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SetupRoute: SetupRoute,
   SignupRoute: SignupRoute,
@@ -1083,13 +1104,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
