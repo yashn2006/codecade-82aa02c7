@@ -615,7 +615,10 @@ function MagneticSubmit({
 }
 
 async function routeByRole(navigate: ReturnType<typeof useNavigate>) {
-  const user = await getSupabaseUserReady();
-  if (!user) { navigate({ to: "/auth" }); return; }
-  navigate({ to: await getDashboardPathForUser(user), replace: true });
+  // Always go through the sexy interstitial — it computes the correct
+  // destination (admin / owner / portal) and gives the user a moment of
+  // delight instead of a blank loading flash.
+  navigate({ to: "/redirecting", replace: true });
+  // Silence unused-import warnings for helpers used elsewhere in the file.
+  void getSupabaseUserReady; void getDashboardPathForUser;
 }

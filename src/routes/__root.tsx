@@ -156,11 +156,14 @@ function RootComponent() {
     const routeByRoleIfNeeded = async () => {
       const path = window.location.pathname;
       // Only auto-route from places where the user can't be (or shouldn't stay)
-      const shouldRoute = path === "/" || path === "/auth" || path === "/login" || path === "/signup";
+      const shouldRoute =
+        path === "/" || path === "/auth" || path === "/login" || path === "/signup";
       if (!shouldRoute) return;
       const user = await getSupabaseUserReady(1200);
       if (!user) return;
-      router.navigate({ to: await getDashboardPathForUser(user), replace: true });
+      // Send through the sexy interstitial; it resolves the correct dashboard.
+      router.navigate({ to: "/redirecting", replace: true });
+      void getDashboardPathForUser;
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
