@@ -69,6 +69,9 @@ function PublicCafePage() {
   const { cafe, page, devices, menu, tournaments, activeDeviceIds, platform } = data;
   const freeCount = devices.filter((d) => !activeDeviceIds.includes(d.id) && d.status !== "maintenance").length;
   const heroUrl = page?.hero_url ?? cafe.cover_url;
+  const theme = (page?.theme ?? {}) as { accent?: string; logo?: string };
+  const accent = theme.accent ?? "#ff52e0";
+  const logoUrl = theme.logo ?? null;
   const social = (page?.socials ?? {}) as Record<string, string>;
   const gallery = (page?.gallery ?? []) as string[];
   const mapUrl = (page?.map_url ?? null) as string | null;
@@ -125,19 +128,28 @@ function PublicCafePage() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#04030c] via-[#04030c]/60 to-transparent" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,82,224,.25),transparent_60%)]" />
             <motion.div style={{ y: titleY }} className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
+              {logoUrl && (
+                <motion.img
+                  src={logoUrl} alt={`${cafe.name} logo`}
+                  initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                  className="mb-4 h-14 w-auto rounded-xl object-contain bg-black/30 p-1.5 backdrop-blur border border-white/10"
+                />
+              )}
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.3em] text-fuchsia-200 backdrop-blur"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] uppercase tracking-[0.3em] backdrop-blur border"
+                style={{ borderColor: `${accent}66`, backgroundColor: `${accent}1a`, color: accent }}
               >
                 <MapPin className="h-3 w-3" />{cafe.city ?? "Gaming Café"}
               </motion.div>
               <motion.h1
                 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
                 className="mt-3 font-display text-4xl font-black leading-[1.05] sm:text-6xl"
-                style={{ textShadow: "0 0 40px rgba(255,82,224,.4)" }}
+                style={{ textShadow: `0 0 40px ${accent}66` }}
               >
                 {cafe.name}
               </motion.h1>
+
               {page?.tagline && (
                 <motion.p
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}

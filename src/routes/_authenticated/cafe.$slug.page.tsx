@@ -33,7 +33,7 @@ const THEME_PRESETS = [
   { mode: "arcade",  label: "Retro CRT",  accent: "#ffd000", bg: "#1a0033" },
 ] as const;
 
-type Theme = { mode?: string; accent?: string; bg?: string; font?: string };
+type Theme = { mode?: string; accent?: string; bg?: string; font?: string; logo?: string };
 
 function PageEditor() {
   const { slug } = Route.useParams();
@@ -118,6 +118,14 @@ function PageEditor() {
             <ImageUploader cafeId={cafeId} folder="hero" label="Upload" onUploaded={(url) => setForm((c) => ({ ...c, hero_url: url }))} />
           </div>
         </div>
+        <div className="space-y-1">
+          <Label>Logo (white-label)</Label>
+          <div className="flex gap-2">
+            <Input value={form.theme.logo ?? ""} onChange={(e) => setForm((c) => ({ ...c, theme: { ...c.theme, logo: e.target.value } }))} placeholder="Paste URL or upload — shown on your public page" />
+            <ImageUploader cafeId={cafeId} folder="logo" label="Upload" onUploaded={(url) => setForm((c) => ({ ...c, theme: { ...c.theme, logo: url } }))} />
+          </div>
+        </div>
+
         <div className="space-y-1"><Label>About</Label><Textarea rows={5} value={form.about} onChange={(e) => setForm({ ...form, about: e.target.value })} /></div>
 
         {/* Theme picker */}
