@@ -114,8 +114,20 @@ export const verifyTopupPayment = createServerFn({ method: "POST" })
     });
     if (rpcErr) throw new Error(rpcErr.message);
 
+    // Receipt notification (best-effort — never fail the payment on this)
+    try {
+      await context.supabase.rpc("insert_payment_receipt", {
+        _user_id: context.userId,
+        _cafe_id: row.cafe_id,
+        _amount: row.amount,
+        _kind: "topup",
+        _reference: data.razorpay_payment_id,
+      });
+    } catch { /* ignore */ }
+
     return { ok: true, already: false };
   });
+
 
 // ---------- Booking payment (full prepayment) ----------
 export const createBookingOrder = createServerFn({ method: "POST" })
@@ -173,7 +185,7 @@ export const verifyBookingPayment = createServerFn({ method: "POST" })
       .digest("hex");
     if (expected !== data.razorpay_signature) throw new Error("Invalid payment signature");
 
-    const { error } = await context.supabase
+    const { data: bk, error } = await context.supabase
       .from("bookings")
       .update({
         status: "confirmed",
@@ -183,7 +195,21 @@ export const verifyBookingPayment = createServerFn({ method: "POST" })
         paid_at: new Date().toISOString(),
       })
       .eq("id", data.booking_id)
-      .eq("razorpay_order_id", data.razorpay_order_id);
+      .eq("razorpay_order_id", data.razorpay_order_id)
+      .select("cafe_id, deposit_amount")
+      .single();
     if (error) throw new Error(error.message);
+
+    try {
+      await context.supabase.rpc("insert_payment_receipt", {
+        _user_id: context.userId,
+        _cafe_id: bk.cafe_id,
+        _amount: bk.deposit_amount ?? 0,
+        _kind: "booking",
+        _reference: data.razorpay_payment_id,
+      });
+    } catch { /* ignore */ }
+
     return { ok: true };
   });
+
