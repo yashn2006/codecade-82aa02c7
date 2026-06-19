@@ -12,6 +12,7 @@ import { ConsoleShell } from "@/components/ConsoleShell";
 import { EmptyState } from "@/components/EmptyState";
 import { TrialBanner } from "@/components/TrialBanner";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { ReferralCard } from "@/components/ReferralCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,6 +102,10 @@ function OwnerHub() {
         <StatTile icon={CalendarRange} label="Total bookings" value={String(totals.bookings)} accent="violet" />
         <StatTile icon={Activity}    label="Active sessions" value={String(totals.activeSessions)} accent="magenta" />
       </div>
+
+      <div className="mb-8"><ReferralCard /></div>
+
+
 
       {isLoading ? (
         <div className="h-48 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
