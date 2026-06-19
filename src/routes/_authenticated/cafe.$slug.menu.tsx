@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { CsvImporter } from "@/components/CsvImporter";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/menu")({
   head: () => ({
@@ -100,9 +101,48 @@ function MenuPage() {
               </form>
             </DialogContent>
           </Dialog>
+          <CsvImporter
+            title="Import menu items"
+            description="Upload a CSV to bulk-add menu items. Existing items aren't touched."
+            templateName="menu-template.csv"
+            columns={[
+              { key: "name", label: "Name", required: true },
+              { key: "price", label: "Price", required: true, transform: (v) => {
+                const n = Math.round(Number(v));
+                if (!Number.isFinite(n) || n < 0) throw new Error("must be a non-negative number");
+                return n;
+              }},
+              { key: "description", label: "Description" },
+              { key: "is_veg", label: "Is Veg", transform: (v) => /^(1|true|yes|veg|y)$/i.test(v.trim()) },
+              { key: "stock", label: "Stock", transform: (v) => {
+                const n = Math.round(Number(v));
+                return Number.isFinite(n) ? n : null;
+              }},
+            ]}
+            onImport={async (rows) => {
+              let ok = 0, failed = 0;
+              for (const r of rows) {
+                try {
+                  await upItem({ data: {
+                    cafe_id: cafeId,
+                    name: String(r.name ?? "").trim(),
+                    price: Number(r.price ?? 0),
+                    description: (r.description as string | undefined) ?? null,
+                    is_veg: (r.is_veg as boolean | undefined) ?? true,
+                    is_active: true,
+                    stock: (r.stock as number | null | undefined) ?? null,
+                  }});
+                  ok++;
+                } catch { failed++; }
+              }
+              refresh();
+              return { ok, failed };
+            }}
+          />
           <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }} onClick={() => setEdit({ cafe_id: cafeId, is_veg: true, is_active: true, price: 0 })}>
             <Plus className="h-4 w-4" /> New item
           </Button>
+
         </div>
       </div>
 
