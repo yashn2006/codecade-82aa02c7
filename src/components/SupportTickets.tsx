@@ -36,8 +36,39 @@ const PRIO_META: Record<string, string> = {
 
 export function SupportTickets({ role = "owner", cafeId }: { role?: TicketRole; cafeId?: string | null }) {
   const fetchFn = useServerFn(listMyTickets);
+  const qc = useQueryClient();
   const q = useQuery({ queryKey: ["my-tickets"], queryFn: () => fetchFn(), refetchInterval: 30_000 });
   const [open, setOpen] = useState(false);
+  const [live, setLive] = useState(false);
+
+  // Realtime: refetch + toast on any change to my tickets
+  useEffect(() => {
+    let userId: string | null = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      userId = data.user?.id ?? null;
+      if (!userId) return;
+      channel = supabase
+        .channel(`tickets:${userId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "support_tickets", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            qc.invalidateQueries({ queryKey: ["my-tickets"] });
+            const next = (payload.new as { admin_reply?: string | null; status?: string } | null) ?? null;
+            const prev = (payload.old as { admin_reply?: string | null; status?: string } | null) ?? null;
+            if (next?.admin_reply && next.admin_reply !== prev?.admin_reply) {
+              toast.success("✨ CoreCade replied to your ticket");
+            } else if (next?.status && next.status !== prev?.status) {
+              toast.message(`Ticket status → ${next.status}`);
+            }
+          },
+        )
+        .subscribe((status) => setLive(status === "SUBSCRIBED"));
+    })();
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [qc]);
 
   const tickets = q.data ?? [];
   const counts = tickets.reduce(
