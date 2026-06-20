@@ -170,10 +170,21 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
 
-    // Reuse if profile exists
-    const { data: existing } = await supabaseAdmin
-      .from("profiles").select("id").eq("email", data.email).maybeSingle();
-    let userId = existing?.id as string | undefined;
+    // Look up an existing auth user by email (profile row may be stale / missing)
+    let userId: string | undefined;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: list } = await (supabaseAdmin.auth.admin as any).listUsers({
+        page: 1, perPage: 200,
+      });
+      const match = (list?.users ?? []).find(
+        (u: { email?: string | null }) =>
+          (u.email ?? "").toLowerCase() === data.email.toLowerCase(),
+      );
+      if (match) userId = match.id;
+    } catch {
+      /* ignore — fall through to create */
+    }
 
     if (!userId) {
       if (data.send_invite) {
@@ -192,16 +203,30 @@ export const adminCreateUser = createServerFn({ method: "POST" })
         if (error) throw new Error(error.message);
         userId = cr.user?.id;
       }
+    } else if (data.password) {
+      // User already existed — apply admin-typed password and confirm email
+      const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: data.password,
+        email_confirm: true,
+        user_metadata: { full_name: data.full_name ?? undefined },
+      });
+      if (updErr) throw new Error(updErr.message);
     }
     if (!userId) throw new Error("Could not create user");
 
-    if (data.full_name) {
-      await supabaseAdmin.from("profiles").update({ full_name: data.full_name }).eq("id", userId);
-    }
+    // Ensure a profile row exists (in case the signup trigger didn't fire)
+    await supabaseAdmin.from("profiles").upsert(
+      { id: userId, email: data.email, full_name: data.full_name ?? null },
+      { onConflict: "id" },
+    );
+
     if (data.role) {
-      await supabaseAdmin.from("user_roles").insert({
+      const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({
         user_id: userId, role: data.role, cafe_id: data.cafe_id ?? null,
       });
+      if (roleErr && !roleErr.message.toLowerCase().includes("duplicate")) {
+        throw new Error(roleErr.message);
+      }
     }
     return { ok: true, user_id: userId };
   });
