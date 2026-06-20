@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, MessageSquare, Clock, CheckCircle2, AlertCircle, Loader2, X,
-  Inbox, Sparkles, Hash,
+  Inbox, Sparkles, Hash, Radio,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { createTicket, listMyTickets } from "@/lib/tickets.functions";
+import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type TicketRole = "owner" | "customer";
