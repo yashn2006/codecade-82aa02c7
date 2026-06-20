@@ -83,7 +83,14 @@ export function SupportTickets({ role = "owner", cafeId }: { role?: TicketRole; 
           <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
             Support tickets
           </div>
-          <h3 className="font-display text-2xl font-extrabold tracking-tight">Your conversations</h3>
+          <h3 className="font-display text-2xl font-extrabold tracking-tight flex items-center gap-2">
+            Your conversations
+            {live && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-emerald-300">
+                <Radio className="h-3 w-3 animate-pulse" /> live
+              </span>
+            )}
+          </h3>
         </div>
         <div className="flex items-center gap-2">
           <CountPill icon={AlertCircle} label="Open" value={counts.open ?? 0} tone="primary" />
