@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, MessageSquare, Clock, CheckCircle2, AlertCircle, Loader2, X,
-  Inbox, Sparkles, Hash,
+  Inbox, Sparkles, Hash, Radio,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { createTicket, listMyTickets } from "@/lib/tickets.functions";
+import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type TicketRole = "owner" | "customer";
@@ -35,8 +36,39 @@ const PRIO_META: Record<string, string> = {
 
 export function SupportTickets({ role = "owner", cafeId }: { role?: TicketRole; cafeId?: string | null }) {
   const fetchFn = useServerFn(listMyTickets);
+  const qc = useQueryClient();
   const q = useQuery({ queryKey: ["my-tickets"], queryFn: () => fetchFn(), refetchInterval: 30_000 });
   const [open, setOpen] = useState(false);
+  const [live, setLive] = useState(false);
+
+  // Realtime: refetch + toast on any change to my tickets
+  useEffect(() => {
+    let userId: string | null = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      userId = data.user?.id ?? null;
+      if (!userId) return;
+      channel = supabase
+        .channel(`tickets:${userId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "support_tickets", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            qc.invalidateQueries({ queryKey: ["my-tickets"] });
+            const next = (payload.new as { admin_reply?: string | null; status?: string } | null) ?? null;
+            const prev = (payload.old as { admin_reply?: string | null; status?: string } | null) ?? null;
+            if (next?.admin_reply && next.admin_reply !== prev?.admin_reply) {
+              toast.success("✨ CoreCade replied to your ticket");
+            } else if (next?.status && next.status !== prev?.status) {
+              toast.message(`Ticket status → ${next.status}`);
+            }
+          },
+        )
+        .subscribe((status) => setLive(status === "SUBSCRIBED"));
+    })();
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [qc]);
 
   const tickets = q.data ?? [];
   const counts = tickets.reduce(
@@ -51,7 +83,14 @@ export function SupportTickets({ role = "owner", cafeId }: { role?: TicketRole; 
           <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
             Support tickets
           </div>
-          <h3 className="font-display text-2xl font-extrabold tracking-tight">Your conversations</h3>
+          <h3 className="font-display text-2xl font-extrabold tracking-tight flex items-center gap-2">
+            Your conversations
+            {live && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-emerald-300">
+                <Radio className="h-3 w-3 animate-pulse" /> live
+              </span>
+            )}
+          </h3>
         </div>
         <div className="flex items-center gap-2">
           <CountPill icon={AlertCircle} label="Open" value={counts.open ?? 0} tone="primary" />
