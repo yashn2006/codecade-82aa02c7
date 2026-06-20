@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { getSupabaseUserReady } from "@/lib/auth-routing";
 
-export const Route = createFileRoute("/_authenticated/owner/help")({
+export const Route = createFileRoute("/_authenticated/owner_/help")({
   ssr: false,
   head: () => ({
     meta: [
