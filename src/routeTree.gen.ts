@@ -19,6 +19,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as ApiSitemapDotxmlRouteImport } from './routes/api/sitemap[.]xml'
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
 import { Route as AuthenticatedOwnerRouteImport } from './routes/_authenticated/owner'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -104,6 +105,11 @@ const IndexRoute = IndexRouteImport.update({
 const CSlugRoute = CSlugRouteImport.update({
   id: '/c/$slug',
   path: '/c/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSitemapDotxmlRoute = ApiSitemapDotxmlRouteImport.update({
+  id: '/api/sitemap.xml',
+  path: '/api/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
@@ -330,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
+  '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
   '/c/$slug': typeof CSlugRouteWithChildren
   '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
@@ -377,6 +384,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
+  '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
   '/c/$slug': typeof CSlugRouteWithChildren
   '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
@@ -426,6 +434,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/owner': typeof AuthenticatedOwnerRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
+  '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
   '/c/$slug': typeof CSlugRouteWithChildren
   '/_authenticated/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
@@ -476,6 +485,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/owner'
     | '/portal'
+    | '/api/sitemap.xml'
     | '/c/$slug'
     | '/admin/announcements'
     | '/admin/api-keys'
@@ -523,6 +533,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/owner'
     | '/portal'
+    | '/api/sitemap.xml'
     | '/c/$slug'
     | '/admin/announcements'
     | '/admin/api-keys'
@@ -571,6 +582,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/owner'
     | '/_authenticated/portal'
+    | '/api/sitemap.xml'
     | '/c/$slug'
     | '/_authenticated/admin/announcements'
     | '/_authenticated/admin/api-keys'
@@ -618,6 +630,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SetupRoute: typeof SetupRoute
   SignupRoute: typeof SignupRoute
+  ApiSitemapDotxmlRoute: typeof ApiSitemapDotxmlRoute
   CSlugRoute: typeof CSlugRouteWithChildren
 }
 
@@ -691,6 +704,13 @@ declare module '@tanstack/react-router' {
       path: '/c/$slug'
       fullPath: '/c/$slug'
       preLoaderRoute: typeof CSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sitemap.xml': {
+      id: '/api/sitemap.xml'
+      path: '/api/sitemap.xml'
+      fullPath: '/api/sitemap.xml'
+      preLoaderRoute: typeof ApiSitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/portal': {
@@ -1090,6 +1110,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SetupRoute: SetupRoute,
   SignupRoute: SignupRoute,
+  ApiSitemapDotxmlRoute: ApiSitemapDotxmlRoute,
   CSlugRoute: CSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
