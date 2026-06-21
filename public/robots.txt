@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /owner
+Disallow: /portal
+Disallow: /cafe/
+Disallow: /auth
+Disallow: /reset-password
+Disallow: /redirecting
+Disallow: /setup
+
+Sitemap: https://saas.coreegin.com/sitemap.xml
