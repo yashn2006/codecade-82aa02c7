@@ -36,11 +36,26 @@ export const Route = createFileRoute("/c/$slug")({
 function PublicCafePage() {
   const { slug } = Route.useParams();
   const fn = useServerFn(getPublicCafe);
+  const qc = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["public-cafe", slug],
     queryFn: () => fn({ data: { slug } }),
     refetchInterval: 20_000,
   });
+
+  // Realtime: refresh when this café or its page changes (theme, logo, hours, etc.)
+  useEffect(() => {
+    const cafeId = data?.cafe?.id;
+    if (!cafeId) return;
+    const ch = supabase
+      .channel(`public-cafe:${cafeId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cafe_pages", filter: `cafe_id=eq.${cafeId}` },
+        () => qc.invalidateQueries({ queryKey: ["public-cafe", slug] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "cafes", filter: `id=eq.${cafeId}` },
+        () => qc.invalidateQueries({ queryKey: ["public-cafe", slug] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [data?.cafe?.id, qc, slug]);
 
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
