@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
+import { supabase } from "@/lib/supabase/client";
 
 export const Route = createFileRoute("/c/$slug")({
   head: ({ params }) => ({
@@ -35,11 +36,26 @@ export const Route = createFileRoute("/c/$slug")({
 function PublicCafePage() {
   const { slug } = Route.useParams();
   const fn = useServerFn(getPublicCafe);
+  const qc = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["public-cafe", slug],
     queryFn: () => fn({ data: { slug } }),
     refetchInterval: 20_000,
   });
+
+  // Realtime: refresh when this café or its page changes (theme, logo, hours, etc.)
+  useEffect(() => {
+    const cafeId = data?.cafe?.id;
+    if (!cafeId) return;
+    const ch = supabase
+      .channel(`public-cafe:${cafeId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cafe_pages", filter: `cafe_id=eq.${cafeId}` },
+        () => qc.invalidateQueries({ queryKey: ["public-cafe", slug] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "cafes", filter: `id=eq.${cafeId}` },
+        () => qc.invalidateQueries({ queryKey: ["public-cafe", slug] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [data?.cafe?.id, qc, slug]);
 
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
