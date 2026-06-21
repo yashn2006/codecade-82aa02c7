@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 
 export const Route = createFileRoute("/c/$slug")({
   head: ({ params }) => ({
