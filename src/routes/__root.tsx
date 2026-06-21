@@ -18,17 +18,40 @@ import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routin
 function NotFoundComponent() {
   const router = useRouter();
   // If a signed-in user lands here (e.g. Supabase OAuth redirected to a path
-  // that isn't a real route), bounce them to their dashboard instead of
-  // showing a dead-end 404.
+  // that isn't a real route, or a race during post-login navigation), bounce
+  // them to their dashboard. Show a neutral loading state first so users
+  // never see a flash of "404" during the normal sign-in flow.
+  const [checked, setChecked] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const user = await getSupabaseUserReady(1200);
-      if (cancelled || !user) return;
-      router.navigate({ to: await getDashboardPathForUser(user), replace: true });
+      const user = await getSupabaseUserReady(1500);
+      if (cancelled) return;
+      if (user) {
+        setHasSession(true);
+        const path = await getDashboardPathForUser(user);
+        if (!cancelled) router.navigate({ to: path, replace: true });
+        return;
+      }
+      setChecked(true);
     })();
     return () => { cancelled = true; };
   }, [router]);
+
+  if (!checked || hasSession) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+            Loading…
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
