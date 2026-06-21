@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/c/$slug")({
   head: ({ params }) => ({
