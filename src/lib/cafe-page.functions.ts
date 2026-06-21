@@ -65,7 +65,8 @@ export const updateCafePage = createServerFn({ method: "POST" })
         bg: z.string().max(20).optional(),
         font: z.string().max(40).optional(),
         mode: z.enum(["dark", "neon", "minimal", "arcade"]).optional(),
-      }).optional(),
+        logo: z.string().url().max(800).optional().or(z.literal("")),
+      }).passthrough().optional(),
       map_url: z.string().url().max(800).nullable().optional(),
     }).parse(d),
   )
