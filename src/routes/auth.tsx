@@ -615,10 +615,18 @@ function MagneticSubmit({
 }
 
 async function routeByRole(navigate: ReturnType<typeof useNavigate>) {
-  // Always go through the sexy interstitial — it computes the correct
-  // destination (admin / owner / portal) and gives the user a moment of
-  // delight instead of a blank loading flash.
-  navigate({ to: "/redirecting", replace: true });
-  // Silence unused-import warnings for helpers used elsewhere in the file.
-  void getSupabaseUserReady; void getDashboardPathForUser;
+  // Resolve the destination FIRST, then navigate directly. The previous
+  // implementation bounced through /redirecting which occasionally raced
+  // with the auth layout's session check and flashed the 404 page.
+  try {
+    const user = await getSupabaseUserReady(3000);
+    if (!user) {
+      navigate({ to: "/auth", replace: true });
+      return;
+    }
+    const path = await getDashboardPathForUser(user);
+    navigate({ to: path, replace: true });
+  } catch {
+    navigate({ to: "/redirecting", replace: true });
+  }
 }
