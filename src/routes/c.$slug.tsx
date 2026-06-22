@@ -107,12 +107,13 @@ function PublicCafePage() {
       className={`relative min-h-screen overflow-x-hidden antialiased ${isLight ? "text-neutral-900" : "text-white"}`}
       style={{ background: bg }}
     >
-      {/* Ambient backdrop */}
+      {/* Ambient backdrop — driven by theme accent */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -left-40 top-1/3 h-[420px] w-[420px] rounded-full bg-fuchsia-600/20 blur-[140px]" />
+        <div className="absolute -left-40 top-1/3 h-[420px] w-[420px] rounded-full blur-[140px]" style={{ background: `${accent}33` }} />
         <div className="absolute -right-40 top-2/3 h-[420px] w-[420px] rounded-full bg-blue-600/20 blur-[140px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(123,47,255,.18),transparent_60%)]" />
+        <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at top, ${accent}22, transparent 60%)` }} />
       </div>
+
 
       {/* Top nav */}
       <header className="sticky top-0 z-40">
