@@ -526,21 +526,47 @@ function FeatureCard({
   );
 }
 
+function StatLoader({ size = "md" }: { size?: "sm" | "md" }) {
+  const dim = size === "sm" ? "h-5 w-5" : "h-8 w-8";
+  return (
+    <span className={`relative inline-flex ${dim} items-center justify-center`} aria-label="Loading">
+      <span className={`absolute inset-0 rounded-full border-2 border-primary/20`} />
+      <motion.span
+        className={`absolute inset-0 rounded-full border-2 border-transparent border-t-primary border-r-primary/70`}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
+      />
+      <motion.span
+        className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-primary to-accent"
+        animate={{ scale: [0.6, 1, 0.6], opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </span>
+  );
+}
+
 function Stats() {
   const stats = [
-    { value: 50000, suffix: "+", label: "Sessions tracked" },
-    { value: 24000000, label: "Revenue processed", format: (n: number) => `₹${(n / 10000000).toFixed(1)}Cr` },
+    { key: "sessions", loading: true, label: "Sessions processed" },
+    { key: "cafes", loading: true, label: "Cafés onboarded" },
+    { key: "minutes", loading: true, label: "Minutes billed" },
+    { key: "rating", loading: true, label: "Owner rating" },
     { value: 99.9, label: "Uptime", suffix: "%", format: (n: number) => n.toFixed(1) },
     { value: 50, label: "Real-time latency", prefix: "<", suffix: "ms" },
-  ];
+    { value: 7, label: "Avg go-live", suffix: " days" },
+  ] as Array<{ key?: string; loading?: boolean; value?: number; prefix?: string; suffix?: string; label: string; format?: (n: number) => string }>;
   return (
     <section className="relative border-y border-border/40 bg-background/40 px-4 py-20 sm:px-6">
       <div className="absolute inset-0 grid-arcade opacity-30" />
-      <div className="relative mx-auto grid max-w-7xl grid-cols-2 gap-10 md:grid-cols-4">
+      <div className="relative mx-auto grid max-w-7xl grid-cols-2 gap-10 md:grid-cols-4 lg:grid-cols-7">
         {stats.map((s) => (
           <div key={s.label} className="text-center">
-            <div className="font-display text-4xl font-extrabold tracking-tight text-gradient sm:text-5xl">
-              <AnimatedNumber value={s.value} prefix={s.prefix} suffix={s.suffix} format={s.format} />
+            <div className="font-display text-3xl font-extrabold tracking-tight text-gradient sm:text-4xl min-h-[2.5rem] flex items-center justify-center">
+              {s.loading ? (
+                <StatLoader />
+              ) : (
+                <AnimatedNumber value={s.value as number} prefix={s.prefix} suffix={s.suffix} format={s.format} />
+              )}
             </div>
             <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{s.label}</div>
           </div>
