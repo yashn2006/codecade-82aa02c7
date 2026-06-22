@@ -220,6 +220,32 @@ function PageEditor() {
           <p className="mt-2 text-[11px] text-muted-foreground">Upload directly to your café gallery bucket, or paste a hosted image URL.</p>
         </div>
 
+        {/* UPI Payments */}
+        <div>
+          <Label className="flex items-center gap-2"><IndianRupee className="h-4 w-4 text-emerald-400" /> UPI payments</Label>
+          <p className="text-[11px] text-muted-foreground">Customers can pay directly to your UPI ID. Optionally upload a QR image so they can scan.</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
+            <Input
+              value={form.upi_id}
+              onChange={(e) => setForm({ ...form, upi_id: e.target.value })}
+              placeholder="yourcafe@upi"
+            />
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={form.upi_qr_url}
+              onChange={(e) => setForm({ ...form, upi_qr_url: e.target.value })}
+              placeholder="QR image URL (or upload)"
+            />
+            <ImageUploader cafeId={cafeId} folder="upi" label="Upload QR" onUploaded={(url) => setForm((c) => ({ ...c, upi_qr_url: url }))} />
+          </div>
+          {form.upi_qr_url && (
+            <div className="mt-3 inline-block rounded-xl border border-border/60 bg-card/40 p-3">
+              <img src={form.upi_qr_url} alt="UPI QR preview" className="h-32 w-32 object-contain" />
+            </div>
+          )}
+        </div>
+
         <Button type="submit" className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
           <Save className="h-4 w-4" /> Save page
         </Button>
