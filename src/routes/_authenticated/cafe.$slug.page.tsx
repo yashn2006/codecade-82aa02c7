@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Image as ImageIcon, Save, ExternalLink, Palette, MapPin, X } from "lucide-react";
+import { Image as ImageIcon, Save, ExternalLink, Palette, MapPin, X, IndianRupee } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { getCafePage, updateCafePage } from "@/lib/cafe-page.functions";
