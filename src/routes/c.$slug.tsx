@@ -348,6 +348,45 @@ function PublicCafePage() {
         </Section>
       )}
 
+      {(upiId || upiQr) && (
+        <Section title="Pay via UPI" icon={Zap}>
+          <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
+            {upiQr && (
+              <div className="grid place-items-center rounded-2xl bg-white p-3 shadow-[0_0_40px_rgba(255,82,224,.25)]">
+                <img src={upiQr} alt="UPI QR" className="h-44 w-44 object-contain" />
+              </div>
+            )}
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/50">UPI ID</div>
+              {upiId ? (
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard?.writeText(upiId); }}
+                  className="mt-1 break-all font-display text-xl font-bold sm:text-2xl"
+                  style={{ color: accent }}
+                  title="Click to copy"
+                >
+                  {upiId}
+                </button>
+              ) : (
+                <div className="mt-1 text-sm text-white/60">Scan the QR with any UPI app.</div>
+              )}
+              <p className="mt-3 text-sm text-white/65">Pay directly to the café. Show the payment screen at the counter to start your session.</p>
+              {upiId && (
+                <a
+                  href={`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(cafe.name)}&cu=INR`}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white"
+                  style={{ background: `linear-gradient(135deg, ${accent}, #7b2fff)` }}
+                >
+                  Open in UPI app <ArrowRight className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          </div>
+        </Section>
+      )}
+
+
       <footer className="mx-auto mt-16 max-w-6xl px-4 py-10 text-center text-xs text-white/40">
         Powered by <span className="bg-gradient-to-r from-fuchsia-300 via-violet-300 to-blue-300 bg-clip-text font-semibold text-transparent">CoreCade</span>
       </footer>
