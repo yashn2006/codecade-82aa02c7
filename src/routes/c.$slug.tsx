@@ -85,12 +85,16 @@ function PublicCafePage() {
   const { cafe, page, devices, menu, tournaments, activeDeviceIds, platform } = data;
   const freeCount = devices.filter((d) => !activeDeviceIds.includes(d.id) && d.status !== "maintenance").length;
   const heroUrl = page?.hero_url ?? cafe.cover_url;
-  const theme = (page?.theme ?? {}) as { accent?: string; logo?: string };
+  const theme = (page?.theme ?? {}) as { accent?: string; bg?: string; mode?: string; logo?: string };
   const accent = theme.accent ?? "#ff52e0";
+  const bg = theme.bg ?? "#04030c";
+  const isLight = theme.mode === "minimal";
   const logoUrl = theme.logo ?? null;
   const social = (page?.socials ?? {}) as Record<string, string>;
   const gallery = (page?.gallery ?? []) as string[];
   const mapUrl = (page?.map_url ?? null) as string | null;
+  const upiId = (page as { upi_id?: string | null } | null)?.upi_id ?? null;
+  const upiQr = (page as { upi_qr_url?: string | null } | null)?.upi_qr_url ?? null;
   const cafeMaint = {
     starts_at: (cafe as { maintenance_starts_at?: string | null }).maintenance_starts_at ?? null,
     ends_at: (cafe as { maintenance_ends_at?: string | null }).maintenance_ends_at ?? null,
@@ -99,13 +103,17 @@ function PublicCafePage() {
   const inMaintenance = isMaintenanceActive(cafeMaint) || isMaintenanceActive(platform);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#04030c] text-white antialiased">
-      {/* Ambient backdrop */}
+    <div
+      className={`relative min-h-screen overflow-x-hidden antialiased ${isLight ? "text-neutral-900" : "text-white"}`}
+      style={{ background: bg }}
+    >
+      {/* Ambient backdrop — driven by theme accent */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -left-40 top-1/3 h-[420px] w-[420px] rounded-full bg-fuchsia-600/20 blur-[140px]" />
+        <div className="absolute -left-40 top-1/3 h-[420px] w-[420px] rounded-full blur-[140px]" style={{ background: `${accent}33` }} />
         <div className="absolute -right-40 top-2/3 h-[420px] w-[420px] rounded-full bg-blue-600/20 blur-[140px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(123,47,255,.18),transparent_60%)]" />
+        <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at top, ${accent}22, transparent 60%)` }} />
       </div>
+
 
       {/* Top nav */}
       <header className="sticky top-0 z-40">
@@ -340,6 +348,45 @@ function PublicCafePage() {
           </div>
         </Section>
       )}
+
+      {(upiId || upiQr) && (
+        <Section title="Pay via UPI" icon={Zap}>
+          <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
+            {upiQr && (
+              <div className="grid place-items-center rounded-2xl bg-white p-3 shadow-[0_0_40px_rgba(255,82,224,.25)]">
+                <img src={upiQr} alt="UPI QR" className="h-44 w-44 object-contain" />
+              </div>
+            )}
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/50">UPI ID</div>
+              {upiId ? (
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard?.writeText(upiId); }}
+                  className="mt-1 break-all font-display text-xl font-bold sm:text-2xl"
+                  style={{ color: accent }}
+                  title="Click to copy"
+                >
+                  {upiId}
+                </button>
+              ) : (
+                <div className="mt-1 text-sm text-white/60">Scan the QR with any UPI app.</div>
+              )}
+              <p className="mt-3 text-sm text-white/65">Pay directly to the café. Show the payment screen at the counter to start your session.</p>
+              {upiId && (
+                <a
+                  href={`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(cafe.name)}&cu=INR`}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white"
+                  style={{ background: `linear-gradient(135deg, ${accent}, #7b2fff)` }}
+                >
+                  Open in UPI app <ArrowRight className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          </div>
+        </Section>
+      )}
+
 
       <footer className="mx-auto mt-16 max-w-6xl px-4 py-10 text-center text-xs text-white/40">
         Powered by <span className="bg-gradient-to-r from-fuchsia-300 via-violet-300 to-blue-300 bg-clip-text font-semibold text-transparent">CoreCade</span>

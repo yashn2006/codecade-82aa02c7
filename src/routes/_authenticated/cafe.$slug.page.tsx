@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Image as ImageIcon, Save, ExternalLink, Palette, MapPin, X } from "lucide-react";
+import { Image as ImageIcon, Save, ExternalLink, Palette, MapPin, X, IndianRupee } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { getCafePage, updateCafePage } from "@/lib/cafe-page.functions";
@@ -55,10 +55,12 @@ function PageEditor() {
     galleryInput: "",
     theme: { mode: "dark", accent: "#ec4899", bg: "#0a0a1a" } as Theme,
     map_url: "",
+    upi_id: "",
+    upi_qr_url: "",
   });
 
   useEffect(() => {
-    const p = pageQ.data;
+    const p = pageQ.data as (typeof pageQ.data & { upi_id?: string | null; upi_qr_url?: string | null }) | null | undefined;
     if (p) {
       setForm((cur) => ({
         ...cur,
@@ -70,6 +72,8 @@ function PageEditor() {
         gallery: Array.isArray(p.gallery) ? p.gallery : [],
         theme: { mode: "dark", accent: "#ec4899", bg: "#0a0a1a", ...(p.theme ?? {}) },
         map_url: p.map_url ?? "",
+        upi_id: p.upi_id ?? "",
+        upi_qr_url: p.upi_qr_url ?? "",
       }));
     }
   }, [pageQ.data]);
@@ -94,6 +98,8 @@ function PageEditor() {
       gallery: form.gallery,
       theme: form.theme,
       map_url: form.map_url || null,
+      upi_id: form.upi_id.trim() || null,
+      upi_qr_url: form.upi_qr_url.trim() || null,
     } });
   }
 
@@ -212,6 +218,32 @@ function PageEditor() {
             </div>
           )}
           <p className="mt-2 text-[11px] text-muted-foreground">Upload directly to your café gallery bucket, or paste a hosted image URL.</p>
+        </div>
+
+        {/* UPI Payments */}
+        <div>
+          <Label className="flex items-center gap-2"><IndianRupee className="h-4 w-4 text-emerald-400" /> UPI payments</Label>
+          <p className="text-[11px] text-muted-foreground">Customers can pay directly to your UPI ID. Optionally upload a QR image so they can scan.</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
+            <Input
+              value={form.upi_id}
+              onChange={(e) => setForm({ ...form, upi_id: e.target.value })}
+              placeholder="yourcafe@upi"
+            />
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={form.upi_qr_url}
+              onChange={(e) => setForm({ ...form, upi_qr_url: e.target.value })}
+              placeholder="QR image URL (or upload)"
+            />
+            <ImageUploader cafeId={cafeId} folder="upi" label="Upload QR" onUploaded={(url) => setForm((c) => ({ ...c, upi_qr_url: url }))} />
+          </div>
+          {form.upi_qr_url && (
+            <div className="mt-3 inline-block rounded-xl border border-border/60 bg-card/40 p-3">
+              <img src={form.upi_qr_url} alt="UPI QR preview" className="h-32 w-32 object-contain" />
+            </div>
+          )}
         </div>
 
         <Button type="submit" className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>

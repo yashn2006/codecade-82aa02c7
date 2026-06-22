@@ -68,6 +68,8 @@ export const updateCafePage = createServerFn({ method: "POST" })
         logo: z.string().url().max(800).optional().or(z.literal("")),
       }).passthrough().optional(),
       map_url: z.string().url().max(800).nullable().optional(),
+      upi_id: z.string().max(120).nullable().optional(),
+      upi_qr_url: z.string().url().max(800).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
