@@ -85,12 +85,16 @@ function PublicCafePage() {
   const { cafe, page, devices, menu, tournaments, activeDeviceIds, platform } = data;
   const freeCount = devices.filter((d) => !activeDeviceIds.includes(d.id) && d.status !== "maintenance").length;
   const heroUrl = page?.hero_url ?? cafe.cover_url;
-  const theme = (page?.theme ?? {}) as { accent?: string; logo?: string };
+  const theme = (page?.theme ?? {}) as { accent?: string; bg?: string; mode?: string; logo?: string };
   const accent = theme.accent ?? "#ff52e0";
+  const bg = theme.bg ?? "#04030c";
+  const isLight = theme.mode === "minimal";
   const logoUrl = theme.logo ?? null;
   const social = (page?.socials ?? {}) as Record<string, string>;
   const gallery = (page?.gallery ?? []) as string[];
   const mapUrl = (page?.map_url ?? null) as string | null;
+  const upiId = (page as { upi_id?: string | null } | null)?.upi_id ?? null;
+  const upiQr = (page as { upi_qr_url?: string | null } | null)?.upi_qr_url ?? null;
   const cafeMaint = {
     starts_at: (cafe as { maintenance_starts_at?: string | null }).maintenance_starts_at ?? null,
     ends_at: (cafe as { maintenance_ends_at?: string | null }).maintenance_ends_at ?? null,
@@ -99,7 +103,10 @@ function PublicCafePage() {
   const inMaintenance = isMaintenanceActive(cafeMaint) || isMaintenanceActive(platform);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#04030c] text-white antialiased">
+    <div
+      className={`relative min-h-screen overflow-x-hidden antialiased ${isLight ? "text-neutral-900" : "text-white"}`}
+      style={{ background: bg }}
+    >
       {/* Ambient backdrop */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute -left-40 top-1/3 h-[420px] w-[420px] rounded-full bg-fuchsia-600/20 blur-[140px]" />
