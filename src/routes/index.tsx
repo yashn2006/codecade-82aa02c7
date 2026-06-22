@@ -232,12 +232,14 @@ function Hero() {
             className="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-border/40 pt-6"
           >
             {[
-              { v: "50k+", l: "sessions" },
-              { v: "₹2.4 Cr", l: "processed" },
+              { v: null, l: "sessions" },
+              { v: null, l: "processed" },
               { v: "99.9%", l: "uptime" },
             ].map((k) => (
               <div key={k.l}>
-                <div className="font-display text-2xl font-extrabold text-gradient">{k.v}</div>
+                <div className="font-display text-2xl font-extrabold text-gradient flex items-center justify-center min-h-[2rem]">
+                  {k.v ?? <StatLoader size="sm" />}
+                </div>
                 <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{k.l}</div>
               </div>
             ))}
