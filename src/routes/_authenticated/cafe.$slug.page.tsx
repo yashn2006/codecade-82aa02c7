@@ -55,10 +55,12 @@ function PageEditor() {
     galleryInput: "",
     theme: { mode: "dark", accent: "#ec4899", bg: "#0a0a1a" } as Theme,
     map_url: "",
+    upi_id: "",
+    upi_qr_url: "",
   });
 
   useEffect(() => {
-    const p = pageQ.data;
+    const p = pageQ.data as (typeof pageQ.data & { upi_id?: string | null; upi_qr_url?: string | null }) | null | undefined;
     if (p) {
       setForm((cur) => ({
         ...cur,
@@ -70,6 +72,8 @@ function PageEditor() {
         gallery: Array.isArray(p.gallery) ? p.gallery : [],
         theme: { mode: "dark", accent: "#ec4899", bg: "#0a0a1a", ...(p.theme ?? {}) },
         map_url: p.map_url ?? "",
+        upi_id: p.upi_id ?? "",
+        upi_qr_url: p.upi_qr_url ?? "",
       }));
     }
   }, [pageQ.data]);
