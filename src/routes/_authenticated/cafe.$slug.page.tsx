@@ -98,6 +98,8 @@ function PageEditor() {
       gallery: form.gallery,
       theme: form.theme,
       map_url: form.map_url || null,
+      upi_id: form.upi_id.trim() || null,
+      upi_qr_url: form.upi_qr_url.trim() || null,
     } });
   }
 
