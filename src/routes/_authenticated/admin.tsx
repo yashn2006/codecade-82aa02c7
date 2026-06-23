@@ -48,6 +48,7 @@ function AdminLayout() {
         { label: "Announcements", icon: Megaphone, to: "/admin/announcements" },
         { label: "Config", icon: SlidersHorizontal, to: "/admin/config" },
         { label: "Leads", icon: FileText, to: "/admin/leads" },
+        { label: "Support", icon: LifeBuoy, to: "/admin/support" },
         { label: "Settings", icon: SettingsIcon, to: "/admin/settings" },
       ]}
     >
