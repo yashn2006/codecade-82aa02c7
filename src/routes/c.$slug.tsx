@@ -169,73 +169,24 @@ function PublicCafePage() {
         <MaintenanceBanner window={cafeMaint} title={`${cafe.name} is in maintenance`} />
       </div>
 
-      {/* HERO — parallax */}
+      {/* HERO — parallax + interactive spotlight */}
       <section ref={heroRef} className="relative mx-auto mt-6 max-w-6xl px-4">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10">
-          <motion.div style={{ y: heroY, scale: heroScale, opacity: heroOpacity }} className="absolute inset-0">
-            {heroUrl ? (
-              <img src={heroUrl} alt={cafe.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="h-full w-full bg-[conic-gradient(from_220deg_at_50%_50%,#7b2fff,#ff52e0,#2d8eff,#7b2fff)]" />
-            )}
-          </motion.div>
-          <div className="relative aspect-[21/9] w-full">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#04030c] via-[#04030c]/60 to-transparent" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,82,224,.25),transparent_60%)]" />
-            <motion.div style={{ y: titleY }} className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
-              {logoUrl && (
-                <motion.img
-                  src={logoUrl} alt={`${cafe.name} logo`}
-                  initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-                  className="mb-4 h-14 w-auto rounded-xl object-contain bg-black/30 p-1.5 backdrop-blur border border-white/10"
-                />
-              )}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] uppercase tracking-[0.3em] backdrop-blur border"
-                style={{ borderColor: `${accent}66`, backgroundColor: `${accent}1a`, color: accent }}
-              >
-                <MapPin className="h-3 w-3" />{cafe.city ?? "Gaming Café"}
-              </motion.div>
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-                className="mt-3 font-display text-4xl font-black leading-[1.05] sm:text-6xl"
-                style={{ textShadow: `0 0 40px ${accent}66` }}
-              >
-                {cafe.name}
-              </motion.h1>
-
-              {page?.tagline && (
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
-                  className="mt-3 max-w-2xl text-base text-white/70 sm:text-lg"
-                >{page.tagline}</motion.p>
-              )}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
-                className="mt-5 flex flex-wrap items-center gap-3"
-              >
-                {inMaintenance ? (
-                  <Button size="lg" disabled variant="outline" className="cursor-not-allowed border-white/20">Bookings paused · maintenance</Button>
-                ) : (
-                  <Link to="/portal">
-                    <Button size="lg" className="border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white shadow-[0_0_36px_rgba(255,82,224,.55)] hover:opacity-95">
-                      Book a rig <ArrowRight className="ml-1.5 h-4 w-4" />
-                    </Button>
-                  </Link>
-                )}
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 backdrop-blur">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-                  </span>
-                  <span className="font-mono">{freeCount}/{devices.length}</span> stations free
-                </div>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
+        <HeroStage
+          cafe={cafe}
+          page={page}
+          heroUrl={heroUrl}
+          logoUrl={logoUrl}
+          accent={accent}
+          freeCount={freeCount}
+          totalDevices={devices.length}
+          inMaintenance={inMaintenance}
+          heroY={heroY}
+          heroScale={heroScale}
+          heroOpacity={heroOpacity}
+          titleY={titleY}
+        />
       </section>
+
 
       {/* PRICING */}
       {devices.length > 0 && (
@@ -507,5 +458,206 @@ function Lightbox({ images, index, onClose, onIndex }: {
         {index + 1} / {images.length}
       </div>
     </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HERO STAGE — interactive, mind-blowing public-page hero
+// ─────────────────────────────────────────────────────────────────────────────
+function HeroStage({
+  cafe, page, heroUrl, logoUrl, accent, freeCount, totalDevices, inMaintenance,
+  heroY, heroScale, heroOpacity, titleY,
+}: {
+  cafe: { name: string; city?: string | null };
+  page: { tagline?: string | null } | null;
+  heroUrl: string | null | undefined;
+  logoUrl: string | null;
+  accent: string;
+  freeCount: number;
+  totalDevices: number;
+  inMaintenance: boolean;
+  heroY: import("framer-motion").MotionValue<number>;
+  heroScale: import("framer-motion").MotionValue<number>;
+  heroOpacity: import("framer-motion").MotionValue<number>;
+  titleY: import("framer-motion").MotionValue<number>;
+}) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState({ x: 50, y: 50, active: false });
+
+  function onMove(e: React.MouseEvent<HTMLDivElement>) {
+    const el = stageRef.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    setCoords({
+      x: ((e.clientX - r.left) / r.width) * 100,
+      y: ((e.clientY - r.top) / r.height) * 100,
+      active: true,
+    });
+  }
+
+  return (
+    <div
+      ref={stageRef}
+      onMouseMove={onMove}
+      onMouseLeave={() => setCoords((c) => ({ ...c, active: false }))}
+      className="group relative overflow-hidden rounded-3xl border border-white/10 will-change-transform"
+      style={{ boxShadow: `0 30px 120px -40px ${accent}55` }}
+    >
+      {/* parallax media */}
+      <motion.div style={{ y: heroY, scale: heroScale, opacity: heroOpacity }} className="absolute inset-0">
+        {heroUrl ? (
+          <img src={heroUrl} alt={cafe.name} className="h-full w-full object-cover" />
+        ) : (
+          <div className="h-full w-full bg-[conic-gradient(from_220deg_at_50%_50%,#7b2fff,#ff52e0,#2d8eff,#7b2fff)]" />
+        )}
+      </motion.div>
+
+      {/* animated grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.18] mix-blend-screen"
+        style={{
+          backgroundImage:
+            `linear-gradient(${accent}55 1px, transparent 1px),
+             linear-gradient(90deg, ${accent}55 1px, transparent 1px)`,
+          backgroundSize: "44px 44px",
+          maskImage: "radial-gradient(ellipse at 50% 60%, black 30%, transparent 75%)",
+        }}
+      />
+
+      {/* scanline sweep */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 h-32 -skew-y-3 mix-blend-screen"
+        style={{ background: `linear-gradient(180deg, transparent, ${accent}33, transparent)` }}
+        animate={{ y: ["-20%", "120%"] }}
+        transition={{ duration: 7, ease: "linear", repeat: Infinity }}
+      />
+
+      {/* mouse spotlight */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 transition-opacity duration-500"
+        style={{
+          opacity: coords.active ? 1 : 0,
+          background: `radial-gradient(420px circle at ${coords.x}% ${coords.y}%, ${accent}3d, transparent 60%)`,
+        }}
+      />
+
+      {/* vignette */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#04030c] via-[#04030c]/55 to-transparent" />
+      <div
+        className="absolute inset-0"
+        style={{ background: `radial-gradient(circle at 75% 22%, ${accent}3a, transparent 60%)` }}
+      />
+
+      {/* aspect spacer */}
+      <div className="relative aspect-[21/9] w-full">
+        <motion.div style={{ y: titleY }} className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
+          {logoUrl && (
+            <motion.img
+              src={logoUrl} alt={`${cafe.name} logo`}
+              initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+              className="mb-4 h-14 w-auto rounded-xl border border-white/10 bg-black/30 object-contain p-1.5 backdrop-blur"
+            />
+          )}
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.3em] backdrop-blur"
+            style={{ borderColor: `${accent}66`, backgroundColor: `${accent}1a`, color: accent }}
+          >
+            <MapPin className="h-3 w-3" />{cafe.city ?? "Gaming Café"}
+          </motion.div>
+
+          {/* shimmering title */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.08 }}
+            className="relative mt-3 font-display text-5xl font-black leading-[1.02] sm:text-7xl"
+            style={{ textShadow: `0 0 40px ${accent}66` }}
+          >
+            <span
+              className="bg-clip-text text-transparent"
+              style={{
+                backgroundImage: `linear-gradient(110deg, #ffffff 0%, ${accent} 35%, #ffffff 60%, ${accent} 85%, #ffffff 100%)`,
+                backgroundSize: "240% 100%",
+                animation: "cc-shimmer 6s linear infinite",
+              }}
+            >
+              {cafe.name}
+            </span>
+          </motion.h1>
+
+          {page?.tagline && (
+            <motion.p
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
+              className="mt-3 max-w-2xl text-base text-white/75 sm:text-lg"
+            >{page.tagline}</motion.p>
+          )}
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
+            className="mt-6 flex flex-wrap items-center gap-3"
+          >
+            {inMaintenance ? (
+              <Button size="lg" disabled variant="outline" className="cursor-not-allowed border-white/20">
+                Bookings paused · maintenance
+              </Button>
+            ) : (
+              <Link to="/portal">
+                <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 320, damping: 20 }}>
+                  <Button
+                    size="lg"
+                    className="group/cta relative overflow-hidden border-0 text-white"
+                    style={{
+                      background: `linear-gradient(135deg, ${accent}, #7b2fff, #2d8eff)`,
+                      boxShadow: `0 0 44px ${accent}88`,
+                    }}
+                  >
+                    <span className="relative z-10 inline-flex items-center">
+                      Book a rig <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover/cta:translate-x-1" />
+                    </span>
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover/cta:translate-x-full"
+                    />
+                  </Button>
+                </motion.div>
+              </Link>
+            )}
+
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 backdrop-blur">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              <span className="font-mono">{freeCount}/{totalDevices}</span> stations free
+            </div>
+
+            <div
+              className="inline-flex items-center gap-2 rounded-full border bg-white/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-white/70 backdrop-blur"
+              style={{ borderColor: `${accent}55` }}
+            >
+              <Zap className="h-3 w-3" style={{ color: accent }} /> Powered by CoreCade
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* corner orb */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl"
+          style={{ background: `radial-gradient(circle, ${accent}66, transparent 70%)` }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+
+      <style>{`
+        @keyframes cc-shimmer {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+      `}</style>
+    </div>
   );
 }

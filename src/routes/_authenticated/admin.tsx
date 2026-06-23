@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText, SlidersHorizontal, BarChart3 } from "lucide-react";
+import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText, SlidersHorizontal, BarChart3, LifeBuoy } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { supabase } from "@/lib/supabase/client";
@@ -48,6 +48,7 @@ function AdminLayout() {
         { label: "Announcements", icon: Megaphone, to: "/admin/announcements" },
         { label: "Config", icon: SlidersHorizontal, to: "/admin/config" },
         { label: "Leads", icon: FileText, to: "/admin/leads" },
+        { label: "Support", icon: LifeBuoy, to: "/admin/support" },
         { label: "Settings", icon: SettingsIcon, to: "/admin/settings" },
       ]}
     >
