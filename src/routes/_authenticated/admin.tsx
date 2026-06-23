@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText, SlidersHorizontal, BarChart3 } from "lucide-react";
+import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText, SlidersHorizontal, BarChart3, LifeBuoy } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { supabase } from "@/lib/supabase/client";
