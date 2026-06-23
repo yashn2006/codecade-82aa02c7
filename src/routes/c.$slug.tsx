@@ -16,14 +16,45 @@ import { isMaintenanceActive } from "@/lib/maintenance";
 import { supabase } from "@/lib/supabase/client";
 
 export const Route = createFileRoute("/c/$slug")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `${params.slug} — Gaming Café · CoreCade` },
-      { name: "description", content: `Book PCs, consoles, snacks and tournaments at ${params.slug}.` },
-      { property: "og:title", content: `${params.slug} — Gaming Café` },
-      { property: "og:description", content: "Live availability, pricing, tournaments and more." },
-    ],
-  }),
+  head: ({ params, loaderData }) => {
+    const cafe = (loaderData as any)?.cafe;
+    const page = (loaderData as any)?.page;
+    const name = cafe?.name || params.slug;
+    const city = cafe?.city ? `, ${cafe.city}` : "";
+    const desc =
+      page?.tagline ||
+      page?.about ||
+      `Book PCs, consoles, snacks and tournaments at ${name}${city}.`;
+    const img = page?.cover_url || page?.logo_url || undefined;
+    const url = `https://codecade.lovable.app/c/${params.slug}`;
+    const ld = {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      name,
+      description: desc,
+      url,
+      ...(img ? { image: img } : {}),
+      ...(cafe?.address ? { address: { "@type": "PostalAddress", streetAddress: cafe.address, addressLocality: cafe.city } } : {}),
+      ...(cafe?.phone ? { telephone: cafe.phone } : {}),
+    };
+    return {
+      meta: [
+        { title: `${name} — Gaming Café · CoreCade` },
+        { name: "description", content: desc },
+        { property: "og:title", content: `${name} — Gaming Café` },
+        { property: "og:description", content: desc },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: url },
+        ...(img ? [{ property: "og:image", content: img }] : []),
+        { name: "twitter:card", content: img ? "summary_large_image" : "summary" },
+        { name: "twitter:title", content: `${name} — Gaming Café` },
+        { name: "twitter:description", content: desc },
+        ...(img ? [{ name: "twitter:image", content: img }] : []),
+      ],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [{ type: "application/ld+json", children: JSON.stringify(ld) }],
+    };
+  },
   component: PublicCafePage,
   loader: async ({ params, context }) => {
     return context.queryClient.ensureQueryData({
