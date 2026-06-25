@@ -32,24 +32,44 @@ Lovable → top-right **GitHub** button → Connect & push.
 
 ### 4. Environment variables (Settings → Variables and Secrets)
 
+From Supabase → **Project Settings → API Keys**, use the keys like this:
+
+| Your screenshot mark | Supabase key | Put in Cloudflare as | Type |
+|---|---|---|---|
+| **1** | New **Publishable key** (`sb_publishable_...`) | `VITE_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_PUBLISHABLE_KEY` | Variable |
+| **2** | New **Secret key** (`sb_secret_...`) | Do **not** use for this app's admin Data API calls | — |
+| **3** | Legacy **anon public JWT** (`eyJ...`, row `anon public`) | `VITE_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY` only if you are not using the publishable key | Variable |
+| **4** | Legacy **service_role secret JWT** (`eyJ...`, row `service_role secret`) | `EXTERNAL_SUPABASE_SERVICE_ROLE_KEY` and/or `SUPABASE_SERVICE_ROLE_KEY` | Secret |
+
+For this codebase, the most reliable setup is:
+
 **Build-time (Production + Preview):**
 ```
 NODE_VERSION = 20
 VITE_SUPABASE_URL          = https://nggaiqniweggifcjtoio.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY = <your publishable/anon key>
+VITE_SUPABASE_PUBLISHABLE_KEY = <mark 1: sb_publishable_...>
 ```
 
 **Runtime secrets (mark as "Secret"):**
 ```
 SUPABASE_URL               = https://nggaiqniweggifcjtoio.supabase.co
-SUPABASE_PUBLISHABLE_KEY   = <same as VITE_SUPABASE_PUBLISHABLE_KEY>
-SUPABASE_SERVICE_ROLE_KEY  = <service_role key from Supabase Settings → API>
+SUPABASE_PUBLISHABLE_KEY   = <mark 1: sb_publishable_...>
+EXTERNAL_SUPABASE_SERVICE_ROLE_KEY = <mark 4: legacy service_role JWT, starts eyJ...>
+SUPABASE_SERVICE_ROLE_KEY  = <same as EXTERNAL_SUPABASE_SERVICE_ROLE_KEY, optional fallback>
 RAZORPAY_KEY_ID            = <live key id>
 RAZORPAY_KEY_SECRET        = <live key secret>
 ```
 
-> ⚠️ Never expose `SUPABASE_SERVICE_ROLE_KEY` or `RAZORPAY_KEY_SECRET` as
-> a `VITE_*` variable. They must stay server-only.
+> ⚠️ Never expose `EXTERNAL_SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+> mark **2**, mark **4**, or `RAZORPAY_KEY_SECRET` as a `VITE_*` variable.
+> They must stay server-only.
+
+> Important: if your Cloudflare screenshot shows `NEXT_PUBLIC_SUPABASE_URL`, that
+> is a Next.js name and is not needed by this TanStack/Vite app. Keep
+> `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for browser build data.
+
+After changing variables, go to **Deployments → Retry deployment / Redeploy**.
+Old deployments keep the old env, so data will not appear until a fresh deploy finishes.
 
 ### 5. Compatibility flags
 Settings → Functions → **Compatibility flags** → add `nodejs_compat` for
