@@ -23,8 +23,6 @@ not_found_handling = "single-page-application"
 # ----------------------------------------------------------------------------
 # Production overrides (optional)
 # ----------------------------------------------------------------------------
-[env.production]
-name = "corecade"
 
 [observability]
 enabled = true
