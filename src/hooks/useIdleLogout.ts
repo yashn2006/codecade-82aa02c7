@@ -37,9 +37,9 @@ export function useIdleLogout(timeoutMs = 30 * 60 * 1000) {
       if (e.key === STORAGE_KEY) schedule();
     };
 
-    const events: (keyof WindowEventMap)[] = [
+    const events = [
       "mousemove", "mousedown", "keydown", "touchstart", "scroll", "visibilitychange",
-    ];
+    ] as const;
     events.forEach((ev) => window.addEventListener(ev, bump, { passive: true }));
     window.addEventListener("storage", onStorage);
     schedule();
