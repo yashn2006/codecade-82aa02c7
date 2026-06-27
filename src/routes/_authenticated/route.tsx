@@ -1,5 +1,11 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { getSupabaseUserReady } from "@/lib/auth-routing";
+import { useIdleLogout } from "@/hooks/useIdleLogout";
+
+function AuthenticatedLayout() {
+  useIdleLogout(30 * 60 * 1000);
+  return <Outlet />;
+}
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -8,5 +14,5 @@ export const Route = createFileRoute("/_authenticated")({
     if (!user) throw redirect({ to: "/auth" });
     return { user };
   },
-  component: () => <Outlet />,
+  component: AuthenticatedLayout,
 });

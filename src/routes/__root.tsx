@@ -82,22 +82,45 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
+  const message = error?.message || String(error);
+  const isAuthIssue = /supabase|fetch|network|auth|jwt|unauthorized/i.test(message);
+
+  const handleHardReset = async () => {
+    try { await supabase.auth.signOut(); } catch {}
+    try {
+      if (typeof window !== "undefined") {
+        Object.keys(window.localStorage)
+          .filter((k) => k.startsWith("sb-"))
+          .forEach((k) => window.localStorage.removeItem(k));
+      }
+    } catch {}
+    if (typeof window !== "undefined") window.location.replace("/auth");
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
+      <div className="max-w-lg text-center">
         <h1 className="text-xl font-semibold tracking-tight">Something glitched</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          We hit an unexpected error. Try again or head home.
+          {isAuthIssue
+            ? "We couldn't reach Supabase from this deployment. Your sign-in session may be stale."
+            : "We hit an unexpected error. Try again or head home."}
         </p>
+        <pre className="mt-3 max-h-40 overflow-auto rounded-md border border-border bg-muted/30 p-3 text-left text-[11px] leading-relaxed text-muted-foreground">
+          {message}
+        </pre>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
+            onClick={() => { router.invalidate(); reset(); }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
           >
             Try again
+          </button>
+          <button
+            onClick={handleHardReset}
+            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium transition hover:bg-secondary"
+          >
+            Clear session & sign in
           </button>
           <a
             href="/"
