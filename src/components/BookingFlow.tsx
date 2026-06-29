@@ -113,8 +113,6 @@ export function BookingFlow({
 
   const paymentMethod = "pay_at_cafe" as const;
 
-  const createOrderFn = useServerFn(createBookingOrder);
-  const verifyPayFn = useServerFn(verifyBookingPayment);
 
   const finishSuccess = () => {
     setBurst(true);
