@@ -11,32 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ParticleField } from "@/components/ParticleField";
 import { getCafeDevicesPublic, getDeviceSchedule, customerBookDevice } from "@/lib/portal.functions";
-import { createBookingOrder, verifyBookingPayment } from "@/lib/razorpay.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-type RzpOptions = {
-  key: string; amount: number; currency: string; order_id: string;
-  name: string; description: string;
-  handler: (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void;
-  prefill?: { name?: string; email?: string; contact?: string };
-  modal?: { ondismiss?: () => void };
-  theme?: { color?: string };
-};
-type RzpCtor = new (o: RzpOptions) => { open: () => void };
-declare global { interface Window { Razorpay?: RzpCtor } }
-
-function loadRazorpay(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") return resolve(false);
-    if (window.Razorpay) return resolve(true);
-    const s = document.createElement("script");
-    s.src = "https://checkout.razorpay.com/v1/checkout.js";
-    s.onload = () => resolve(!!window.Razorpay);
-    s.onerror = () => resolve(false);
-    document.body.appendChild(s);
-  });
-}
 
 type Device = { id: string; name: string; type: string; hourly_rate: number; status: string };
 type Cafe = { id: string; name: string; city?: string | null };
