@@ -152,55 +152,7 @@ export function BookingFlow({
 
   const book = useMutation({
     mutationFn: bookFn,
-    onSuccess: async (row) => {
-      if (paymentMethod !== "pay_online") {
-        finishSuccess();
-        return;
-      }
-      try {
-        const ok = await loadRazorpay();
-        if (!ok || !window.Razorpay) throw new Error("Could not load Razorpay");
-        const order = await createOrderFn({ data: { booking_id: (row as { id: string }).id } });
-        // Close the booking dialog FIRST so Radix releases pointer-events / focus trap,
-        // otherwise the Razorpay checkout overlay is unclickable.
-        onOpenChange(false);
-        // Wait a tick for Radix to fully unmount before opening Razorpay's overlay.
-        await new Promise((r) => setTimeout(r, 60));
-        const rzp = new window.Razorpay({
-          key: order.key_id,
-          amount: order.amount * 100,
-          currency: order.currency,
-          order_id: order.order_id,
-          name: cafe.name,
-          description: `Booking · ${device?.name ?? ""}`,
-          theme: { color: "#e94db1" },
-          handler: async (resp) => {
-            try {
-              await verifyPayFn({
-                data: {
-                  booking_id: order.booking_id,
-                  razorpay_order_id: resp.razorpay_order_id,
-                  razorpay_payment_id: resp.razorpay_payment_id,
-                  razorpay_signature: resp.razorpay_signature,
-                },
-              });
-              setBurst(true);
-              setTimeout(() => {
-                toast.success("Payment received! Booking confirmed.");
-                onBooked?.();
-                reset();
-              }, 400);
-            } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Payment verification failed");
-            }
-          },
-          modal: { ondismiss: () => toast("Payment cancelled — booking still pending. Pay from My Bookings.") },
-        });
-        rzp.open();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Payment failed to start");
-      }
-    },
+    onSuccess: () => { finishSuccess(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Booking failed"),
   });
 
@@ -697,7 +649,7 @@ export function BookingFlow({
                   className="shadow-[0_0_30px_-2px_oklch(0.7_0.26_335/0.9)]"
                 >
                   <Sparkles className="h-4 w-4" />
-                  {book.isPending ? "Locking it in…" : paymentMethod === "pay_online" ? `Pay ₹${cost} & lock` : "Confirm & lock"}
+                  {book.isPending ? "Locking it in…" : "Confirm & lock"}
                 </Button>
               </motion.div>
             )}
