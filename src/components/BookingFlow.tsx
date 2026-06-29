@@ -11,32 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ParticleField } from "@/components/ParticleField";
 import { getCafeDevicesPublic, getDeviceSchedule, customerBookDevice } from "@/lib/portal.functions";
-import { createBookingOrder, verifyBookingPayment } from "@/lib/razorpay.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-type RzpOptions = {
-  key: string; amount: number; currency: string; order_id: string;
-  name: string; description: string;
-  handler: (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void;
-  prefill?: { name?: string; email?: string; contact?: string };
-  modal?: { ondismiss?: () => void };
-  theme?: { color?: string };
-};
-type RzpCtor = new (o: RzpOptions) => { open: () => void };
-declare global { interface Window { Razorpay?: RzpCtor } }
-
-function loadRazorpay(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined") return resolve(false);
-    if (window.Razorpay) return resolve(true);
-    const s = document.createElement("script");
-    s.src = "https://checkout.razorpay.com/v1/checkout.js";
-    s.onload = () => resolve(!!window.Razorpay);
-    s.onerror = () => resolve(false);
-    document.body.appendChild(s);
-  });
-}
 
 type Device = { id: string; name: string; type: string; hourly_rate: number; status: string };
 type Cafe = { id: string; name: string; city?: string | null };
@@ -135,10 +111,8 @@ export function BookingFlow({
     enabled: open && step >= 2,
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<"pay_online" | "pay_at_cafe">("pay_at_cafe");
+  const paymentMethod = "pay_at_cafe" as const;
 
-  const createOrderFn = useServerFn(createBookingOrder);
-  const verifyPayFn = useServerFn(verifyBookingPayment);
 
   const finishSuccess = () => {
     setBurst(true);
@@ -152,61 +126,12 @@ export function BookingFlow({
 
   const book = useMutation({
     mutationFn: bookFn,
-    onSuccess: async (row) => {
-      if (paymentMethod !== "pay_online") {
-        finishSuccess();
-        return;
-      }
-      try {
-        const ok = await loadRazorpay();
-        if (!ok || !window.Razorpay) throw new Error("Could not load Razorpay");
-        const order = await createOrderFn({ data: { booking_id: (row as { id: string }).id } });
-        // Close the booking dialog FIRST so Radix releases pointer-events / focus trap,
-        // otherwise the Razorpay checkout overlay is unclickable.
-        onOpenChange(false);
-        // Wait a tick for Radix to fully unmount before opening Razorpay's overlay.
-        await new Promise((r) => setTimeout(r, 60));
-        const rzp = new window.Razorpay({
-          key: order.key_id,
-          amount: order.amount * 100,
-          currency: order.currency,
-          order_id: order.order_id,
-          name: cafe.name,
-          description: `Booking · ${device?.name ?? ""}`,
-          theme: { color: "#e94db1" },
-          handler: async (resp) => {
-            try {
-              await verifyPayFn({
-                data: {
-                  booking_id: order.booking_id,
-                  razorpay_order_id: resp.razorpay_order_id,
-                  razorpay_payment_id: resp.razorpay_payment_id,
-                  razorpay_signature: resp.razorpay_signature,
-                },
-              });
-              setBurst(true);
-              setTimeout(() => {
-                toast.success("Payment received! Booking confirmed.");
-                onBooked?.();
-                reset();
-              }, 400);
-            } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Payment verification failed");
-            }
-          },
-          modal: { ondismiss: () => toast("Payment cancelled — booking still pending. Pay from My Bookings.") },
-        });
-        rzp.open();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Payment failed to start");
-      }
-    },
+    onSuccess: () => { finishSuccess(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Booking failed"),
   });
 
   const reset = () => {
     setStep(0); setDevice(null); setTime(null); setDuration(60); setDate(new Date()); setBurst(false);
-    setPaymentMethod("pay_at_cafe");
   };
 
   const slots = useMemo(() => {
@@ -648,39 +573,15 @@ export function BookingFlow({
                       <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-background" />
                     </div>
 
-                    {/* Payment method selector */}
-                    <div>
-                      <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-white/50">Payment method</div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {([
-                          { id: "pay_online", title: "Pay online now", sub: "UPI · Card · Wallet · Razorpay" },
-                          { id: "pay_at_cafe", title: "Pay at café", sub: "Cash / card / UPI on arrival" },
-                        ] as const).map((opt) => {
-                          const sel = paymentMethod === opt.id;
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => setPaymentMethod(opt.id)}
-                              className={cn(
-                                "rounded-2xl border p-3 text-left transition-all",
-                                sel
-                                  ? "border-primary bg-primary/15 shadow-[0_0_24px_-6px_oklch(0.7_0.26_335/0.8)]"
-                                  : "border-white/10 bg-white/5 hover:border-primary/40 hover:bg-white/10",
-                              )}
-                            >
-                              <div className="font-display text-sm font-bold text-white">{opt.title}</div>
-                              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/50">{opt.sub}</div>
-                            </button>
-                          );
-                        })}
+                    <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-center">
+                      <div className="font-display text-base font-bold text-emerald-200">Pay at the café counter</div>
+                      <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-100/70">
+                        Cash · Card · UPI on arrival
                       </div>
                     </div>
 
                     <p className="text-center text-xs text-white/50">
-                      {paymentMethod === "pay_online"
-                        ? "You'll be charged ₹" + cost + " securely via Razorpay. Booking auto-confirms on payment."
-                        : <>Your booking starts <Badge variant="secondary" className="mx-1 bg-white/10">pending</Badge> until the café confirms · Free cancellation anytime</>}
+                      Your booking starts <Badge variant="secondary" className="mx-1 bg-white/10">pending</Badge> until the café confirms · Free cancellation anytime
                     </p>
                   </div>
                 )}
@@ -722,7 +623,7 @@ export function BookingFlow({
                   className="shadow-[0_0_30px_-2px_oklch(0.7_0.26_335/0.9)]"
                 >
                   <Sparkles className="h-4 w-4" />
-                  {book.isPending ? "Locking it in…" : paymentMethod === "pay_online" ? `Pay ₹${cost} & lock` : "Confirm & lock"}
+                  {book.isPending ? "Locking it in…" : "Confirm & lock"}
                 </Button>
               </motion.div>
             )}

@@ -13,6 +13,7 @@ import {
 import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import corecadeLogo from "@/assets/corecade-logo.png.asset.json";
 
 export const Route = createFileRoute("/discover")({
@@ -68,19 +69,21 @@ function DiscoverPage() {
     });
   }, [cafes, query, city]);
 
+  const isMobile = useIsMobile();
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#04030c] text-white antialiased selection:bg-fuchsia-500/40 selection:text-white">
-      <NeonCursor />
-      <NebulaCanvas />
-      <GrainOverlay />
+      {!isMobile && <NeonCursor />}
+      {!isMobile && <NebulaCanvas />}
+      {!isMobile && <GrainOverlay />}
       <ScrollProgress />
       <Navbar signedIn={signedIn} email={email} />
 
       <CinematicHero query={query} setQuery={setQuery} cities={cities} city={city} setCity={setCity} cafes={cafes} />
-      <MarqueeStrip />
-      <PinnedManifesto />
+      {!isMobile && <MarqueeStrip />}
+      {!isMobile && <PinnedManifesto />}
       <ArenaShowcase cafes={filtered} loading={!cafes.length} />
-      <ParallaxStats />
+      {!isMobile && <ParallaxStats />}
       <RitualSection />
       <PerksSection />
       <FinalCTA />
@@ -93,7 +96,6 @@ function DiscoverPage() {
    NEON CURSOR (desktop only)
 ================================================================= */
 function NeonCursor() {
-  if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px), (pointer: coarse)").matches) return null;
   const x = useMotionValue(-200);
   const y = useMotionValue(-200);
   const sx = useSpring(x, { stiffness: 350, damping: 30, mass: 0.4 });
@@ -146,7 +148,7 @@ function NeonCursor() {
 ================================================================= */
 function NebulaCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
-  const isMobileLike = typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  const isMobileLike = false;
   useEffect(() => {
     if (isMobileLike) return;
     const c = ref.current; if (!c) return;
