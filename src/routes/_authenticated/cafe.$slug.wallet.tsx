@@ -18,7 +18,8 @@ import {
 import { toast } from "sonner";
 import { PrintableStatement, type StatementTx } from "@/components/PrintableStatement";
 
-// Razorpay window type is declared once in src/components/BookingFlow.tsx
+type RzpOpts = { key: string; amount: number; currency: string; order_id: string; name: string; description: string; handler: (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void; prefill?: { name?: string; email?: string; contact?: string }; modal?: { ondismiss?: () => void }; theme?: { color?: string } };
+declare global { interface Window { Razorpay?: new (o: RzpOpts) => { open: () => void } } }
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
