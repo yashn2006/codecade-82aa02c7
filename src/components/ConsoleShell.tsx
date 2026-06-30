@@ -210,55 +210,100 @@ export function ConsoleShell({
           </main>
 
 
-          {/* === Mobile bottom nav === */}
-          <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border/70 bg-card/90 backdrop-blur-xl lg:hidden">
-            {bottomNav.map((item) => {
-              const active = isActive(item);
-              return (
-                <Link
-                  key={item.label}
-                  to={item.to}
-                  params={item.params}
-                  className={`relative flex flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition ${
-                    active ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="mob-nav-pill"
-                      className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-primary shadow-[0_0_8px_currentColor]"
-                    />
-                  )}
-                  <item.icon className="h-4 w-4" />
-                  <span className="truncate px-1">{item.label.split(" ")[0]}</span>
-                </Link>
-              );
-            })}
+          {/* === iOS-grade mobile bottom nav === */}
+          <nav
+            className="fixed inset-x-0 bottom-0 z-30 lg:hidden"
+            style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
+            aria-label="Primary"
+          >
+            <div className="mx-3 mb-2 overflow-hidden rounded-[28px] border border-white/10 bg-card/60 shadow-[0_18px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur-2xl supports-[backdrop-filter]:bg-card/40">
+              <div className={`relative grid ${hasOverflow ? "grid-cols-5" : "grid-cols-4"}`}>
+                {primaryNav.map((item) => {
+                  const active = isActive(item);
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.to}
+                      params={item.params}
+                      className="relative isolate flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium tracking-wide transition active:scale-95"
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="mob-nav-pill"
+                          className="absolute inset-x-2 inset-y-1 -z-10 rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]"
+                          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                        />
+                      )}
+                      <item.icon className={`h-[18px] w-[18px] transition ${active ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className={`truncate px-1 ${active ? "text-primary" : "text-muted-foreground"}`}>
+                        {item.label.split(" ")[0]}
+                      </span>
+                    </Link>
+                  );
+                })}
+                {hasOverflow && (
+                  <button
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    className="relative isolate flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium tracking-wide transition active:scale-95"
+                    aria-label="More menu"
+                  >
+                    {moreActive && (
+                      <motion.span
+                        layoutId="mob-nav-pill"
+                        className="absolute inset-x-2 inset-y-1 -z-10 rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]"
+                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                      />
+                    )}
+                    <Menu className={`h-[18px] w-[18px] transition ${moreActive ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={moreActive ? "text-primary" : "text-muted-foreground"}>More</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </nav>
         </div>
       </div>
 
-      {/* === Mobile drawer (full nav) === */}
+      {/* === iOS-style "More" full-screen sheet === */}
       <AnimatePresence>
         {open && (
           <>
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={() => setOpen(false)}
-              className="fixed inset-0 z-40 bg-ink/40 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-ink/60 backdrop-blur-md lg:hidden"
             />
             <motion.aside
-              initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
-              transition={{ type: "spring", stiffness: 320, damping: 32 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-card shadow-pop lg:hidden"
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 360, damping: 36 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.4 }}
+              onDragEnd={(_, info) => { if (info.offset.y > 120) setOpen(false); }}
+              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-card/95 shadow-[0_-30px_80px_-20px_rgba(0,0,0,0.7)] backdrop-blur-2xl lg:hidden"
+              style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)" }}
+              aria-label="More navigation"
             >
-              <div className="flex h-14 items-center justify-between border-b border-border/70 px-4">
-                <BrandLockup size={24} badge={badge} />
-                <button onClick={() => setOpen(false)} className="rounded-lg p-2 hover:bg-secondary" aria-label="Close">
+              <div className="flex justify-center pt-2.5">
+                <span className="h-1.5 w-12 rounded-full bg-white/20" />
+              </div>
+              <div className="flex items-center justify-between px-5 pb-3 pt-4">
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">{badge}</div>
+                  <div className="font-display text-xl font-extrabold">Menu</div>
+                </div>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="rounded-full bg-secondary/60 p-2 text-muted-foreground transition active:scale-90"
+                  aria-label="Close"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+              <div className="grid flex-1 grid-cols-3 gap-2.5 overflow-y-auto px-4 pb-4">
                 {safeNav.map((item) => {
                   const active = isActive(item);
                   return (
@@ -267,16 +312,20 @@ export function ConsoleShell({
                       to={item.to}
                       params={item.params}
                       onClick={() => setOpen(false)}
-                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                        active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      className={`group flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border p-3 text-center transition active:scale-95 ${
+                        active
+                          ? "border-primary/50 bg-primary/15 text-primary shadow-[0_0_28px_-8px_oklch(0.72_0.26_330/0.7)]"
+                          : "border-white/10 bg-background/40 text-foreground hover:border-primary/30"
                       }`}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
+                      <div className={`grid h-10 w-10 place-items-center rounded-xl ${active ? "bg-primary/20" : "bg-secondary/60"}`}>
+                        <item.icon className={`h-5 w-5 ${active ? "text-primary" : "text-foreground"}`} />
+                      </div>
+                      <span className="line-clamp-2 text-[11px] font-medium leading-tight">{item.label}</span>
                     </Link>
                   );
                 })}
-              </nav>
+              </div>
             </motion.aside>
           </>
         )}
