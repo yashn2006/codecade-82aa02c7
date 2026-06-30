@@ -58,8 +58,12 @@ export function ConsoleShell({
     return item.exact ? path === target : path === target || path.startsWith(target + "/");
   };
 
-  // Top 5 nav items for mobile bottom bar
-  const bottomNav = safeNav.slice(0, 5);
+  // iOS-style bottom nav: 4 primary tabs + "More" pill if there are extras
+  const PRIMARY_COUNT = 4;
+  const primaryNav = safeNav.slice(0, PRIMARY_COUNT);
+  const overflowNav = safeNav.slice(PRIMARY_COUNT);
+  const hasOverflow = overflowNav.length > 0;
+  const moreActive = overflowNav.some(isActive);
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
@@ -135,23 +139,14 @@ export function ConsoleShell({
             <NotificationBell />
           </header>
 
-          {/* Mobile top bar */}
-          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/70 bg-background/80 px-3 backdrop-blur-xl lg:hidden">
-            <div className="flex items-center gap-2">
-              <button
-                className="rounded-lg p-2 hover:bg-secondary"
-                onClick={() => setOpen(true)}
-                aria-label="Open menu"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <BrandLockup size={24} badge={badge} />
-            </div>
+          {/* Mobile top bar — clean: logo + bell. Nav lives in the bottom bar. */}
+          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/40 bg-background/70 px-4 backdrop-blur-2xl lg:hidden">
+            <BrandLockup size={22} badge={badge} />
             <div className="flex items-center gap-1">
               <NotificationBell />
               <button
                 onClick={signOut}
-                className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                className="rounded-full p-2 text-muted-foreground transition active:scale-90 hover:bg-secondary"
                 aria-label="Sign out"
               >
                 <LogOut className="h-4 w-4" />
