@@ -10,7 +10,14 @@ export const getRouter = () => {
         staleTime: 30_000,
         gcTime: 5 * 60_000,
         refetchOnWindowFocus: false,
-        retry: 1,
+        // ALWAYS refetch on mount — fixes "dashboard empty until I navigate away"
+        // bug where the first fetch happens before the Supabase bearer token is
+        // attached and silently errors, then the cached error/empty state sticks.
+        refetchOnMount: "always",
+        refetchOnReconnect: true,
+        // Retry transient auth races (bearer not yet attached on first paint)
+        retry: 2,
+        retryDelay: (attempt) => Math.min(400 * 2 ** attempt, 2000),
       },
     },
   });

@@ -6,11 +6,15 @@ export type DashboardPath = "/admin" | "/owner" | "/portal";
 const SUPER_ADMIN_EMAILS = ["giganexa2026@gmail.com", "yashnandi77@gmail.com"];
 
 export async function getSupabaseUserReady(timeoutMs = 1600): Promise<User | null> {
+  // CRITICAL: require an access_token, not just a user. The bearer-attacher
+  // middleware reads getSession() per server-fn call; if we let the route
+  // render before the token is hydrated, the first wave of dashboard queries
+  // fires unauthenticated, errors silently, and the cached empty state sticks
+  // until the user navigates away and back. Wait for the real token here.
   const { data: sessionData } = await supabase.auth.getSession();
-  if (sessionData.session?.user) return sessionData.session.user;
-
-  const { data: userData } = await supabase.auth.getUser();
-  if (userData.user) return userData.user;
+  if (sessionData.session?.access_token && sessionData.session.user) {
+    return sessionData.session.user;
+  }
 
   if (typeof window === "undefined") return null;
 
@@ -26,9 +30,14 @@ export async function getSupabaseUserReady(timeoutMs = 1600): Promise<User | nul
       resolve(user);
     };
 
-    const timer = window.setTimeout(() => finish(null), timeoutMs);
+    const timer = window.setTimeout(async () => {
+      // Last-ditch: ask Supabase to validate whatever's in storage.
+      const { data } = await supabase.auth.getUser();
+      finish(data.user ?? null);
+    }, timeoutMs);
+
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      finish(session?.user ?? null);
+      if (session?.access_token && session.user) finish(session.user);
     });
     subscription = data.subscription;
   });
