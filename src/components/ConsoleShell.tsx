@@ -274,13 +274,9 @@ export function ConsoleShell({
             />
             <motion.aside
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 360, damping: 36 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0, bottom: 0.4 }}
-              onDragEnd={(_, info) => { if (info.offset.y > 120) setOpen(false); }}
+              transition={{ type: "spring", stiffness: 420, damping: 38, mass: 0.7 }}
               className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-card/95 shadow-[0_-30px_80px_-20px_rgba(0,0,0,0.7)] backdrop-blur-2xl lg:hidden"
-              style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)" }}
+              style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)", willChange: "transform" }}
               aria-label="More navigation"
             >
               <div className="flex justify-center pt-2.5">
