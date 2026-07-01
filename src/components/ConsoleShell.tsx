@@ -245,16 +245,12 @@ export function ConsoleShell({
                 {hasOverflow && (
                   <button
                     type="button"
-                    onClick={() => setOpen(true)}
+                    onPointerDown={() => setOpen(true)}
                     className="relative isolate flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium tracking-wide transition active:scale-95"
                     aria-label="More menu"
                   >
                     {moreActive && (
-                      <motion.span
-                        layoutId="mob-nav-pill"
-                        className="absolute inset-x-2 inset-y-1 -z-10 rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]"
-                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                      />
+                      <span className="absolute inset-x-2 inset-y-1 -z-10 rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]" />
                     )}
                     <Menu className={`h-[18px] w-[18px] transition ${moreActive ? "text-primary" : "text-muted-foreground"}`} />
                     <span className={moreActive ? "text-primary" : "text-muted-foreground"}>More</span>
