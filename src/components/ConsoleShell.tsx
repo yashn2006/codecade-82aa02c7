@@ -195,13 +195,13 @@ export function ConsoleShell({
                 </div>
               </div>
             </motion.div>
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
                 key={path}
-                initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: -6, filter: "blur(4px)" }}
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                 className="mt-6"
               >
                 {children}
@@ -231,8 +231,8 @@ export function ConsoleShell({
                       {active && (
                         <motion.span
                           layoutId="mob-nav-pill"
-                          className="absolute inset-x-2 inset-y-1 -z-10 rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]"
-                          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                          className="pointer-events-none absolute inset-x-2 inset-y-1 -z-10 rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]"
+                          transition={{ type: "spring", stiffness: 500, damping: 38 }}
                         />
                       )}
                       <item.icon className={`h-[18px] w-[18px] transition ${active ? "text-primary" : "text-muted-foreground"}`} />
