@@ -9,10 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as RedirectingRouteImport } from './routes/redirecting'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -59,6 +62,11 @@ import { Route as AuthenticatedCafeSlugAuditRouteImport } from './routes/_authen
 import { Route as AuthenticatedCafeSlugAnalyticsRouteImport } from './routes/_authenticated/cafe.$slug.analytics'
 import { Route as AuthenticatedCafeSlugTournamentsIdRouteImport } from './routes/_authenticated/cafe.$slug.tournaments.$id'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -74,9 +82,19 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RefundPolicyRoute = RefundPolicyRouteImport.update({
+  id: '/refund-policy',
+  path: '/refund-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RedirectingRoute = RedirectingRouteImport.update({
   id: '/redirecting',
   path: '/redirecting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -336,10 +354,13 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
@@ -386,10 +407,13 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
@@ -436,10 +460,13 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/owner': typeof AuthenticatedOwnerRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
@@ -488,10 +515,13 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/login'
+    | '/privacy'
     | '/redirecting'
+    | '/refund-policy'
     | '/reset-password'
     | '/setup'
     | '/signup'
+    | '/terms'
     | '/admin'
     | '/owner'
     | '/portal'
@@ -538,10 +568,13 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/login'
+    | '/privacy'
     | '/redirecting'
+    | '/refund-policy'
     | '/reset-password'
     | '/setup'
     | '/signup'
+    | '/terms'
     | '/owner'
     | '/portal'
     | '/api/sitemap.xml'
@@ -587,10 +620,13 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/login'
+    | '/privacy'
     | '/redirecting'
+    | '/refund-policy'
     | '/reset-password'
     | '/setup'
     | '/signup'
+    | '/terms'
     | '/_authenticated/admin'
     | '/_authenticated/owner'
     | '/_authenticated/portal'
@@ -639,16 +675,26 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DiscoverRoute: typeof DiscoverRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   RedirectingRoute: typeof RedirectingRoute
+  RefundPolicyRoute: typeof RefundPolicyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SetupRoute: typeof SetupRoute
   SignupRoute: typeof SignupRoute
+  TermsRoute: typeof TermsRoute
   ApiSitemapDotxmlRoute: typeof ApiSitemapDotxmlRoute
   CSlugRoute: typeof CSlugRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -670,11 +716,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/refund-policy': {
+      id: '/refund-policy'
+      path: '/refund-policy'
+      fullPath: '/refund-policy'
+      preLoaderRoute: typeof RefundPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/redirecting': {
       id: '/redirecting'
       path: '/redirecting'
       fullPath: '/redirecting'
       preLoaderRoute: typeof RedirectingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1128,10 +1188,13 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DiscoverRoute: DiscoverRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   RedirectingRoute: RedirectingRoute,
+  RefundPolicyRoute: RefundPolicyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SetupRoute: SetupRoute,
   SignupRoute: SignupRoute,
+  TermsRoute: TermsRoute,
   ApiSitemapDotxmlRoute: ApiSitemapDotxmlRoute,
   CSlugRoute: CSlugRouteWithChildren,
 }
