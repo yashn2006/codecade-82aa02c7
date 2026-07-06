@@ -38,6 +38,12 @@ function CafeLayout() {
   });
 
   const restricted = !!(cafe as { restricted_message?: string | null } | undefined)?.restricted_message;
+  const sub = (cafe as { subscription_status?: string | null; trial_ends_at?: string | null } | undefined);
+  const trialEnded = !!(sub?.trial_ends_at && new Date(sub.trial_ends_at).getTime() < Date.now() && sub?.subscription_status !== "active");
+  const locked = restricted || trialEnded;
+  const lockMessage = restricted
+    ? ((cafe as { restricted_message?: string }).restricted_message ?? "")
+    : "Your free trial has ended. Renew your subscription to continue managing this café.";
   const cafeMaint = cafe ? {
     starts_at: (cafe as { maintenance_starts_at?: string | null }).maintenance_starts_at ?? null,
     ends_at: (cafe as { maintenance_ends_at?: string | null }).maintenance_ends_at ?? null,
