@@ -106,8 +106,8 @@ function CafeLayout() {
           </div>
         )}
       </div>
-      {restricted ? <RestrictedOverlay message={(cafe as { restricted_message?: string }).restricted_message ?? ""} /> : null}
-      <div className={restricted ? "pointer-events-none select-none opacity-30 blur-[2px]" : ""} aria-hidden={restricted}>
+      {locked ? <RestrictedOverlay message={lockMessage} trial={trialEnded && !restricted} /> : null}
+      <div className={locked ? "pointer-events-none select-none opacity-30 blur-[2px]" : ""} aria-hidden={locked}>
         <Outlet />
       </div>
     </ConsoleShell>
