@@ -149,7 +149,7 @@ function BookingsPage() {
                 {(items ?? []).map((b) => {
                   const dep = (b as { deposit_amount?: number; deposit_paid?: boolean });
                   return (
-                    <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur">
+                    <div key={b.id} onClick={(e) => { if ((e.target as HTMLElement).closest("button")) return; setDetail(b as unknown as BookingRow); }} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur cursor-pointer hover:border-primary/40 transition">
                       <div>
                         <div className="font-mono text-xs text-azure">
                           {new Date(b.scheduled_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} · {b.duration_minutes}m
