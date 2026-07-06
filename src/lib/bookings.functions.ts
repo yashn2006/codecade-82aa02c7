@@ -202,6 +202,28 @@ export const cancelBookingWithRefund = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const extendBooking = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), add_minutes: z.number().int().min(5).max(240) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: b, error: e1 } = await context.supabase.from("bookings").select("duration_minutes").eq("id", data.id).single();
+    if (e1) throw new Error(e1.message);
+    const next = (b?.duration_minutes ?? 0) + data.add_minutes;
+    const { error } = await context.supabase.from("bookings").update({ duration_minutes: next }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true, duration_minutes: next };
+  });
+
+export const endBookingEarly = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("bookings").update({ status: "completed" }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
 export const runNoShowSweep = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
