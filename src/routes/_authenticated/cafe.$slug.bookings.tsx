@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { BookingDetailDialog, type BookingRow } from "@/components/BookingDetailDialog";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/bookings")({
   head: () => ({
