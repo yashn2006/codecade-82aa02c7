@@ -8,14 +8,14 @@ import { ArrowLeft } from "lucide-react";
  * lists (- ...), ordered lists (1. ...), simple GFM tables, **bold**,
  * _italics_, and horizontal rules (---).
  */
-function renderMarkdown(src: string): JSX.Element[] {
+function renderMarkdown(src: string): ReactElement[] {
   const lines = src.replace(/\r\n/g, "\n").split("\n");
-  const out: JSX.Element[] = [];
+  const out: ReactElement[] = [];
   let i = 0;
   let key = 0;
   const inline = (s: string) => {
     // escape then apply bold/italic
-    const parts: (string | JSX.Element)[] = [];
+    const parts: (string | ReactElement)[] = [];
     let rest = s;
     let idx = 0;
     const re = /\*\*(.+?)\*\*|_(.+?)_/g;

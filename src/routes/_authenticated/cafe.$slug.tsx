@@ -38,6 +38,12 @@ function CafeLayout() {
   });
 
   const restricted = !!(cafe as { restricted_message?: string | null } | undefined)?.restricted_message;
+  const sub = (cafe as { subscription_status?: string | null; trial_ends_at?: string | null } | undefined);
+  const trialEnded = !!(sub?.trial_ends_at && new Date(sub.trial_ends_at).getTime() < Date.now() && sub?.subscription_status !== "active");
+  const locked = restricted || trialEnded;
+  const lockMessage = restricted
+    ? ((cafe as { restricted_message?: string }).restricted_message ?? "")
+    : "Your free trial has ended. Renew your subscription to continue managing this café.";
   const cafeMaint = cafe ? {
     starts_at: (cafe as { maintenance_starts_at?: string | null }).maintenance_starts_at ?? null,
     ends_at: (cafe as { maintenance_ends_at?: string | null }).maintenance_ends_at ?? null,
@@ -100,8 +106,8 @@ function CafeLayout() {
           </div>
         )}
       </div>
-      {restricted ? <RestrictedOverlay message={(cafe as { restricted_message?: string }).restricted_message ?? ""} /> : null}
-      <div className={restricted ? "pointer-events-none select-none opacity-30 blur-[2px]" : ""} aria-hidden={restricted}>
+      {locked ? <RestrictedOverlay message={lockMessage} trial={trialEnded && !restricted} /> : null}
+      <div className={locked ? "pointer-events-none select-none opacity-30 blur-[2px]" : ""} aria-hidden={locked}>
         <Outlet />
       </div>
     </ConsoleShell>
@@ -174,7 +180,7 @@ function CafeBreadcrumbs({ slug, cafeName }: { slug: string; cafeName: string | 
   );
 }
 
-function RestrictedOverlay({ message }: { message: string }) {
+function RestrictedOverlay({ message, trial = false }: { message: string; trial?: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -187,10 +193,10 @@ function RestrictedOverlay({ message }: { message: string }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-destructive">
-            Service restricted by CoreCade admin
+            {trial ? "Trial ended" : "Service restricted by CoreCade admin"}
           </div>
           <h2 className="mt-1 font-display text-xl font-extrabold tracking-tight sm:text-2xl">
-            Your café console has been temporarily suspended
+            {trial ? "Your free trial has ended" : "Your café console has been temporarily suspended"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-foreground/80">
             {message}
@@ -199,7 +205,7 @@ function RestrictedOverlay({ message }: { message: string }) {
             to="/portal"
             className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-3 py-1.5 text-xs text-foreground transition hover:border-primary/40"
           >
-            <Mail className="h-3 w-3" /> Contact support to resolve
+            <Mail className="h-3 w-3" /> {trial ? "Renew subscription" : "Contact support to resolve"}
           </Link>
         </div>
       </div>
