@@ -69,6 +69,7 @@ function BookingsPage() {
 
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"list" | "calendar">("list");
+  const [detail, setDetail] = useState<BookingRow | null>(null);
 
   if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
 
