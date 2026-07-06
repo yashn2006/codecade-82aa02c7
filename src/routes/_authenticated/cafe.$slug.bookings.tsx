@@ -208,6 +208,7 @@ function BookingsPage() {
           ))}
         </div>
       )}
+      <BookingDetailDialog booking={detail} open={!!detail} onOpenChange={(o) => !o && setDetail(null)} cafeId={cafeId} />
     </div>
   );
 }
