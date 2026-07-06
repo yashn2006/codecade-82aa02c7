@@ -180,7 +180,7 @@ function CafeBreadcrumbs({ slug, cafeName }: { slug: string; cafeName: string | 
   );
 }
 
-function RestrictedOverlay({ message }: { message: string }) {
+function RestrictedOverlay({ message, trial = false }: { message: string; trial?: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -193,10 +193,10 @@ function RestrictedOverlay({ message }: { message: string }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-destructive">
-            Service restricted by CoreCade admin
+            {trial ? "Trial ended" : "Service restricted by CoreCade admin"}
           </div>
           <h2 className="mt-1 font-display text-xl font-extrabold tracking-tight sm:text-2xl">
-            Your café console has been temporarily suspended
+            {trial ? "Your free trial has ended" : "Your café console has been temporarily suspended"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-foreground/80">
             {message}
@@ -205,7 +205,7 @@ function RestrictedOverlay({ message }: { message: string }) {
             to="/portal"
             className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-3 py-1.5 text-xs text-foreground transition hover:border-primary/40"
           >
-            <Mail className="h-3 w-3" /> Contact support to resolve
+            <Mail className="h-3 w-3" /> {trial ? "Renew subscription" : "Contact support to resolve"}
           </Link>
         </div>
       </div>
