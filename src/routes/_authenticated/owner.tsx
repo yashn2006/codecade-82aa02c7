@@ -286,8 +286,15 @@ function CreateCafeButton() {
 
         <form
           className="space-y-5 px-6 py-5"
+          onKeyDown={(e) => {
+            // Prevent Enter from auto-submitting on earlier steps
+            if (e.key === "Enter" && step < 2 && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+              e.preventDefault();
+            }
+          }}
           onSubmit={(e) => {
             e.preventDefault();
+            if (step !== 2) return; // only submit from final step
             const fd = new FormData(e.currentTarget);
             m.mutate({
               data: {
