@@ -577,65 +577,61 @@ function Stats() {
 }
 
 function Pricing() {
-  const plans = [
-    { name: "Starter", price: "₹999", devices: "10", features: ["POS basics", "Session tracking", "Email support"] },
-    { name: "Pro", price: "₹2,499", devices: "30", features: ["All Starter", "Bookings + memberships", "Analytics dashboard", "Priority support"], featured: true },
-    { name: "Enterprise", price: "₹5,999", devices: "100", features: ["All Pro", "Multi-branch", "White-label portal", "Dedicated manager", "API access"] },
+  const features = [
+    "Unlimited devices & sessions",
+    "Bookings, memberships & POS",
+    "Real-time analytics dashboard",
+    "Priority WhatsApp support",
   ];
   return (
     <section id="pricing" className="relative px-4 py-28 sm:px-6">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-3xl">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
           <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-6xl">
-            Pricing for <span className="text-gradient">India.</span>
+            One price. <span className="text-gradient">Everything in.</span>
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">Pay monthly. Cancel anytime. No setup fees. No surprises.</p>
         </motion.div>
 
-        <div className="mt-14 grid gap-6 md:grid-cols-3">
-          {plans.map((p, i) => (
-            <motion.div
-              key={p.name}
-              initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i} variants={fadeUp}
-              className={`relative rounded-3xl p-7 backdrop-blur transition ${
-                p.featured
-                  ? "border-conic glass-strong glow-violet md:scale-[1.03]"
-                  : "border border-border/60 bg-card/40 hover-lift hover:border-primary/40"
-              }`}
+        <motion.div
+          initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+          className="relative mt-14 overflow-hidden rounded-3xl border-conic glass-strong glow-violet p-8 sm:p-10"
+        >
+          <div className="pointer-events-none absolute inset-0 -translate-x-full animate-[shine_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
+            Launch offer
+          </div>
+          <h3 className="font-heading text-2xl font-bold tracking-tight">CoreCade Pro</h3>
+          <div className="mt-4 flex items-baseline gap-1">
+            <span className="font-display text-6xl font-extrabold tracking-tight animate-[glow_2.5s_ease-in-out_infinite]">₹999</span>
+            <span className="text-sm text-muted-foreground">/mo</span>
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground">For one café · unlimited devices</div>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+            {features.map((f) => (
+              <li key={f} className="flex items-start gap-2 text-sm">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-xs text-muted-foreground">…and many more — bookings, POS, tournaments, wallets, staff roles, exports.</p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link
+              to="/auth"
+              className="inline-flex flex-1 items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+              style={{ background: "var(--gradient-brand-hot)" }}
             >
-              {p.featured && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
-                  Most popular
-                </div>
-              )}
-              <h3 className="font-heading text-2xl font-bold tracking-tight">{p.name}</h3>
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="font-display text-5xl font-extrabold tracking-tight">{p.price}</span>
-                <span className="text-sm text-muted-foreground">/mo</span>
-              </div>
-              <div className="mt-1 text-sm text-muted-foreground">Up to {p.devices} devices</div>
-              <ul className="mt-6 space-y-3">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                to="/auth"
-                className={`mt-8 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                  p.featured
-                    ? "text-primary-foreground hover:opacity-90"
-                    : "border border-border bg-background/40 hover:bg-background/70"
-                }`}
-                style={p.featured ? { background: "var(--gradient-brand-hot)" } : undefined}
-              >
-                Get started
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+              Get started
+            </Link>
+            <Link
+              to="/features"
+              className="inline-flex flex-1 items-center justify-center rounded-xl border border-border bg-background/40 px-4 py-3 text-sm font-semibold transition hover:bg-background/70"
+            >
+              See all features →
+            </Link>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

@@ -17,6 +17,7 @@ import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as RedirectingRouteImport } from './routes/redirecting'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -100,6 +101,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverRoute = DiscoverRouteImport.update({
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
+  '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -406,6 +413,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
+  '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -459,6 +467,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
+  '/features': typeof FeaturesRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -514,6 +523,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/discover'
+    | '/features'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -567,6 +577,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/discover'
+    | '/features'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -619,6 +630,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/discover'
+    | '/features'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -674,6 +686,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   DiscoverRoute: typeof DiscoverRoute
+  FeaturesRoute: typeof FeaturesRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   RedirectingRoute: typeof RedirectingRoute
@@ -742,6 +755,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/discover': {
@@ -1187,6 +1207,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   DiscoverRoute: DiscoverRoute,
+  FeaturesRoute: FeaturesRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RedirectingRoute: RedirectingRoute,
