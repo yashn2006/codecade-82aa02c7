@@ -354,6 +354,34 @@
   .mobile-hide { display: none !important; }
 }
 
+/* ---------- Auth door-walk micro-animation ---------- */
+@keyframes door-walk-figure {
+  0%   { transform: translateX(0);      opacity: 0; }
+  15%  { opacity: 1; }
+  70%  { transform: translateX(56px);   opacity: 1; }
+  85%  { transform: translateX(70px);   opacity: 0; }
+  100% { transform: translateX(70px);   opacity: 0; }
+}
+@keyframes door-walk-panel {
+  0%,55% { transform: rotateY(0deg); }
+  70%    { transform: rotateY(-80deg); }
+  90%    { transform: rotateY(-80deg); }
+  100%   { transform: rotateY(0deg); }
+}
+@keyframes door-walk-leg-l {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-2px); }
+}
+@keyframes door-walk-leg-r {
+  0%,100% { transform: translateY(-2px); }
+  50%     { transform: translateY(0); }
+}
+.door-walk-figure { animation: door-walk-figure 750ms cubic-bezier(0.4,0,0.2,1) forwards; will-change: transform, opacity; }
+.door-walk-panel  { animation: door-walk-panel 750ms cubic-bezier(0.4,0,0.2,1) forwards; will-change: transform; }
+.door-walk-leg-l  { animation: door-walk-leg-l 180ms linear infinite; }
+.door-walk-leg-r  { animation: door-walk-leg-r 180ms linear infinite; }
+
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
