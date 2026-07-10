@@ -26,10 +26,12 @@ type Mode = "signin" | "signup" | "forgot";
 function AuthPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [shake, setShake] = useState(false);
   const redirectingRef = useRef(false);
   const navigate = useNavigate();
+
 
   const routeOnce = async () => {
     if (redirectingRef.current) return;
