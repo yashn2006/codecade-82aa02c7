@@ -305,17 +305,20 @@ function AuthPage() {
                 </div>
               )}
 
-              <MagneticSubmit
-                disabled={loading}
+              <SubmitButton
+                disabled={loading || success}
                 valid={formValid}
+                success={success}
                 onInvalid={() => { triggerShake(); toast.error("Fill the required fields correctly."); }}
                 label={
-                  loading ? "Please wait…"
-                    : mode === "signin" ? "Sign in"
-                      : mode === "signup" ? "Create account"
-                        : "Send reset link"
+                  success ? "Entering…"
+                    : loading ? "Please wait…"
+                      : mode === "signin" ? "Sign in"
+                        : mode === "signup" ? "Create account"
+                          : "Send reset link"
                 }
               />
+
             </form>
 
             <div className="mt-5 text-center text-sm text-muted-foreground">
