@@ -95,11 +95,15 @@ function AuthPage() {
         });
         if (error) throw error;
         toast.success("Account created. Check your email if confirmation is required.");
+        setSuccess(true);
+        await new Promise((r) => setTimeout(r, 750));
         await routeOnce();
       } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back.");
+        setSuccess(true);
+        await new Promise((r) => setTimeout(r, 750));
         await routeOnce();
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -116,6 +120,7 @@ function AuthPage() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
