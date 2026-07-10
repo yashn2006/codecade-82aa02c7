@@ -26,10 +26,12 @@ type Mode = "signin" | "signup" | "forgot";
 function AuthPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [shake, setShake] = useState(false);
   const redirectingRef = useRef(false);
   const navigate = useNavigate();
+
 
   const routeOnce = async () => {
     if (redirectingRef.current) return;
@@ -93,11 +95,15 @@ function AuthPage() {
         });
         if (error) throw error;
         toast.success("Account created. Check your email if confirmation is required.");
+        setSuccess(true);
+        await new Promise((r) => setTimeout(r, 750));
         await routeOnce();
       } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back.");
+        setSuccess(true);
+        await new Promise((r) => setTimeout(r, 750));
         await routeOnce();
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -114,6 +120,7 @@ function AuthPage() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -298,17 +305,20 @@ function AuthPage() {
                 </div>
               )}
 
-              <MagneticSubmit
-                disabled={loading}
+              <SubmitButton
+                disabled={loading || success}
                 valid={formValid}
+                success={success}
                 onInvalid={() => { triggerShake(); toast.error("Fill the required fields correctly."); }}
                 label={
-                  loading ? "Please wait…"
-                    : mode === "signin" ? "Sign in"
-                      : mode === "signup" ? "Create account"
-                        : "Send reset link"
+                  success ? "Entering…"
+                    : loading ? "Please wait…"
+                      : mode === "signin" ? "Sign in"
+                        : mode === "signup" ? "Create account"
+                          : "Send reset link"
                 }
               />
+
             </form>
 
             <div className="mt-5 text-center text-sm text-muted-foreground">
@@ -548,50 +558,12 @@ function PasswordMeter({ value }: { value: string }) {
   );
 }
 
-/* -------------------- Magnetic submit (evades if invalid) -------------------- */
-function MagneticSubmit({
-  label, disabled, valid, onInvalid,
-}: { label: string; disabled: boolean; valid: boolean; onInvalid: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const x = useSpring(mx, { stiffness: 250, damping: 18 });
-  const y = useSpring(my, { stiffness: 250, damping: 18 });
-
-  const handleMove = (e: React.MouseEvent) => {
-    const r = ref.current?.getBoundingClientRect();
-    if (!r || !r.width || !r.height) return;
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
-    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
-
-    if (!valid) {
-      const dist = Math.hypot(dx, dy);
-      const near = dist < 200;
-      if (near) {
-        const push = (200 - dist) * 0.6;
-        const ang = Math.atan2(dy, dx);
-        mx.set(-Math.cos(ang) * push);
-        my.set(-Math.sin(ang) * push);
-      } else {
-        mx.set(0); my.set(0);
-      }
-    } else {
-      mx.set(dx * 0.18);
-      my.set(dy * 0.2);
-    }
-  };
-
+/* -------------------- Static submit with door-walk success animation -------------------- */
+function SubmitButton({
+  label, disabled, valid, success, onInvalid,
+}: { label: string; disabled: boolean; valid: boolean; success: boolean; onInvalid: () => void }) {
   return (
-    <motion.div
-      ref={ref}
-      onMouseMove={handleMove}
-      onMouseLeave={() => { mx.set(0); my.set(0); }}
-      style={{ x, y }}
-      className="relative pt-1"
-    >
+    <div className="relative pt-1">
       <button
         type={valid ? "submit" : "button"}
         onClick={(e) => { if (!valid) { e.preventDefault(); onInvalid(); } }}
@@ -600,17 +572,62 @@ function MagneticSubmit({
         className={`group relative h-12 w-full overflow-hidden rounded-xl text-base font-semibold text-primary-foreground transition ${valid ? "" : "opacity-80"}`}
         style={{ background: "var(--gradient-brand-hot)" }}
       >
-        <span className={`absolute -inset-2 rounded-2xl opacity-70 blur-2xl transition group-hover:opacity-100 ${valid ? "" : "opacity-40"}`}
-              style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.6), transparent 70%)" }} aria-hidden />
+        <span
+          className={`absolute -inset-2 rounded-2xl opacity-70 blur-2xl transition group-hover:opacity-100 ${valid ? "" : "opacity-40"}`}
+          style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.6), transparent 70%)" }}
+          aria-hidden
+        />
         <span className="absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
           <span className="absolute -inset-y-2 -left-1/2 w-1/2 rotate-12 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 transition-all duration-700 group-hover:left-[120%] group-hover:opacity-100" />
         </span>
-        <span className="relative z-10 inline-flex items-center justify-center gap-2">
+
+        {/* Label (fades out on success) */}
+        <span
+          className="relative z-10 inline-flex items-center justify-center gap-2 transition-opacity duration-200"
+          style={{ opacity: success ? 0 : 1 }}
+        >
           {label}
           <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
         </span>
+
+        {/* Door-walk overlay */}
+        {success && <DoorWalk />}
       </button>
-    </motion.div>
+    </div>
+  );
+}
+
+/**
+ * Minimal door-walk micro-animation. Pure CSS transforms (translateX + rotateY)
+ * on GPU-composited layers. Total duration ~750ms.
+ */
+function DoorWalk() {
+  return (
+    <span className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center" aria-hidden>
+      <span className="relative flex h-8 w-24 items-end justify-center">
+        {/* Ground line */}
+        <span className="absolute bottom-1 left-0 right-0 h-px bg-white/40" />
+
+        {/* Walking figure — abstract silhouette */}
+        <span className="door-walk-figure absolute bottom-1.5 left-0 flex flex-col items-center">
+          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+          <span className="mt-0.5 h-2 w-1 rounded-sm bg-white" />
+          <span className="flex gap-0.5">
+            <span className="door-walk-leg-l h-1.5 w-0.5 bg-white" />
+            <span className="door-walk-leg-r h-1.5 w-0.5 bg-white" />
+          </span>
+        </span>
+
+        {/* Door frame */}
+        <span className="absolute bottom-1 right-2 h-6 w-3.5 rounded-t-sm border border-white/70" style={{ perspective: 60 }}>
+          {/* Door panel — hinges on the left edge */}
+          <span
+            className="door-walk-panel absolute inset-0 rounded-t-sm bg-white/85"
+            style={{ transformOrigin: "left center", backfaceVisibility: "hidden" }}
+          />
+        </span>
+      </span>
+    </span>
   );
 }
 
@@ -630,3 +647,4 @@ async function routeByRole(navigate: ReturnType<typeof useNavigate>) {
     navigate({ to: "/redirecting", replace: true });
   }
 }
+
