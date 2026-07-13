@@ -58,7 +58,12 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const pwValid = password.length >= 8;
+  // Stronger on signup: 10+ chars with letters + digits. Sign-in keeps the
+  // legacy 8+ rule so people whose current password predates the change
+  // can still get in.
+  const pwValid = mode === "signup"
+    ? password.length >= 10 && /[A-Za-z]/.test(password) && /\d/.test(password)
+    : password.length >= 8;
   const nameValid = mode !== "signup" || fullName.trim().length >= 2;
   const formValid =
     mode === "forgot" ? emailValid : emailValid && pwValid && nameValid;
@@ -79,14 +84,16 @@ function AuthPage() {
             ? "Enter a valid email."
             : !nameValid
               ? "Tell us your name."
-              : "Password must be 8+ characters.";
+              : mode === "signup"
+                ? "Password needs 10+ characters with letters and numbers."
+                : "Password must be 8+ characters.";
       toast.error(why);
       return;
     }
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: `${window.location.origin}/portal`,
@@ -94,16 +101,26 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Account created. Check your email if confirmation is required.");
+        // If Supabase returns a user with no session, email confirmation is
+        // required — do NOT lock into the "Entering…" state; drop back to
+        // sign-in so the user can retry once they've confirmed.
+        if (!signUpData.session) {
+          toast.success("Check your email to confirm your account, then sign in.");
+          setMode("signin");
+          setPassword("");
+          setSuccess(false);
+          return;
+        }
+        toast.success("Account created.");
         setSuccess(true);
-        await new Promise((r) => setTimeout(r, 750));
+        await new Promise((r) => setTimeout(r, 500));
         await routeOnce();
       } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back.");
         setSuccess(true);
-        await new Promise((r) => setTimeout(r, 750));
+        await new Promise((r) => setTimeout(r, 500));
         await routeOnce();
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {

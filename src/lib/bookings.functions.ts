@@ -112,16 +112,38 @@ export const customerCreateBooking = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
 
-    // Pick first matching device that's available
-    const { data: device, error: de } = await supabaseAdmin
+    const start = new Date(data.scheduled_at);
+    const end = new Date(start.getTime() + data.duration_minutes * 60_000);
+
+    // Find candidate devices of the requested type; then pick the first one
+    // whose schedule doesn't collide with the requested window.
+    const { data: candidates, error: de } = await supabaseAdmin
       .from("devices")
-      .select("id, hourly_rate")
+      .select("id, hourly_rate, status")
       .eq("cafe_id", data.cafe_id)
-      .eq("type", data.device_type)
-      .limit(1)
-      .maybeSingle();
+      .eq("type", data.device_type);
     if (de) throw new Error(de.message);
-    if (!device) throw new Error("No device of this type available at this café");
+    const usable = (candidates ?? []).filter((d) => d.status !== "maintenance");
+    if (usable.length === 0) throw new Error("No device of this type available at this café");
+
+    const deviceIds = usable.map((d) => d.id);
+    const { data: overlapping, error: oe } = await supabaseAdmin
+      .from("bookings")
+      .select("device_id, scheduled_at, duration_minutes")
+      .in("device_id", deviceIds)
+      .in("status", ["pending", "confirmed"])
+      .gte("scheduled_at", new Date(start.getTime() - 8 * 3600_000).toISOString())
+      .lte("scheduled_at", new Date(end.getTime() + 8 * 3600_000).toISOString());
+    if (oe) throw new Error(oe.message);
+
+    const busy = new Set<string>();
+    for (const b of overlapping ?? []) {
+      const bs = new Date(b.scheduled_at).getTime();
+      const be = bs + b.duration_minutes * 60_000;
+      if (bs < end.getTime() && be > start.getTime()) busy.add(b.device_id);
+    }
+    const device = usable.find((d) => !busy.has(d.id));
+    if (!device) throw new Error("That slot is already booked. Try a different time.");
 
     // Ensure a customer row exists for this user in this cafe
     const { data: profile } = await context.supabase
@@ -152,15 +174,17 @@ export const customerCreateBooking = createServerFn({ method: "POST" })
       customerId = newCust.id;
     }
 
+    const amount = Math.ceil((device.hourly_rate * data.duration_minutes) / 60);
     const { data: row, error } = await supabaseAdmin
       .from("bookings")
       .insert({
         cafe_id: data.cafe_id,
         device_id: device.id,
         customer_id: customerId,
-        scheduled_at: data.scheduled_at,
+        scheduled_at: start.toISOString(),
         duration_minutes: data.duration_minutes,
         status: "pending",
+        deposit_amount: amount,
       })
       .select()
       .single();
