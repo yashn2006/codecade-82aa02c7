@@ -142,8 +142,9 @@ export function ConsoleShell({
 
           {/* Mobile top bar — clean: logo + bell. Nav lives in the bottom bar. */}
           <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/40 bg-background/70 px-4 backdrop-blur-2xl lg:hidden">
-            <BrandLockup size={22} badge={badge} />
+            <BrandLockup size={22} badge={badge} to={safeNav[0]?.to ?? "/"} />
             <div className="flex items-center gap-1">
+
               <NotificationBell />
               <button
                 onClick={signOut}
