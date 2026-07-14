@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +29,14 @@ export const Route = createFileRoute("/_authenticated/portal")({
   component: Portal,
 });
 
+type TabKey = "discover" | "bookings" | "wallets" | "profile";
+const TABS: { key: TabKey; label: string; icon: typeof Compass }[] = [
+  { key: "discover", label: "Discover", icon: Compass },
+  { key: "bookings", label: "My Bookings", icon: CalendarRange },
+  { key: "wallets",  label: "Wallets",    icon: Wallet },
+  { key: "profile",  label: "Profile",    icon: UserIcon },
+];
+
 function Portal() {
   const fetchRoles = useServerFn(getMyRoles);
   const fetchOwned = useServerFn(getMyOwnedCafes);
@@ -43,12 +50,23 @@ function Portal() {
   const isSuper = roles.some((r) => r.role === "super_admin");
   const ownerCafe = (ownedCafes ?? [])[0];
 
+  // Drive the active tab from the URL hash so the sidebar/menubar links
+  // (which are real anchors) select the right panel.
+  const hash = useRouterState({ select: (s) => (s.location.hash ?? "").replace(/^#/, "") });
+  const active: TabKey = (TABS.find((t) => t.key === hash)?.key ?? "discover");
+
   return (
     <ConsoleShell
       badge="Customer"
       title="Your Arcade"
       subtitle="Discover cafés. Book rigs. Earn streaks."
-      nav={[{ label: "Discover", icon: Compass, to: "/portal", exact: true }]}
+      nav={TABS.map((t) => ({
+        label: t.label,
+        icon: t.icon,
+        to: "/portal",
+        exact: true,
+        hash: t.key === "discover" ? "" : t.key,
+      }))}
       intensity="hero"
     >
       <div className="mb-4"><MaintenanceBanner window={platform} title="CoreCade network maintenance" /></div>
@@ -68,21 +86,32 @@ function Portal() {
         <StatTile icon={Trophy} label="Cafés visited" value={String(summary?.cafesVisited ?? 0)} hint="explored" accent="magenta" />
       </div>
 
-      <Tabs defaultValue="discover">
-        <TabsList className="glass-strong w-full justify-start rounded-2xl p-1">
-          <TabsTrigger value="discover"><Compass className="mr-2 h-3.5 w-3.5" />Discover</TabsTrigger>
-          <TabsTrigger value="bookings"><CalendarRange className="mr-2 h-3.5 w-3.5" />My bookings</TabsTrigger>
-          <TabsTrigger value="wallets"><Wallet className="mr-2 h-3.5 w-3.5" />Wallets</TabsTrigger>
-          <TabsTrigger value="profile"><UserIcon className="mr-2 h-3.5 w-3.5" />Profile</TabsTrigger>
-        </TabsList>
-        <TabsContent value="discover" className="mt-6"><DiscoverPanel /></TabsContent>
-        <TabsContent value="bookings" className="mt-6"><MyBookingsPanel /></TabsContent>
-        <TabsContent value="wallets" className="mt-6"><WalletsPanel summary={summary} /></TabsContent>
-        <TabsContent value="profile" className="mt-6"><ProfilePanel /></TabsContent>
-      </Tabs>
+      <PortalSectionHeader active={active} />
+      <motion.div
+        key={active}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {active === "discover" && <DiscoverPanel />}
+        {active === "bookings" && <MyBookingsPanel />}
+        {active === "wallets"  && <WalletsPanel summary={summary} />}
+        {active === "profile"  && <ProfilePanel />}
+      </motion.div>
     </ConsoleShell>
   );
 }
+
+function PortalSectionHeader({ active }: { active: TabKey }) {
+  const meta = TABS.find((t) => t.key === active)!;
+  const Icon = meta.icon;
+  return (
+    <div className="mb-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+      <Icon className="h-3.5 w-3.5 text-primary" /> {meta.label}
+    </div>
+  );
+}
+
 
 function StatTile({ icon: Icon, label, value, hint, accent }: {
   icon: typeof Wallet; label: string; value: string; hint?: string;
