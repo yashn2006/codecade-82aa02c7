@@ -17,7 +17,9 @@ export type NavItem = {
   to: string;
   params?: Record<string, string>;
   exact?: boolean;
+  hash?: string;
 };
+
 
 export function ConsoleShell({
   badge, title, subtitle, nav, children, intensity = "default",
@@ -34,6 +36,7 @@ export function ConsoleShell({
   const [email, setEmail] = useState("");
   const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const hash = useRouterState({ select: (s) => s.location.hash });
   const safeNav = Array.isArray(nav) ? nav : [];
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export function ConsoleShell({
   }, []);
 
   // close drawer on route change
-  useEffect(() => { setOpen(false); }, [path]);
+  useEffect(() => { setOpen(false); }, [path, hash]);
 
   const signOut = async () => {
     await queryClient.cancelQueries();
@@ -55,8 +58,17 @@ export function ConsoleShell({
 
   const isActive = (item: NavItem) => {
     const target = resolveTo(item);
-    return item.exact ? path === target : path === target || path.startsWith(target + "/");
+    const pathMatches = item.exact ? path === target : path === target || path.startsWith(target + "/");
+    if (!pathMatches) return false;
+    // If any sibling item on this same path defines a hash, treat items as
+    // hash-scoped: only the matching hash is active (empty hash matches "").
+    const hashScoped = safeNav.some((n) => resolveTo(n) === target && n.hash !== undefined);
+    if (!hashScoped) return true;
+    const current = (hash ?? "").replace(/^#/, "");
+    const wanted = (item.hash ?? "").replace(/^#/, "");
+    return current === wanted;
   };
+
 
   // iOS-style bottom nav: 4 primary tabs + "More" pill if there are extras
   const PRIMARY_COUNT = 4;
@@ -74,8 +86,10 @@ export function ConsoleShell({
         {/* === Desktop sidebar === */}
         <aside className="hidden lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:border-r lg:border-border/70 lg:bg-card/60 lg:backdrop-blur-xl">
           <div className="flex h-16 items-center px-5 border-b border-border/70">
-            <BrandLockup size={28} badge={badge} />
+            <BrandLockup size={28} badge={badge} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
           </div>
+
+
           <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
             {safeNav.map((item, i) => {
               const active = isActive(item);
@@ -84,6 +98,8 @@ export function ConsoleShell({
                   key={item.label}
                   to={item.to}
                   params={item.params}
+                  hash={item.hash}
+
                   className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                     active
                       ? "bg-primary/10 text-primary shadow-[0_0_24px_-6px_oklch(0.7_0.26_335/0.55)] ring-1 ring-primary/30"
@@ -141,8 +157,10 @@ export function ConsoleShell({
 
           {/* Mobile top bar — clean: logo + bell. Nav lives in the bottom bar. */}
           <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/40 bg-background/70 px-4 backdrop-blur-2xl lg:hidden">
-            <BrandLockup size={22} badge={badge} />
+            <BrandLockup size={22} badge={badge} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
+
             <div className="flex items-center gap-1">
+
               <NotificationBell />
               <button
                 onClick={signOut}
@@ -225,9 +243,11 @@ export function ConsoleShell({
                       key={item.label}
                       to={item.to}
                       params={item.params}
+                      hash={item.hash}
                       className="relative isolate flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium tracking-wide transition active:scale-95"
                       aria-current={active ? "page" : undefined}
                     >
+
                       {active && (
                         <motion.span
                           layoutId="mob-nav-pill"
@@ -303,7 +323,9 @@ export function ConsoleShell({
                       key={item.label}
                       to={item.to}
                       params={item.params}
+                      hash={item.hash}
                       onClick={() => setOpen(false)}
+
                       className={`group flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border p-3 text-center transition active:scale-95 ${
                         active
                           ? "border-primary/50 bg-primary/15 text-primary shadow-[0_0_28px_-8px_oklch(0.72_0.26_330/0.7)]"
