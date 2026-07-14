@@ -98,6 +98,8 @@ export function ConsoleShell({
                   key={item.label}
                   to={item.to}
                   params={item.params}
+                  hash={item.hash}
+
                   className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                     active
                       ? "bg-primary/10 text-primary shadow-[0_0_24px_-6px_oklch(0.7_0.26_335/0.55)] ring-1 ring-primary/30"
