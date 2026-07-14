@@ -323,7 +323,9 @@ export function ConsoleShell({
                       key={item.label}
                       to={item.to}
                       params={item.params}
+                      hash={item.hash}
                       onClick={() => setOpen(false)}
+
                       className={`group flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border p-3 text-center transition active:scale-95 ${
                         active
                           ? "border-primary/50 bg-primary/15 text-primary shadow-[0_0_28px_-8px_oklch(0.72_0.26_330/0.7)]"
