@@ -23,9 +23,22 @@ export function BrandMark({ size = 36, className = "" }: { size?: number; classN
   );
 }
 
-export function BrandLockup({ size = 32, badge, to = "/" }: { size?: number; badge?: string; to?: string }) {
+export function BrandLockup({
+  size = 32,
+  badge,
+  to = "/",
+  params,
+}: {
+  size?: number;
+  badge?: string;
+  to?: string;
+  params?: Record<string, string>;
+}) {
+  // Use `to as never` + `params as never` so any generated route path is
+  // accepted (dashboards pass "/cafe/$slug" with { slug }). TanStack still
+  // resolves it correctly at runtime.
   return (
-    <Link to={to} className="group inline-flex items-center gap-2.5 leading-none">
+    <Link to={to as never} params={params as never} className="group inline-flex items-center gap-2.5 leading-none">
       <BrandMark size={size} className="transition-transform group-hover:scale-105" />
       <span className="inline-flex items-baseline gap-2 leading-none">
         <span
@@ -44,3 +57,4 @@ export function BrandLockup({ size = 32, badge, to = "/" }: { size?: number; bad
     </Link>
   );
 }
+
