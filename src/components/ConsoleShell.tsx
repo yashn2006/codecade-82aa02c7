@@ -243,9 +243,11 @@ export function ConsoleShell({
                       key={item.label}
                       to={item.to}
                       params={item.params}
+                      hash={item.hash}
                       className="relative isolate flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium tracking-wide transition active:scale-95"
                       aria-current={active ? "page" : undefined}
                     >
+
                       {active && (
                         <motion.span
                           layoutId="mob-nav-pill"
