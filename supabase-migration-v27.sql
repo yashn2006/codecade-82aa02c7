@@ -46,12 +46,14 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 -- Only enforce for live bookings (pending/confirmed). Cancelled/completed
 -- don't participate. We use a generated tstzrange for the window.
+-- Use make_interval() — it's IMMUTABLE, unlike text::interval casts,
+-- so Postgres accepts it in a generated-column expression.
 ALTER TABLE public.bookings
   DROP COLUMN IF EXISTS booking_window;
 ALTER TABLE public.bookings
   ADD COLUMN booking_window tstzrange
     GENERATED ALWAYS AS (
-      tstzrange(scheduled_at, scheduled_at + (duration_minutes || ' minutes')::interval, '[)')
+      tstzrange(scheduled_at, scheduled_at + make_interval(mins => duration_minutes), '[)')
     ) STORED;
 
 ALTER TABLE public.bookings
