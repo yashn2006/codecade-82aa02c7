@@ -36,6 +36,7 @@ export function ConsoleShell({
   const [email, setEmail] = useState("");
   const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const hash = useRouterState({ select: (s) => s.location.hash });
   const safeNav = Array.isArray(nav) ? nav : [];
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function ConsoleShell({
   }, []);
 
   // close drawer on route change
-  useEffect(() => { setOpen(false); }, [path]);
+  useEffect(() => { setOpen(false); }, [path, hash]);
 
   const signOut = async () => {
     await queryClient.cancelQueries();
@@ -57,8 +58,17 @@ export function ConsoleShell({
 
   const isActive = (item: NavItem) => {
     const target = resolveTo(item);
-    return item.exact ? path === target : path === target || path.startsWith(target + "/");
+    const pathMatches = item.exact ? path === target : path === target || path.startsWith(target + "/");
+    if (!pathMatches) return false;
+    // If any sibling item on this same path defines a hash, treat items as
+    // hash-scoped: only the matching hash is active (empty hash matches "").
+    const hashScoped = safeNav.some((n) => resolveTo(n) === target && n.hash !== undefined);
+    if (!hashScoped) return true;
+    const current = (hash ?? "").replace(/^#/, "");
+    const wanted = (item.hash ?? "").replace(/^#/, "");
+    return current === wanted;
   };
+
 
   // iOS-style bottom nav: 4 primary tabs + "More" pill if there are extras
   const PRIMARY_COUNT = 4;
