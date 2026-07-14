@@ -74,8 +74,9 @@ export function ConsoleShell({
         {/* === Desktop sidebar === */}
         <aside className="hidden lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:border-r lg:border-border/70 lg:bg-card/60 lg:backdrop-blur-xl">
           <div className="flex h-16 items-center px-5 border-b border-border/70">
-            <BrandLockup size={28} badge={badge} />
+            <BrandLockup size={28} badge={badge} to={safeNav[0]?.to ?? "/"} />
           </div>
+
           <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
             {safeNav.map((item, i) => {
               const active = isActive(item);
