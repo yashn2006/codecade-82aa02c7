@@ -17,7 +17,9 @@ export type NavItem = {
   to: string;
   params?: Record<string, string>;
   exact?: boolean;
+  hash?: string;
 };
+
 
 export function ConsoleShell({
   badge, title, subtitle, nav, children, intensity = "default",
