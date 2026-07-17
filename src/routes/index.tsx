@@ -10,7 +10,7 @@ import { BrandLockup, BrandMark } from "@/components/Brand";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { ConsoleMockup } from "@/components/ConsoleMockup";
 import { TerminalContact } from "@/components/TerminalContact";
-import { SocialProof } from "@/components/SocialProof";
+
 
 
 
@@ -49,7 +49,6 @@ function Landing() {
       <Cinematic />
       <Features />
       <Stats />
-      <SocialProof />
       <Pricing />
       <Contact />
       <Footer />
@@ -547,26 +546,18 @@ function StatLoader({ size = "md" }: { size?: "sm" | "md" }) {
 
 function Stats() {
   const stats = [
-    { key: "sessions", loading: true, label: "Sessions processed" },
-    { key: "cafes", loading: true, label: "Cafés onboarded" },
-    { key: "minutes", loading: true, label: "Minutes billed" },
-    { key: "rating", loading: true, label: "Owner rating" },
     { value: 99.9, label: "Uptime", suffix: "%", format: (n: number) => n.toFixed(1) },
     { value: 50, label: "Real-time latency", prefix: "<", suffix: "ms" },
-    { value: 7, label: "Avg go-live", suffix: " days" },
-  ] as Array<{ key?: string; loading?: boolean; value?: number; prefix?: string; suffix?: string; label: string; format?: (n: number) => string }>;
+    { value: 24, label: "Avg go-live", suffix: " hrs" },
+  ];
   return (
     <section className="relative border-y border-border/40 bg-background/40 px-4 py-20 sm:px-6">
       <div className="absolute inset-0 grid-arcade opacity-30" />
-      <div className="relative mx-auto grid max-w-7xl grid-cols-2 gap-10 md:grid-cols-4 lg:grid-cols-7">
+      <div className="relative mx-auto grid max-w-4xl grid-cols-1 gap-10 sm:grid-cols-3">
         {stats.map((s) => (
           <div key={s.label} className="text-center">
-            <div className="font-display text-3xl font-extrabold tracking-tight text-gradient sm:text-4xl min-h-[2.5rem] flex items-center justify-center">
-              {s.loading ? (
-                <StatLoader />
-              ) : (
-                <AnimatedNumber value={s.value as number} prefix={s.prefix} suffix={s.suffix} format={s.format} />
-              )}
+            <div className="font-display text-4xl font-extrabold tracking-tight text-gradient sm:text-5xl min-h-[3rem] flex items-center justify-center">
+              <AnimatedNumber value={s.value} prefix={s.prefix} suffix={s.suffix} format={s.format} />
             </div>
             <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{s.label}</div>
           </div>
@@ -586,11 +577,12 @@ function Pricing() {
     "Priority WhatsApp support",
   ];
   return (
-    <section id="pricing" className="relative px-4 py-28 sm:px-6">
-      {/* Ambient glow */}
+    <section id="pricing" className="relative overflow-hidden px-4 py-28 sm:px-6">
+      {/* Ambient glow — clipped inside section so it can't bleed above */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl opacity-40" style={{ background: "var(--gradient-brand-hot)" }} />
+        <div className="absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl opacity-20" style={{ background: "var(--gradient-brand-hot)" }} />
       </div>
+
 
       <div className="mx-auto max-w-2xl">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
@@ -742,22 +734,78 @@ function Contact() {
 
 
 function Footer() {
+  const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-border/40 px-4 py-12 sm:px-6">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
-        <div className="flex items-center gap-3">
-          <BrandMark size={28} />
-          <span className="font-display font-bold">
-            <span className="text-foreground">core</span><span className="text-gradient">cade</span>
-          </span>
-          <span>© {new Date().getFullYear()} CoreCade — Powered by CoreGin. All rights reserved.</span>
+    <footer className="relative border-t border-border/40 bg-background/60 px-4 py-14 sm:px-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-10 md:grid-cols-4">
+          {/* Brand */}
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-3">
+              <BrandMark size={32} />
+              <span className="font-display text-lg font-bold">
+                <span className="text-foreground">core</span><span className="text-gradient">cade</span>
+              </span>
+            </div>
+            <p className="mt-4 max-w-sm text-sm text-muted-foreground">
+              The operating system for gaming cafés. Live sessions, bookings, memberships, devices — one ridiculously fast platform.
+            </p>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              <Sparkles className="h-3 w-3 text-primary" />
+              A product of{" "}
+              <a href="https://coreegin.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition">
+                CoreEgin
+              </a>
+            </div>
+          </div>
+
+          {/* Product */}
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Product</div>
+            <ul className="mt-4 space-y-2.5 text-sm">
+              <li><a href="#features" className="text-foreground/80 hover:text-foreground transition">Features</a></li>
+              <li><a href="#pricing" className="text-foreground/80 hover:text-foreground transition">Pricing</a></li>
+              <li><Link to="/discover" className="text-foreground/80 hover:text-foreground transition">Discover cafés</Link></li>
+              <li><a href="#contact" className="text-foreground/80 hover:text-foreground transition">Contact</a></li>
+            </ul>
+          </div>
+
+          {/* Company + Legal */}
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Company</div>
+            <ul className="mt-4 space-y-2.5 text-sm">
+              <li>
+                <a href="mailto:support@corecade.io" className="text-foreground/80 hover:text-foreground transition">
+                  support@corecade.io
+                </a>
+              </li>
+              <li>
+                <a href="https://coreegin.com" target="_blank" rel="noopener noreferrer" className="text-foreground/80 hover:text-foreground transition">
+                  coreegin.com
+                </a>
+              </li>
+              <li><Link to="/terms" className="text-foreground/80 hover:text-foreground transition">Terms</Link></li>
+              <li><Link to="/privacy" className="text-foreground/80 hover:text-foreground transition">Privacy</Link></li>
+              <li><Link to="/refund-policy" className="text-foreground/80 hover:text-foreground transition">Refund policy</Link></li>
+            </ul>
+          </div>
         </div>
-        <div className="flex gap-6">
-          <a href="#features" className="hover:text-foreground">Features</a>
-          <a href="#pricing" className="hover:text-foreground">Pricing</a>
-          <a href="#contact" className="hover:text-foreground">Contact</a>
+
+        {/* Bottom bar */}
+        <div className="mt-12 flex flex-col-reverse items-center justify-between gap-4 border-t border-border/30 pt-6 text-xs text-muted-foreground sm:flex-row">
+          <div className="text-center sm:text-left">
+            © {year} <span className="text-foreground">CoreCade</span>. All rights reserved.
+            <span className="mx-2 opacity-40">·</span>
+            CoreCade is a product of{" "}
+            <a href="https://coreegin.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition">
+              CoreEgin
+            </a>{" "}
+            &{" "}
+            <span className="font-mono uppercase tracking-widest text-foreground/80">powered by CoreEngine</span>.
+          </div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em]">Made in India 🇮🇳</div>
         </div>
-        <div className="font-mono text-xs">Made in India 🇮🇳</div>
       </div>
     </footer>
   );
