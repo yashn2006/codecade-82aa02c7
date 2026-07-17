@@ -10,7 +10,7 @@ import { BrandLockup, BrandMark } from "@/components/Brand";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { ConsoleMockup } from "@/components/ConsoleMockup";
 import { TerminalContact } from "@/components/TerminalContact";
-import { SocialProof } from "@/components/SocialProof";
+
 
 
 
