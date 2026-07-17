@@ -579,57 +579,123 @@ function Stats() {
 function Pricing() {
   const features = [
     "Unlimited devices & sessions",
-    "Bookings, memberships & POS",
-    "Real-time analytics dashboard",
+    "Real-time bookings & POS",
+    "Live analytics dashboard",
+    "Tournaments & memberships",
+    "Wallet & loyalty system",
     "Priority WhatsApp support",
   ];
   return (
     <section id="pricing" className="relative px-4 py-28 sm:px-6">
-      <div className="mx-auto max-w-3xl">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl opacity-40" style={{ background: "var(--gradient-brand-hot)" }} />
+      </div>
+
+      <div className="mx-auto max-w-2xl">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
-          <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-6xl">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-primary">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+            </span>
+            launch pricing · limited
+          </div>
+          <h2 className="mt-5 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">
             One price. <span className="text-gradient">Everything in.</span>
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">Pay monthly. Cancel anytime. No setup fees. No surprises.</p>
+          <p className="mx-auto mt-4 max-w-lg text-muted-foreground">Pay monthly. Cancel anytime. No setup fees. No surprises.</p>
         </motion.div>
 
         <motion.div
           initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="relative mt-14 overflow-hidden rounded-3xl border-conic glass-strong glow-violet p-8 sm:p-10"
+          className="group relative mt-14"
         >
-          <div className="pointer-events-none absolute inset-0 -translate-x-full animate-[shine_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
-            Launch offer
-          </div>
-          <h3 className="font-heading text-2xl font-bold tracking-tight">CoreCade Pro</h3>
-          <div className="mt-4 flex items-baseline gap-1">
-            <span className="font-display text-6xl font-extrabold tracking-tight animate-[glow_2.5s_ease-in-out_infinite]">₹999</span>
-            <span className="text-sm text-muted-foreground">/mo</span>
-          </div>
-          <div className="mt-1 text-sm text-muted-foreground">For one café · unlimited devices</div>
-          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-            {features.map((f) => (
-              <li key={f} className="flex items-start gap-2 text-sm">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                {f}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-xs text-muted-foreground">…and many more — bookings, POS, tournaments, wallets, staff roles, exports.</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              to="/auth"
-              className="inline-flex flex-1 items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-              style={{ background: "var(--gradient-brand-hot)" }}
-            >
-              Get started
-            </Link>
-            <Link
-              to="/features"
-              className="inline-flex flex-1 items-center justify-center rounded-xl border border-border bg-background/40 px-4 py-3 text-sm font-semibold transition hover:bg-background/70"
-            >
-              See all features →
-            </Link>
+          {/* Rotating gradient border */}
+          <div className="absolute -inset-[2px] rounded-[28px] opacity-70 blur-md transition-opacity duration-500 group-hover:opacity-100" style={{ background: "conic-gradient(from 0deg, #a855f7, #ec4899, #f97316, #a855f7)", animation: "spin 8s linear infinite" }} />
+          <div className="absolute -inset-[1px] rounded-[26px]" style={{ background: "conic-gradient(from 0deg, #a855f7, #ec4899, #f97316, #a855f7)", animation: "spin 8s linear infinite" }} />
+
+          <div className="relative overflow-hidden rounded-3xl bg-background/95 p-8 backdrop-blur-xl sm:p-10">
+            {/* Shine sweep */}
+            <div className="pointer-events-none absolute inset-0 -translate-x-full animate-[shine_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+            {/* Ribbon */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-white shadow-lg shadow-primary/50" style={{ background: "var(--gradient-brand-hot)" }}>
+              ★ launch offer
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-display text-3xl font-extrabold tracking-tight">CoreCade Pro</h3>
+                <p className="mt-1 text-sm text-muted-foreground">For one café · unlimited devices</p>
+              </div>
+              <div className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-emerald-300">
+                15-day trial
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="mt-6 flex items-end gap-2">
+              <span className="font-display text-7xl font-extrabold tracking-tighter text-gradient-hot leading-none animate-[glow_2.5s_ease-in-out_infinite]">
+                ₹999
+              </span>
+              <span className="pb-2 text-sm text-muted-foreground">/ month</span>
+              <span className="ml-auto pb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground line-through decoration-red-500/50">
+                ₹2,499
+              </span>
+            </div>
+            <div className="mt-1 font-mono text-[11px] text-emerald-400">▸ Save 60% during launch week</div>
+
+            {/* Divider */}
+            <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+            {/* Features grid */}
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {features.map((f, i) => (
+                <motion.li
+                  key={f}
+                  initial={{ opacity: 0, x: -8 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.05 * i, duration: 0.3 }}
+                  className="flex items-start gap-2.5 text-sm"
+                >
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 ring-1 ring-primary/30">
+                    <Check className="h-3 w-3 text-primary" strokeWidth={3} />
+                  </span>
+                  <span className="text-foreground/90">{f}</span>
+                </motion.li>
+              ))}
+            </ul>
+
+            <p className="mt-5 text-xs text-muted-foreground">
+              …plus staff roles, CSV exports, tournaments, referrals, receipts & more.
+            </p>
+
+            {/* CTAs */}
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link
+                to="/auth"
+                className="group/btn relative inline-flex flex-1 items-center justify-center overflow-hidden rounded-xl px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/40 transition-all hover:shadow-primary/60 hover:-translate-y-0.5"
+                style={{ background: "var(--gradient-brand-hot)" }}
+              >
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full" />
+                <span className="relative">Start free trial →</span>
+              </Link>
+              <Link
+                to="/features"
+                className="inline-flex flex-1 items-center justify-center rounded-xl border border-border/70 bg-background/40 px-5 py-3.5 text-sm font-semibold backdrop-blur transition hover:border-primary/40 hover:bg-background/70"
+              >
+                See all features
+              </Link>
+            </div>
+
+            {/* Trust row */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              <span>✓ no card required</span>
+              <span>✓ cancel anytime</span>
+              <span>✓ setup in 5 min</span>
+            </div>
           </div>
         </motion.div>
       </div>
