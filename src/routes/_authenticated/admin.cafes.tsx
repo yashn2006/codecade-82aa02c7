@@ -335,6 +335,16 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
         </div>
       </div>
 
+      <ExtendTrialDialog
+        cafeId={cafe.id} cafeName={cafe.name}
+        currentEndsAt={cafe.trial_ends_at ?? null}
+        trigger={null} open={extendOpen} onOpenChange={setExtendOpen}
+      />
+      <AdminMessageComposer
+        cafeId={cafe.id} cafeName={cafe.name}
+        trigger={null} open={msgOpen} onOpenChange={setMsgOpen}
+      />
+
       {/* Deep stats dialog */}
       <Dialog open={statsOpen} onOpenChange={setStatsOpen}>
         <DialogContent className="sm:max-w-md">
