@@ -20,6 +20,9 @@ import { Download } from "lucide-react";
 import { createCafe, toggleCafeActive } from "@/lib/cafes.functions";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { isMaintenanceActive } from "@/lib/maintenance";
+import { ExtendTrialDialog } from "@/components/ExtendTrialDialog";
+import { AdminMessageComposer } from "@/components/AdminMessageComposer";
+import { CalendarPlus, Mail } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/admin/cafes")({
