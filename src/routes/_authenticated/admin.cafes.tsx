@@ -310,6 +310,12 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
               <DropdownMenuItem onSelect={() => setStatsOpen(true)}>
                 <BarChart3 className="mr-2 h-3.5 w-3.5" /> Deep stats
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setExtendOpen(true); }}>
+                <CalendarPlus className="mr-2 h-3.5 w-3.5" /> Extend trial
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMsgOpen(true); }}>
+                <Mail className="mr-2 h-3.5 w-3.5" /> Message owner
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a href={`/c/${cafe.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-2">
                   <ExternalLink className="h-3.5 w-3.5" /> Open public page
