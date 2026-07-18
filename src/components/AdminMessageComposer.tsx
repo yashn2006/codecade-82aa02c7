@@ -45,14 +45,16 @@ export function AdminMessageComposer({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
-            {mode === "broadcast" ? <Megaphone className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
-            {mode === "broadcast" ? "Broadcast" : "Message"}
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== null && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+              {mode === "broadcast" ? <Megaphone className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
+              {mode === "broadcast" ? "Broadcast" : "Message"}
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
