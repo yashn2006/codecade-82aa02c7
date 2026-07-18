@@ -20,6 +20,9 @@ import { Download } from "lucide-react";
 import { createCafe, toggleCafeActive } from "@/lib/cafes.functions";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { isMaintenanceActive } from "@/lib/maintenance";
+import { ExtendTrialDialog } from "@/components/ExtendTrialDialog";
+import { AdminMessageComposer } from "@/components/AdminMessageComposer";
+import { CalendarPlus, Mail } from "lucide-react";
 
 
 export const Route = createFileRoute("/_authenticated/admin/cafes")({
@@ -32,6 +35,7 @@ type CafeRow = {
   maintenance_starts_at: string | null;
   maintenance_ends_at: string | null;
   maintenance_message: string | null;
+  trial_ends_at?: string | null;
   profiles: unknown;
 };
 
@@ -70,6 +74,7 @@ function CafesPanel() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">{cafes.length} cafés on network</div>
         <div className="flex flex-wrap items-center gap-2">
+          <AdminMessageComposer mode="broadcast" />
           <ExportButton kind="cafes" />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -160,6 +165,8 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
   const [restrictOpen, setRestrictOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [msgOpen, setMsgOpen] = useState(false);
   const stats = useQuery({
     queryKey: ["cafe-deep-stats", cafe.id],
     queryFn: () => statsFn({ data: { cafe_id: cafe.id } }),
@@ -305,6 +312,12 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
               <DropdownMenuItem onSelect={() => setStatsOpen(true)}>
                 <BarChart3 className="mr-2 h-3.5 w-3.5" /> Deep stats
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setExtendOpen(true); }}>
+                <CalendarPlus className="mr-2 h-3.5 w-3.5" /> Extend trial
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMsgOpen(true); }}>
+                <Mail className="mr-2 h-3.5 w-3.5" /> Message owner
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a href={`/c/${cafe.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-2">
                   <ExternalLink className="h-3.5 w-3.5" /> Open public page
@@ -321,6 +334,16 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
           </DropdownMenu>
         </div>
       </div>
+
+      <ExtendTrialDialog
+        cafeId={cafe.id} cafeName={cafe.name}
+        currentEndsAt={cafe.trial_ends_at ?? null}
+        trigger={null} open={extendOpen} onOpenChange={setExtendOpen}
+      />
+      <AdminMessageComposer
+        cafeId={cafe.id} cafeName={cafe.name}
+        trigger={null} open={msgOpen} onOpenChange={setMsgOpen}
+      />
 
       {/* Deep stats dialog */}
       <Dialog open={statsOpen} onOpenChange={setStatsOpen}>

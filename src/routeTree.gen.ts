@@ -45,6 +45,7 @@ import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminAnnouncementsRouteImport } from './routes/_authenticated/admin.announcements'
 import { Route as AuthenticatedCafeSlugIndexRouteImport } from './routes/_authenticated/cafe.$slug.index'
 import { Route as CSlugTournamentsIdRouteImport } from './routes/c.$slug.tournaments.$id'
+import { Route as ApiPublicCronTrialEmailsRouteImport } from './routes/api/public/cron/trial-emails'
 import { Route as AuthenticatedCafeSlugWalletRouteImport } from './routes/_authenticated/cafe.$slug.wallet'
 import { Route as AuthenticatedCafeSlugTournamentsRouteImport } from './routes/_authenticated/cafe.$slug.tournaments'
 import { Route as AuthenticatedCafeSlugSupportRouteImport } from './routes/_authenticated/cafe.$slug.support'
@@ -252,6 +253,12 @@ const CSlugTournamentsIdRoute = CSlugTournamentsIdRouteImport.update({
   path: '/tournaments/$id',
   getParentRoute: () => CSlugRoute,
 } as any)
+const ApiPublicCronTrialEmailsRoute =
+  ApiPublicCronTrialEmailsRouteImport.update({
+    id: '/api/public/cron/trial-emails',
+    path: '/api/public/cron/trial-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedCafeSlugWalletRoute =
   AuthenticatedCafeSlugWalletRouteImport.update({
     id: '/wallet',
@@ -405,6 +412,7 @@ export interface FileRoutesByFullPath {
   '/cafe/$slug/support': typeof AuthenticatedCafeSlugSupportRoute
   '/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
+  '/api/public/cron/trial-emails': typeof ApiPublicCronTrialEmailsRoute
   '/c/$slug/tournaments/$id': typeof CSlugTournamentsIdRoute
   '/cafe/$slug/': typeof AuthenticatedCafeSlugIndexRoute
   '/cafe/$slug/tournaments/$id': typeof AuthenticatedCafeSlugTournamentsIdRoute
@@ -457,6 +465,7 @@ export interface FileRoutesByTo {
   '/cafe/$slug/support': typeof AuthenticatedCafeSlugSupportRoute
   '/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
+  '/api/public/cron/trial-emails': typeof ApiPublicCronTrialEmailsRoute
   '/c/$slug/tournaments/$id': typeof CSlugTournamentsIdRoute
   '/cafe/$slug': typeof AuthenticatedCafeSlugIndexRoute
   '/cafe/$slug/tournaments/$id': typeof AuthenticatedCafeSlugTournamentsIdRoute
@@ -513,6 +522,7 @@ export interface FileRoutesById {
   '/_authenticated/cafe/$slug/support': typeof AuthenticatedCafeSlugSupportRoute
   '/_authenticated/cafe/$slug/tournaments': typeof AuthenticatedCafeSlugTournamentsRouteWithChildren
   '/_authenticated/cafe/$slug/wallet': typeof AuthenticatedCafeSlugWalletRoute
+  '/api/public/cron/trial-emails': typeof ApiPublicCronTrialEmailsRoute
   '/c/$slug/tournaments/$id': typeof CSlugTournamentsIdRoute
   '/_authenticated/cafe/$slug/': typeof AuthenticatedCafeSlugIndexRoute
   '/_authenticated/cafe/$slug/tournaments/$id': typeof AuthenticatedCafeSlugTournamentsIdRoute
@@ -569,6 +579,7 @@ export interface FileRouteTypes {
     | '/cafe/$slug/support'
     | '/cafe/$slug/tournaments'
     | '/cafe/$slug/wallet'
+    | '/api/public/cron/trial-emails'
     | '/c/$slug/tournaments/$id'
     | '/cafe/$slug/'
     | '/cafe/$slug/tournaments/$id'
@@ -621,6 +632,7 @@ export interface FileRouteTypes {
     | '/cafe/$slug/support'
     | '/cafe/$slug/tournaments'
     | '/cafe/$slug/wallet'
+    | '/api/public/cron/trial-emails'
     | '/c/$slug/tournaments/$id'
     | '/cafe/$slug'
     | '/cafe/$slug/tournaments/$id'
@@ -676,6 +688,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cafe/$slug/support'
     | '/_authenticated/cafe/$slug/tournaments'
     | '/_authenticated/cafe/$slug/wallet'
+    | '/api/public/cron/trial-emails'
     | '/c/$slug/tournaments/$id'
     | '/_authenticated/cafe/$slug/'
     | '/_authenticated/cafe/$slug/tournaments/$id'
@@ -697,6 +710,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiSitemapDotxmlRoute: typeof ApiSitemapDotxmlRoute
   CSlugRoute: typeof CSlugRouteWithChildren
+  ApiPublicCronTrialEmailsRoute: typeof ApiPublicCronTrialEmailsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -952,6 +966,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/c/$slug/tournaments/$id'
       preLoaderRoute: typeof CSlugTournamentsIdRouteImport
       parentRoute: typeof CSlugRoute
+    }
+    '/api/public/cron/trial-emails': {
+      id: '/api/public/cron/trial-emails'
+      path: '/api/public/cron/trial-emails'
+      fullPath: '/api/public/cron/trial-emails'
+      preLoaderRoute: typeof ApiPublicCronTrialEmailsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/cafe/$slug/wallet': {
       id: '/_authenticated/cafe/$slug/wallet'
@@ -1218,6 +1239,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiSitemapDotxmlRoute: ApiSitemapDotxmlRoute,
   CSlugRoute: CSlugRouteWithChildren,
+  ApiPublicCronTrialEmailsRoute: ApiPublicCronTrialEmailsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
