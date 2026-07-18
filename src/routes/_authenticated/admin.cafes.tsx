@@ -35,6 +35,7 @@ type CafeRow = {
   maintenance_starts_at: string | null;
   maintenance_ends_at: string | null;
   maintenance_message: string | null;
+  trial_ends_at?: string | null;
   profiles: unknown;
 };
 
