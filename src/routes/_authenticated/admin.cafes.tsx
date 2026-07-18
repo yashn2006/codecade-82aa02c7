@@ -165,6 +165,8 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
   const [restrictOpen, setRestrictOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [msgOpen, setMsgOpen] = useState(false);
   const stats = useQuery({
     queryKey: ["cafe-deep-stats", cafe.id],
     queryFn: () => statsFn({ data: { cafe_id: cafe.id } }),
