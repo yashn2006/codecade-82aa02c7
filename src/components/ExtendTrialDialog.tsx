@@ -48,13 +48,15 @@ export function ExtendTrialDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
-            <CalendarPlus className="h-3 w-3" /> Extend trial
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== null && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+              <CalendarPlus className="h-3 w-3" /> Extend trial
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><CalendarPlus className="h-4 w-4" /> Extend trial — {cafeName}</DialogTitle>
