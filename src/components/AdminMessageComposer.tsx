@@ -11,14 +11,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { sendAdminMessage, broadcastAdminMessage } from "@/lib/messages.functions";
 
 export function AdminMessageComposer({
-  cafeId, cafeName, trigger, mode = "single",
+  cafeId, cafeName, trigger, mode = "single", open: openProp, onOpenChange,
 }: {
   cafeId?: string;
   cafeName?: string;
   trigger?: React.ReactNode;
   mode?: "single" | "broadcast";
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = onOpenChange ?? setOpenState;
   const send = useServerFn(sendAdminMessage);
   const broadcast = useServerFn(broadcastAdminMessage);
 
