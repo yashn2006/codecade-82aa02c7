@@ -74,6 +74,7 @@ function CafesPanel() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">{cafes.length} cafés on network</div>
         <div className="flex flex-wrap items-center gap-2">
+          <AdminMessageComposer mode="broadcast" />
           <ExportButton kind="cafes" />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
