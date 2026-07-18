@@ -12,6 +12,8 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { Button } from "@/components/ui/button";
 import { DeleteCafeButton } from "@/components/DeleteCafeButton";
+import { OwnerInbox } from "@/components/OwnerInbox";
+import { LogRevenueButton } from "@/components/LogRevenueButton";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug")({
   head: () => ({
