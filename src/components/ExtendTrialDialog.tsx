@@ -14,14 +14,18 @@ import { cn } from "@/lib/utils";
 import { extendCafeTrial } from "@/lib/messages.functions";
 
 export function ExtendTrialDialog({
-  cafeId, cafeName, currentEndsAt, trigger,
+  cafeId, cafeName, currentEndsAt, trigger, open: openProp, onOpenChange,
 }: {
   cafeId: string;
   cafeName: string;
   currentEndsAt: string | null;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = onOpenChange ?? setOpenState;
   const [date, setDate] = useState<Date | undefined>();
   const [reason, setReason] = useState("");
   const qc = useQueryClient();
