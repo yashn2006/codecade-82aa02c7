@@ -13,6 +13,7 @@ import { isMaintenanceActive } from "@/lib/maintenance";
 import { Button } from "@/components/ui/button";
 import { DeleteCafeButton } from "@/components/DeleteCafeButton";
 import { OwnerInbox } from "@/components/OwnerInbox";
+import { OwnerMessageAdmin } from "@/components/OwnerMessageAdmin";
 import { LogRevenueButton } from "@/components/LogRevenueButton";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug")({
