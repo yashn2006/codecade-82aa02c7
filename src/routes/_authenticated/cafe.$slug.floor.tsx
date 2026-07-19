@@ -280,7 +280,17 @@ function FloorBuilder() {
                       <span className="absolute bottom-1 right-2 font-mono text-[9px] opacity-50">{x},{y}</span>
                     </button>
                   )}
-                  {dev && (
+                  {dev && (() => {
+                    const active = activeByDevice.get(dev.id);
+                    const effectiveStatus: DeviceStatus = active
+                      ? (active.state === "live" ? "in_use" : "reserved")
+                      : ((dev.status as DeviceStatus) || "available");
+                    const cust = active?.booking.customers?.full_name || "Guest";
+                    const timeMs = active ? (active.state === "live" ? active.endMs - nowTs : active.startMs - nowTs) : 0;
+                    const caption = active
+                      ? (active.state === "live" ? `LIVE · ${fmtCountdown(timeMs)}` : `IN ${fmtCountdown(timeMs)}`)
+                      : undefined;
+                    return (
                     <div
                       draggable
                       onDragStart={(e) => {
@@ -301,22 +311,38 @@ function FloorBuilder() {
                           }}
                         >{dev.zone}</div>
                       )}
+                      {/* Booking ribbon */}
+                      {active && (
+                        <div
+                          className="pointer-events-none absolute -top-1 right-2 z-10 rounded-md border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] shadow-lg"
+                          style={{
+                            background: active.state === "live" ? "rgba(239,79,182,0.18)" : "rgba(245,176,66,0.18)",
+                            color: active.state === "live" ? "#ef4fb6" : "#f5b042",
+                            borderColor: active.state === "live" ? "rgba(239,79,182,0.55)" : "rgba(245,176,66,0.55)",
+                          }}
+                        >
+                          {active.state === "live" ? "● LIVE" : "✦ RESERVED"} · {cust}
+                        </div>
+                      )}
                       <button
-                        onClick={() => setEditing(dev)}
+                        onClick={() => active ? setSelectedBooking(active.booking) : setEditing(dev)}
                         onContextMenu={(e) => { e.preventDefault(); sendToTray(dev.id); }}
                         className="block w-full text-left"
-                        title="Click to edit · Right-click to unplace"
+                        title={active ? "Click to view booking · Right-click to unplace" : "Click to edit · Right-click to unplace"}
                       >
                         <StationPod
                           name={dev.name}
                           type={dev.type as "pc" | "console" | "vr" | "racing" | "other"}
-                          status={(dev.status as DeviceStatus) || "available"}
+                          status={effectiveStatus}
                           hourlyRate={dev.hourly_rate}
                           accent={dev.zone_color}
+                          caption={caption}
                         />
                       </button>
                     </div>
-                  )}
+                    );
+                  })()}
+
                 </div>
               );
             })}
