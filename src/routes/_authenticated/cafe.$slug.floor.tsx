@@ -116,8 +116,62 @@ function FloorBuilder() {
 
   const [adding, setAdding] = useState<null | { x: number; y: number }>(null);
   const [editing, setEditing] = useState<null | Device>(null);
+  const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hoverCell, setHoverCell] = useState<string | null>(null);
+
+  // Live bookings for this café — used to overlay reserved / live sessions on stations.
+  const bookingsFn = useServerFn(listBookings);
+  const bookingsQ = useQuery({
+    queryKey: ["bookings", cafe?.id],
+    queryFn: () => bookingsFn({ data: { cafe_id: cafe!.id } }),
+    enabled: !!cafe?.id,
+    refetchInterval: 30_000,
+  });
+
+  // 1-second ticker so countdowns/overlays refresh live.
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  type ActiveInfo = { booking: BookingRow; state: "live" | "reserved"; endMs: number; startMs: number };
+  const activeByDevice = useMemo(() => {
+    const m = new Map<string, ActiveInfo>();
+    const rows = (bookingsQ.data ?? []) as BookingRow[] & { device_id?: string }[];
+    for (const b of rows as any[]) {
+      if (!b.device_id) continue;
+      if (b.status === "cancelled" || b.status === "completed" || b.status === "no_show") continue;
+      const startMs = new Date(b.scheduled_at).getTime();
+      const endMs = startMs + (b.duration_minutes || 0) * 60_000;
+      if (nowTs > endMs) continue; // finished
+      // Only surface within 2h of start / until end
+      if (startMs - nowTs > 2 * 60 * 60_000) continue;
+      const state: "live" | "reserved" = nowTs >= startMs ? "live" : "reserved";
+      const prev = m.get(b.device_id);
+      // Prefer the currently live one, else the soonest upcoming.
+      if (!prev || (state === "live" && prev.state !== "live") || (state === prev.state && startMs < prev.startMs)) {
+        m.set(b.device_id, { booking: b as BookingRow, state, endMs, startMs });
+      }
+    }
+    return m;
+  }, [bookingsQ.data, nowTs]);
+
+  function fmtCountdown(ms: number) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    if (m >= 60) {
+      const h = Math.floor(m / 60);
+      return `${h}h ${m % 60}m`;
+    }
+    return `${m}:${String(r).padStart(2, "0")}`;
+  }
+
+  const cols = cafe?.floor_cols ?? 10;
+  const rows = cafe?.floor_rows ?? 6;
+
 
   const cols = cafe?.floor_cols ?? 10;
   const rows = cafe?.floor_rows ?? 6;
