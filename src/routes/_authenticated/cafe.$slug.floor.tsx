@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,8 @@ import {
   listDevices, createDevice, updateDevice, deleteDevice, placeDevice,
   type DeviceStatus,
 } from "@/lib/devices.functions";
+import { listBookings } from "@/lib/bookings.functions";
+import { BookingDetailDialog, type BookingRow } from "@/components/BookingDetailDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +29,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/floor")({
   head: () => ({
@@ -113,11 +116,62 @@ function FloorBuilder() {
 
   const [adding, setAdding] = useState<null | { x: number; y: number }>(null);
   const [editing, setEditing] = useState<null | Device>(null);
+  const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hoverCell, setHoverCell] = useState<string | null>(null);
 
+  // Live bookings for this café — used to overlay reserved / live sessions on stations.
+  const bookingsFn = useServerFn(listBookings);
+  const bookingsQ = useQuery({
+    queryKey: ["bookings", cafe?.id],
+    queryFn: () => bookingsFn({ data: { cafe_id: cafe!.id } }),
+    enabled: !!cafe?.id,
+    refetchInterval: 30_000,
+  });
+
+  // 1-second ticker so countdowns/overlays refresh live.
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  type ActiveInfo = { booking: BookingRow; state: "live" | "reserved"; endMs: number; startMs: number };
+  const activeByDevice = useMemo(() => {
+    const m = new Map<string, ActiveInfo>();
+    const rows = (bookingsQ.data ?? []) as BookingRow[] & { device_id?: string }[];
+    for (const b of rows as any[]) {
+      if (!b.device_id) continue;
+      if (b.status === "cancelled" || b.status === "completed" || b.status === "no_show") continue;
+      const startMs = new Date(b.scheduled_at).getTime();
+      const endMs = startMs + (b.duration_minutes || 0) * 60_000;
+      if (nowTs > endMs) continue; // finished
+      // Only surface within 2h of start / until end
+      if (startMs - nowTs > 2 * 60 * 60_000) continue;
+      const state: "live" | "reserved" = nowTs >= startMs ? "live" : "reserved";
+      const prev = m.get(b.device_id);
+      // Prefer the currently live one, else the soonest upcoming.
+      if (!prev || (state === "live" && prev.state !== "live") || (state === prev.state && startMs < prev.startMs)) {
+        m.set(b.device_id, { booking: b as BookingRow, state, endMs, startMs });
+      }
+    }
+    return m;
+  }, [bookingsQ.data, nowTs]);
+
+  function fmtCountdown(ms: number) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    if (m >= 60) {
+      const h = Math.floor(m / 60);
+      return `${h}h ${m % 60}m`;
+    }
+    return `${m}:${String(r).padStart(2, "0")}`;
+  }
+
   const cols = cafe?.floor_cols ?? 10;
   const rows = cafe?.floor_rows ?? 6;
+
   const devices = (devicesQ.data ?? []) as Device[];
   const placed = devices.filter((d) => d.pos_x != null && d.pos_y != null);
   const tray = devices.filter((d) => d.pos_x == null || d.pos_y == null);
@@ -226,7 +280,17 @@ function FloorBuilder() {
                       <span className="absolute bottom-1 right-2 font-mono text-[9px] opacity-50">{x},{y}</span>
                     </button>
                   )}
-                  {dev && (
+                  {dev && (() => {
+                    const active = activeByDevice.get(dev.id);
+                    const effectiveStatus: DeviceStatus = active
+                      ? (active.state === "live" ? "in_use" : "reserved")
+                      : ((dev.status as DeviceStatus) || "available");
+                    const cust = active?.booking.customers?.full_name || "Guest";
+                    const timeMs = active ? (active.state === "live" ? active.endMs - nowTs : active.startMs - nowTs) : 0;
+                    const caption = active
+                      ? (active.state === "live" ? `LIVE · ${fmtCountdown(timeMs)}` : `IN ${fmtCountdown(timeMs)}`)
+                      : undefined;
+                    return (
                     <div
                       draggable
                       onDragStart={(e) => {
@@ -247,22 +311,38 @@ function FloorBuilder() {
                           }}
                         >{dev.zone}</div>
                       )}
+                      {/* Booking ribbon */}
+                      {active && (
+                        <div
+                          className="pointer-events-none absolute -top-1 right-2 z-10 rounded-md border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] shadow-lg"
+                          style={{
+                            background: active.state === "live" ? "rgba(239,79,182,0.18)" : "rgba(245,176,66,0.18)",
+                            color: active.state === "live" ? "#ef4fb6" : "#f5b042",
+                            borderColor: active.state === "live" ? "rgba(239,79,182,0.55)" : "rgba(245,176,66,0.55)",
+                          }}
+                        >
+                          {active.state === "live" ? "● LIVE" : "✦ RESERVED"} · {cust}
+                        </div>
+                      )}
                       <button
-                        onClick={() => setEditing(dev)}
+                        onClick={() => active ? setSelectedBooking(active.booking) : setEditing(dev)}
                         onContextMenu={(e) => { e.preventDefault(); sendToTray(dev.id); }}
                         className="block w-full text-left"
-                        title="Click to edit · Right-click to unplace"
+                        title={active ? "Click to view booking · Right-click to unplace" : "Click to edit · Right-click to unplace"}
                       >
                         <StationPod
                           name={dev.name}
                           type={dev.type as "pc" | "console" | "vr" | "racing" | "other"}
-                          status={(dev.status as DeviceStatus) || "available"}
+                          status={effectiveStatus}
                           hourlyRate={dev.hourly_rate}
                           accent={dev.zone_color}
+                          caption={caption}
                         />
                       </button>
                     </div>
-                  )}
+                    );
+                  })()}
+
                 </div>
               );
             })}
@@ -445,6 +525,16 @@ function FloorBuilder() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Booking detail popup — opens when clicking a reserved/live station */}
+      <BookingDetailDialog
+        booking={selectedBooking}
+        open={!!selectedBooking}
+        onOpenChange={(o) => !o && setSelectedBooking(null)}
+        cafeId={cafe.id}
+      />
+
+
 
       {/* If totally empty, soft empty state hint */}
       <AnimatePresence>
