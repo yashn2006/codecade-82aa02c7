@@ -10,7 +10,77 @@ async function isSuperAdmin(ctx: { supabase: any; userId: string }) {
   return !!data;
 }
 
+/* -------------------- Owner → Admin messaging -------------------- */
+
+export const sendOwnerMessage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      cafe_id: z.string().uuid().optional().nullable(),
+      subject: z.string().min(1).max(200),
+      body: z.string().min(1).max(4000),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    // Owner can only tag a cafe they own.
+    if (data.cafe_id) {
+      const { data: c } = await context.supabase
+        .from("cafes").select("id").eq("id", data.cafe_id).eq("owner_id", context.userId).maybeSingle();
+      if (!c) throw new Error("Not your café");
+    }
+    const { error } = await context.supabase.from("owner_messages").insert({
+      sender_id: context.userId,
+      cafe_id: data.cafe_id ?? null,
+      subject: data.subject,
+      body: data.body,
+    });
+    if (error) throw new Error(error.message);
+    // Notify all super admins in-app (best-effort).
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: admins } = await supabaseAdmin
+      .from("user_roles").select("user_id").eq("role", "super_admin");
+    if (admins?.length) {
+      await supabaseAdmin.from("notifications").insert(
+        admins.map((a: { user_id: string }) => ({
+          user_id: a.user_id,
+          kind: "owner_message",
+          title: `Owner: ${data.subject}`,
+          body: data.body.slice(0, 240),
+          link: "/admin/support",
+        })),
+      );
+    }
+    return { ok: true };
+  });
+
+export const listOwnerMessagesAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
+    const { data, error } = await context.supabase
+      .from("owner_messages")
+      .select("id, subject, body, sent_at, read_at, cafe_id, sender_id, cafes(name, slug)")
+      .order("sent_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const markOwnerMessageRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
+    const { error } = await context.supabase
+      .from("owner_messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /* -------------------- Admin → Owner messaging -------------------- */
+
 
 export const sendAdminMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
