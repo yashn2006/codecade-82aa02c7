@@ -106,7 +106,9 @@ function CafeLayout() {
               />
               {!locked && <LogRevenueButton cafeId={(cafe as { id: string }).id} />}
               <OwnerInbox />
+              <OwnerMessageAdmin cafeId={(cafe as { id: string }).id} />
               <DeleteCafeButton cafeId={(cafe as { id: string }).id} slug={cafe.slug} name={cafe.name} />
+
             </div>
           </div>
         )}
