@@ -16,7 +16,7 @@ export function AdminOwnerMessagesInbox() {
   const mark = useServerFn(markOwnerMessageRead);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["admin-owner-messages"], queryFn: () => fn(), refetchInterval: 60_000 });
-  const rows = (q.data ?? []) as Row[];
+  const rows = (q.data ?? []) as unknown as Row[];
   const m = useMutation({
     mutationFn: (id: string) => mark({ data: { id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-owner-messages"] }),
