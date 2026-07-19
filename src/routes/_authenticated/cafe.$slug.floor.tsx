@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,8 @@ import {
   listDevices, createDevice, updateDevice, deleteDevice, placeDevice,
   type DeviceStatus,
 } from "@/lib/devices.functions";
+import { listBookings } from "@/lib/bookings.functions";
+import { BookingDetailDialog, type BookingRow } from "@/components/BookingDetailDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +29,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/floor")({
   head: () => ({
