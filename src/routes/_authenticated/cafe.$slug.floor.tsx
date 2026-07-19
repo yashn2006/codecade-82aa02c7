@@ -172,9 +172,6 @@ function FloorBuilder() {
   const cols = cafe?.floor_cols ?? 10;
   const rows = cafe?.floor_rows ?? 6;
 
-
-  const cols = cafe?.floor_cols ?? 10;
-  const rows = cafe?.floor_rows ?? 6;
   const devices = (devicesQ.data ?? []) as Device[];
   const placed = devices.filter((d) => d.pos_x != null && d.pos_y != null);
   const tray = devices.filter((d) => d.pos_x == null || d.pos_y == null);
