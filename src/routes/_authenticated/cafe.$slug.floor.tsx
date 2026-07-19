@@ -526,6 +526,16 @@ function FloorBuilder() {
         </SheetContent>
       </Sheet>
 
+      {/* Booking detail popup — opens when clicking a reserved/live station */}
+      <BookingDetailDialog
+        booking={selectedBooking}
+        open={!!selectedBooking}
+        onOpenChange={(o) => !o && setSelectedBooking(null)}
+        cafeId={cafe.id}
+      />
+
+
+
       {/* If totally empty, soft empty state hint */}
       <AnimatePresence>
         {devices.length === 0 && (
