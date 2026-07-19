@@ -13,6 +13,7 @@ import { isMaintenanceActive } from "@/lib/maintenance";
 import { Button } from "@/components/ui/button";
 import { DeleteCafeButton } from "@/components/DeleteCafeButton";
 import { OwnerInbox } from "@/components/OwnerInbox";
+import { OwnerMessageAdmin } from "@/components/OwnerMessageAdmin";
 import { LogRevenueButton } from "@/components/LogRevenueButton";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug")({
@@ -105,7 +106,9 @@ function CafeLayout() {
               />
               {!locked && <LogRevenueButton cafeId={(cafe as { id: string }).id} />}
               <OwnerInbox />
+              <OwnerMessageAdmin cafeId={(cafe as { id: string }).id} />
               <DeleteCafeButton cafeId={(cafe as { id: string }).id} slug={cafe.slug} name={cafe.name} />
+
             </div>
           </div>
         )}

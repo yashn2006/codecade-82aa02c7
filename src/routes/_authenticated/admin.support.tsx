@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { listAdminTickets, replyTicket } from "@/lib/tickets.functions";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { AdminOwnerMessagesInbox } from "@/components/AdminOwnerMessagesInbox";
 
 export const Route = createFileRoute("/_authenticated/admin/support")({
   head: () => ({ meta: [{ title: "Support tickets — Super Admin · CoreCade" }] }),
@@ -175,6 +176,8 @@ function AdminSupportPanel() {
           ))}
         </div>
       </header>
+
+      <AdminOwnerMessagesInbox />
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
