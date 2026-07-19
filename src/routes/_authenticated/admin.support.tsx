@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { listAdminTickets, replyTicket } from "@/lib/tickets.functions";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { AdminOwnerMessagesInbox } from "@/components/AdminOwnerMessagesInbox";
 
 export const Route = createFileRoute("/_authenticated/admin/support")({
   head: () => ({ meta: [{ title: "Support tickets — Super Admin · CoreCade" }] }),
