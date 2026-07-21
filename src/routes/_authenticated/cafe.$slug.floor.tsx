@@ -15,6 +15,7 @@ import {
 } from "@/lib/devices.functions";
 import { listBookings } from "@/lib/bookings.functions";
 import { BookingDetailDialog, type BookingRow } from "@/components/BookingDetailDialog";
+import { StationDetailDialog, type StationBooking, type StationInfo } from "@/components/StationDetailDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
