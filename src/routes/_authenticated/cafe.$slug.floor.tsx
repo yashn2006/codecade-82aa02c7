@@ -118,6 +118,7 @@ function FloorBuilder() {
   const [adding, setAdding] = useState<null | { x: number; y: number }>(null);
   const [editing, setEditing] = useState<null | Device>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
+  const [selectedStation, setSelectedStation] = useState<StationInfo | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hoverCell, setHoverCell] = useState<string | null>(null);
 
@@ -326,10 +327,10 @@ function FloorBuilder() {
                         </div>
                       )}
                       <button
-                        onClick={() => active ? setSelectedBooking(active.booking) : setEditing(dev)}
+                        onClick={() => setSelectedStation(dev as unknown as StationInfo)}
                         onContextMenu={(e) => { e.preventDefault(); sendToTray(dev.id); }}
                         className="block w-full text-left"
-                        title={active ? "Click to view booking · Right-click to unplace" : "Click to edit · Right-click to unplace"}
+                        title="Click for station details · Right-click to unplace"
                       >
                         <StationPod
                           name={dev.name}
@@ -527,7 +528,23 @@ function FloorBuilder() {
         </SheetContent>
       </Sheet>
 
-      {/* Booking detail popup — opens when clicking a reserved/live station */}
+      {/* Rich station detail popup — opens on any station click */}
+      <StationDetailDialog
+        open={!!selectedStation}
+        onOpenChange={(o) => !o && setSelectedStation(null)}
+        station={selectedStation}
+        bookings={
+          selectedStation
+            ? ((bookingsQ.data ?? []) as unknown as StationBooking[]).filter(
+                (b) => (b as { device_id?: string }).device_id === selectedStation.id,
+              )
+            : []
+        }
+        cafeId={cafe.id}
+        onEdit={(s) => setEditing(s as unknown as Device)}
+      />
+
+      {/* Booking detail popup (legacy — kept for programmatic opens) */}
       <BookingDetailDialog
         booking={selectedBooking}
         open={!!selectedBooking}
