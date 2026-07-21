@@ -220,20 +220,24 @@ function AuthPage() {
               <div className="mt-6 space-y-3">
                 <button
                   type="button"
-                  disabled={loading}
                   onClick={async () => {
-                    setLoading(true);
                     try {
                       const { error } = await supabase.auth.signInWithOAuth({
                         provider: "google",
-                        options: { redirectTo: `${window.location.origin}/auth` },
+                        options: {
+                          redirectTo: `${window.location.origin}/auth`,
+                          // Force the Google account chooser every time so
+                          // users aren't silently logged in with whatever
+                          // account the browser last used.
+                          queryParams: { prompt: "select_account" },
+                        },
                       });
                       if (error) throw error;
                     } catch (err) {
                       toast.error(err instanceof Error ? err.message : "Google sign-in failed");
-                      setLoading(false);
                     }
                   }}
+
                   className="group relative flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl border border-border/70 bg-background/60 font-semibold text-foreground backdrop-blur transition hover:border-primary/50 hover:bg-background/80"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden>
