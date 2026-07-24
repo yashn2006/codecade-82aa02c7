@@ -174,7 +174,7 @@ export function ConsoleShell({
           </header>
 
           {/* Main content */}
-          <main className="min-w-0 flex-1 px-3 pb-24 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
+          <main className="min-w-0 px-3 pb-24 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
