@@ -178,10 +178,11 @@ export function ConsoleShell({
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/35 px-4 py-5 shadow-pop backdrop-blur-xl sm:px-6 sm:py-6"
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card/60 via-card/40 to-card/20 px-4 py-5 shadow-pop backdrop-blur-xl sm:px-6 sm:py-6"
             >
-              <HeroBackdrop3D />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,oklch(0.32_0.18_320/0.35),transparent_55%),radial-gradient(ellipse_at_bottom_right,oklch(0.32_0.2_260/0.3),transparent_55%)]" aria-hidden />
+
               <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0">
                   <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.28em] text-primary shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]">
