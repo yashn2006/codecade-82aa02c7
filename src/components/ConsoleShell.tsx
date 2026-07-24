@@ -78,11 +78,12 @@ export function ConsoleShell({
   const moreActive = overflowNav.some(isActive);
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
       <AuroraBackground intensity={intensity} />
       <CommandPalette />
 
       <div className="flex min-h-screen">
+
         {/* === Desktop sidebar === */}
         <aside className="hidden lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:border-r lg:border-border/70 lg:bg-card/60 lg:backdrop-blur-xl">
           <div className="flex h-16 items-center px-5 border-b border-border/70">
