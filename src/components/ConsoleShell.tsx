@@ -6,10 +6,10 @@ import { LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { AuroraBackground } from "@/components/AuroraBackground";
-import { HeroBackdrop3D } from "@/components/HeroBackdrop3D";
 import { BrandLockup } from "@/components/Brand";
 import { NotificationBell } from "@/components/NotificationBell";
 import { CommandPalette } from "@/components/CommandPalette";
+
 
 export type NavItem = {
   label: string;
