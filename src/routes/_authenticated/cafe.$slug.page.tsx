@@ -317,6 +317,20 @@ function PageEditor() {
             <Button variant="outline" className="mt-3 w-full gap-2"><ExternalLink className="h-4 w-4" /> Open public page</Button>
           </Link>
         </div>
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
+          <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground">
+            <span>Live public page</span>
+            <button type="button" onClick={() => qc.invalidateQueries({ queryKey: ["cafe-page", cafeId] })} className="rounded-full border border-border/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest hover:border-primary/50 hover:text-primary">Refresh</button>
+          </div>
+          <iframe
+            key={pageQ.dataUpdatedAt}
+            src={`/c/${slug}`}
+            className="aspect-[9/16] w-full bg-black sm:aspect-[3/4]"
+            loading="lazy"
+            title="Public page preview"
+          />
+        </div>
+
         {form.hero_url && (
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
             <img src={form.hero_url} alt="Hero preview" className="aspect-[16/9] w-full object-cover" />
