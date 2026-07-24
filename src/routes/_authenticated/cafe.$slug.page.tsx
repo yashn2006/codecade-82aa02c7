@@ -27,13 +27,25 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/page")({
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const THEME_PRESETS = [
-  { mode: "dark",    label: "Midnight",  accent: "#ec4899", bg: "#0a0a1a" },
-  { mode: "neon",    label: "Neon Arcade", accent: "#00f0ff", bg: "#050014" },
-  { mode: "minimal", label: "Minimal",    accent: "#171717", bg: "#fafafa" },
-  { mode: "arcade",  label: "Retro CRT",  accent: "#ffd000", bg: "#1a0033" },
+  { mode: "dark",     label: "Midnight",    accent: "#ec4899", bg: "#0a0a1a" },
+  { mode: "neon",     label: "Neon Arcade", accent: "#00f0ff", bg: "#050014" },
+  { mode: "minimal",  label: "Minimal",     accent: "#171717", bg: "#fafafa" },
+  { mode: "arcade",   label: "Retro CRT",   accent: "#ffd000", bg: "#1a0033" },
+  { mode: "sunset",   label: "Sunset",      accent: "#ff6b35", bg: "#1a0a1f" },
+  { mode: "forest",   label: "Forest",      accent: "#22c55e", bg: "#02120a" },
+  { mode: "ocean",    label: "Ocean",       accent: "#38bdf8", bg: "#020a1a" },
+  { mode: "royal",    label: "Royal",       accent: "#a855f7", bg: "#0a0520" },
+] as const;
+
+const FONT_PRESETS = [
+  { id: "display", label: "Display (default)" },
+  { id: "mono",    label: "Mono / Tech" },
+  { id: "serif",   label: "Editorial serif" },
+  { id: "grotesk", label: "Modern grotesk" },
 ] as const;
 
 type Theme = { mode?: string; accent?: string; bg?: string; font?: string; logo?: string };
+
 
 function PageEditor() {
   const { slug } = Route.useParams();
