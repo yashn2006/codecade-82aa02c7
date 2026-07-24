@@ -149,7 +149,7 @@ export function ConsoleShell({
         </aside>
 
         {/* === Main column === */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="relative flex min-w-0 flex-1 flex-col bg-background/85 backdrop-blur-xl">
           {/* Desktop top bar — notification bell lives here so the dropdown
               has room to open downward instead of clipping at the sidebar. */}
           <header className="sticky top-0 z-30 hidden h-12 items-center justify-end gap-1 border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl lg:flex">
@@ -174,7 +174,7 @@ export function ConsoleShell({
           </header>
 
           {/* Main content */}
-          <main className="min-w-0 flex-1 px-3 pb-24 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
+          <main className="min-w-0 px-3 pb-24 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
