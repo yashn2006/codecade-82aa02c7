@@ -157,7 +157,7 @@ function PageEditor() {
                   key={t.mode}
                   type="button"
                   onClick={() => setForm((c) => ({ ...c, theme: { ...c.theme, mode: t.mode, accent: t.accent, bg: t.bg } }))}
-                  className={`group relative overflow-hidden rounded-xl border p-3 text-left transition ${active ? "border-primary shadow-soft" : "border-border hover:border-primary/40"}`}
+                  className={`group relative overflow-hidden rounded-xl border p-3 text-left transition ${active ? "border-primary shadow-soft ring-2 ring-primary/60" : "border-border hover:border-primary/40"}`}
                   style={{ background: `linear-gradient(135deg, ${t.bg}, ${t.bg}cc)` }}
                 >
                   <div className="text-xs font-semibold" style={{ color: t.mode === "minimal" ? "#111" : "#fff" }}>{t.label}</div>
@@ -165,11 +165,12 @@ function PageEditor() {
                     <span className="h-4 w-4 rounded-full ring-1 ring-white/30" style={{ background: t.accent }} />
                     <span className="h-4 w-4 rounded-full ring-1 ring-white/30" style={{ background: t.bg }} />
                   </div>
+                  {active && <span className="absolute right-2 top-2 rounded-full bg-primary/90 px-1.5 py-0.5 font-mono text-[8px] uppercase text-primary-foreground">Active</span>}
                 </button>
               );
             })}
           </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <div className="space-y-1">
               <Label className="text-xs">Accent color</Label>
               <Input type="color" value={form.theme.accent ?? "#ec4899"} onChange={(e) => setForm((c) => ({ ...c, theme: { ...c.theme, accent: e.target.value } }))} className="h-10 w-full" />
@@ -178,6 +179,50 @@ function PageEditor() {
               <Label className="text-xs">Background</Label>
               <Input type="color" value={form.theme.bg ?? "#0a0a1a"} onChange={(e) => setForm((c) => ({ ...c, theme: { ...c.theme, bg: e.target.value } }))} className="h-10 w-full" />
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Font style</Label>
+              <select
+                value={form.theme.font ?? "display"}
+                onChange={(e) => setForm((c) => ({ ...c, theme: { ...c.theme, font: e.target.value } }))}
+                className="h-10 w-full rounded-md border border-border bg-background px-2 text-sm"
+              >
+                {FONT_PRESETS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Inline live preview card */}
+          <div
+            className="mt-4 overflow-hidden rounded-2xl border p-5 shadow-inner transition-all"
+            style={{
+              background: `linear-gradient(140deg, ${form.theme.bg}, ${form.theme.bg}dd)`,
+              borderColor: `${form.theme.accent}55`,
+              boxShadow: `0 0 60px -20px ${form.theme.accent}88 inset`,
+            }}
+          >
+            <div className="flex items-center gap-3">
+              {form.theme.logo ? (
+                <img src={form.theme.logo} alt="" className="h-10 w-10 rounded-lg object-contain ring-1 ring-white/20" />
+              ) : (
+                <div className="h-10 w-10 rounded-lg ring-1 ring-white/20" style={{ background: form.theme.accent }} />
+              )}
+              <div>
+                <div className="text-xs uppercase tracking-[0.24em]" style={{ color: `${form.theme.accent}` }}>Live preview</div>
+                <div className="text-lg font-extrabold" style={{ color: form.theme.mode === "minimal" ? "#111" : "#fff" }}>
+                  {cafe?.name ?? "Your café"}
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-sm" style={{ color: form.theme.mode === "minimal" ? "#33333399" : "#ffffffb0" }}>
+              {form.tagline || "Your tagline previews right here as you type."}
+            </div>
+            <button
+              type="button"
+              className="mt-4 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest text-black transition hover:brightness-110"
+              style={{ background: form.theme.accent, boxShadow: `0 8px 30px -8px ${form.theme.accent}` }}
+            >
+              Book a rig
+            </button>
           </div>
         </div>
 
@@ -187,6 +232,7 @@ function PageEditor() {
           <Input value={form.map_url} onChange={(e) => setForm({ ...form, map_url: e.target.value })} placeholder="https://www.google.com/maps/embed?pb=…" />
           <p className="text-[11px] text-muted-foreground">In Google Maps → Share → Embed a map → copy the src URL from the iframe.</p>
         </div>
+
 
         <div>
           <Label>Opening hours</Label>
