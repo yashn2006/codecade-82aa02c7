@@ -8,7 +8,9 @@ import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 import corecadeLogo from "@/assets/corecade-logo.png.asset.json";
+
 
 export const Route = createFileRoute("/discover")({
   ssr: false,
