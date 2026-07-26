@@ -614,19 +614,22 @@ function FiltersSheet({
 /* ============ STATS ============ */
 function StatsRow() {
   const items = [
-    { n: "120+", l: "Arenas" },
-    { n: "50,000+", l: "Sessions" },
-    { n: "18", l: "Cities" },
-    { n: "4.8★", l: "Avg Rating" },
+    { v: 120, suffix: "+", l: "Arenas" },
+    { v: 50000, suffix: "+", l: "Sessions" },
+    { v: 18, suffix: "", l: "Cities" },
+    { v: 4.8, suffix: "★", l: "Avg Rating", format: (n: number) => n.toFixed(1) },
   ];
   return (
     <div className="mt-20 grid grid-cols-2 gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-6 sm:grid-cols-4 sm:p-8">
       {items.map((it) => (
         <div key={it.l} className="text-center">
-          <div className="font-display text-2xl font-black text-white sm:text-3xl">{it.n}</div>
+          <div className="font-display text-2xl font-black text-white sm:text-3xl">
+            <AnimatedNumber value={it.v} suffix={it.suffix} duration={1500} format={it.format} />
+          </div>
           <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/40">{it.l}</div>
         </div>
       ))}
     </div>
   );
 }
+
