@@ -247,7 +247,7 @@ function Hero({
 
         <motion.h1
           initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
-          className="mt-6 font-display text-5xl font-black tracking-tight text-white sm:text-6xl"
+          className="mt-6 font-display font-black leading-[0.95] tracking-[-0.04em] text-white text-[2.75rem] sm:text-[4.5rem] xl:text-[5.5rem]"
         >
           Find Your Perfect Arena
         </motion.h1>
@@ -260,7 +260,7 @@ function Hero({
 
         <motion.div
           initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15 }}
-          className="mx-auto mt-8 flex w-full max-w-[600px] items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 pl-5 backdrop-blur-xl"
+          className="search-glow mx-auto mt-8 flex w-full max-w-2xl items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 pl-5 backdrop-blur-xl transition"
         >
           <Search className="h-4 w-4 shrink-0 text-white/40" />
           <input
@@ -285,14 +285,26 @@ function Hero({
               <button
                 key={c}
                 onClick={() => setCity(c)}
-                className={`rounded-full border px-4 py-1.5 text-xs font-medium transition ${active ? "border-transparent text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:text-white"}`}
+                className={`rounded-full border px-4 py-1.5 text-xs font-medium transition ${active ? "pill-active-glow border-transparent text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:text-white"}`}
                 style={active ? { background: MAGENTA } : undefined}
               >
                 {label}
               </button>
             );
           })}
+          <button
+            onClick={() => setLiveOnly(!liveOnly)}
+            className={`flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${liveOnly ? "pill-active-glow border-transparent text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:text-white"}`}
+            style={liveOnly ? { background: MAGENTA } : undefined}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            Live now
+          </button>
         </motion.div>
+
       </div>
     </section>
   );
