@@ -42,6 +42,7 @@ function DiscoverPage() {
   const [city, setCity] = useState<string>("all");
   const [amenities, setAmenities] = useState<string[]>([]);
   const [openNow, setOpenNow] = useState(false);
+  const [liveOnly, setLiveOnly] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [view, setView] = useState<"grid" | "map">("grid");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -62,23 +63,38 @@ function DiscoverPage() {
     return Array.from(s).sort();
   }, [cafes]);
 
+  // Cafés with active sessions (only shown when the data actually reports them)
+  const liveCafes = useMemo(
+    () =>
+      cafes
+        .map((c) => ({ cafe: c, sessions: (c as Cafe & { active_sessions?: number }).active_sessions ?? 0 }))
+        .filter((x) => x.sessions > 0),
+    [cafes],
+  );
+  const liveIds = useMemo(() => new Set(liveCafes.map((x) => x.cafe.id)), [liveCafes]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return cafes.filter((c) => {
       if (city !== "all" && c.city?.toLowerCase() !== city.toLowerCase()) return false;
+      if (liveOnly && !liveIds.has(c.id)) return false;
       if (q && ![c.name, c.city, c.state, c.description].some((v) => v?.toLowerCase().includes(q))) return false;
       return true;
     });
-  }, [cafes, query, city]);
+  }, [cafes, query, city, liveOnly, liveIds]);
 
   return (
-    <div className="min-h-screen antialiased text-white" style={{ background: BG }}>
+    <div className="discover-bg relative min-h-screen antialiased text-white">
+      <div className="grid-pulse pointer-events-none fixed inset-0 z-0" aria-hidden />
+      <div className="relative z-10">
       <Navbar signedIn={signedIn} email={email} />
       <Hero
         query={query} setQuery={setQuery}
         city={city} setCity={setCity}
         cityList={cityList}
+        liveOnly={liveOnly} setLiveOnly={setLiveOnly}
       />
+
 
       <section className="mx-auto max-w-[1200px] px-5 pb-24 sm:px-8">
         <div className="mb-6 flex items-end justify-between gap-4">
