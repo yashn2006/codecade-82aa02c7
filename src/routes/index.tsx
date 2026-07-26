@@ -308,11 +308,75 @@ function Cinematic() {
             <span className="block text-gradient-hot">an arcade.</span>
             <span className="block text-foreground/40">Runs like a bank.</span>
           </h2>
-          <p className="mx-auto mt-8 max-w-2xl text-muted-foreground sm:text-lg">
+        </motion.div>
+
+        {/* Two-column: copy + split visual */}
+        <div className="mt-14 grid items-center gap-10 lg:grid-cols-2">
+          <motion.p
+            initial={{ opacity: 0, x: -28 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-xl text-muted-foreground sm:text-lg"
+          >
             CoreCade is the operating system underneath every PC, console, controller and
             QR-code in your café. One backend. One source of truth. Zero spreadsheets.
-          </p>
-        </motion.div>
+          </motion.p>
+
+          <div className="grid gap-4">
+            {/* Top half — neon joystick */}
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="flex items-center justify-center rounded-2xl border border-magenta/25 bg-card/40 py-8 backdrop-blur"
+            >
+              <svg viewBox="0 0 120 120" className="h-28 w-28" fill="none" aria-hidden
+                style={{ filter: "drop-shadow(0 0 12px var(--color-magenta))" }}>
+                <ellipse cx="60" cy="96" rx="34" ry="12" stroke="var(--color-magenta)" strokeWidth="3" />
+                <path d="M60 84V40" stroke="var(--color-magenta)" strokeWidth="5" strokeLinecap="round" />
+                <circle cx="60" cy="30" r="14" stroke="var(--color-magenta)" strokeWidth="4" />
+                <circle cx="60" cy="30" r="5" fill="var(--color-magenta)" />
+                <path d="M34 96c0-7 12-12 26-12s26 5 26 12" stroke="var(--color-magenta)" strokeWidth="2" opacity="0.5" />
+                <circle cx="38" cy="92" r="3.5" fill="var(--color-magenta)" opacity="0.7" />
+                <circle cx="82" cy="92" r="3.5" fill="var(--color-magenta)" opacity="0.7" />
+              </svg>
+            </motion.div>
+
+            {/* Bottom half — mini bank-statement mockup */}
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.6, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+              className="rounded-2xl border border-border/60 bg-[oklch(0.14_0.02_290)] p-4 shadow-soft"
+            >
+              <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                <span>daily statement</span>
+                <span className="text-emerald-400">settled</span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {[
+                  { l: "Rig-04 · 92 min", v: "+₹184" },
+                  { l: "UPI · counter", v: "+₹560" },
+                  { l: "Membership · gold", v: "+₹999" },
+                  { l: "Tournament entry", v: "+₹1,200" },
+                ].map((r) => (
+                  <div key={r.l} className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2 text-xs">
+                    <span className="text-muted-foreground">{r.l}</span>
+                    <span className="font-mono font-semibold text-emerald-400">{r.v}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-3 text-sm">
+                <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">net today</span>
+                <span className="font-mono font-bold text-emerald-400">₹2,943</span>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
 
         {/* Marquee accent */}
         <motion.div
