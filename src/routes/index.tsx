@@ -678,7 +678,7 @@ function Pricing() {
           <div className="absolute -inset-[2px] rounded-[28px] opacity-70 blur-md transition-opacity duration-500 group-hover:opacity-100" style={{ background: "conic-gradient(from 0deg, #a855f7, #ec4899, #f97316, #a855f7)", animation: "spin 8s linear infinite" }} />
           <div className="absolute -inset-[1px] rounded-[26px]" style={{ background: "conic-gradient(from 0deg, #a855f7, #ec4899, #f97316, #a855f7)", animation: "spin 8s linear infinite" }} />
 
-          <div className="relative overflow-hidden rounded-3xl bg-background/95 p-8 backdrop-blur-xl sm:p-10">
+          <div className="pulse-glow-card relative overflow-hidden rounded-3xl bg-background/95 p-8 backdrop-blur-xl sm:p-10">
             {/* Shine sweep */}
             <div className="pointer-events-none absolute inset-0 -translate-x-full animate-[shine_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
