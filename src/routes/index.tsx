@@ -170,6 +170,9 @@ function Hero() {
   return (
     <section className="relative px-4 pt-16 pb-24 sm:px-6">
       <AuroraBackground intensity="immersive" />
+      {/* CSS-only animated grid texture */}
+      <div className="grid-pulse pointer-events-none absolute inset-0 -z-0" aria-hidden />
+
 
       <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-8">
         {/* LEFT — typography column */}
@@ -210,13 +213,13 @@ function Hero() {
           >
             <Link
               to="/auth"
-              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl px-7 py-3.5 text-sm font-semibold text-primary-foreground glow-violet"
+              className="cta-shimmer group relative inline-flex items-center gap-2 overflow-hidden rounded-xl px-7 py-3.5 text-sm font-semibold text-primary-foreground glow-violet"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
               <span className="relative z-10">Launch your café</span>
               <ArrowRight className="relative z-10 h-4 w-4 transition group-hover:translate-x-1" />
-              <span className="absolute inset-0 -z-0 animate-shimmer" />
             </Link>
+
             <a
               href="#features"
               className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/40 px-6 py-3.5 text-sm font-semibold backdrop-blur transition hover:border-primary/50 hover:bg-background/60"
@@ -233,15 +236,18 @@ function Hero() {
             {[
               { v: null, l: "sessions" },
               { v: null, l: "processed" },
-              { v: "99.9%", l: "uptime" },
+              { v: 99.9, l: "uptime" },
             ].map((k) => (
               <div key={k.l}>
                 <div className="font-display text-2xl font-extrabold text-gradient flex items-center justify-center min-h-[2rem]">
-                  {k.v ?? <StatLoader size="sm" />}
+                  {k.v === null
+                    ? <StatLoader size="sm" />
+                    : <AnimatedNumber value={k.v} duration={1500} suffix="%" format={(n) => n.toFixed(1)} />}
                 </div>
                 <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{k.l}</div>
               </div>
             ))}
+
           </motion.div>
         </div>
 
