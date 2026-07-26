@@ -223,12 +223,17 @@ function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }
 
 /* ============ HERO ============ */
 function Hero({
-  query, setQuery, city, setCity, cityList,
-}: { query: string; setQuery: (s: string) => void; city: string; setCity: (c: string) => void; cityList: string[] }) {
+  query, setQuery, city, setCity, cityList, liveOnly, setLiveOnly,
+}: {
+  query: string; setQuery: (s: string) => void;
+  city: string; setCity: (c: string) => void; cityList: string[];
+  liveOnly: boolean; setLiveOnly: (v: boolean) => void;
+}) {
   const chips = ["all", ...POPULAR_CITIES.filter((c) => cityList.some((x) => x.toLowerCase() === c.toLowerCase())), ...cityList.filter((c) => !POPULAR_CITIES.some((p) => p.toLowerCase() === c.toLowerCase()))];
   return (
     <section className="relative pt-32 pb-14 sm:pt-40 sm:pb-20">
-      <div className="mx-auto max-w-3xl px-5 text-center sm:px-8">
+      <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
+
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur"
