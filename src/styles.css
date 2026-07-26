@@ -332,7 +332,78 @@
 
   .hover-lift { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
   .hover-lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-pop); }
+
+  /* ---------- Landing / Discover motion kit ---------- */
+
+  /* CSS-only pulsing grid texture */
+  @keyframes grid-pulse {
+    0%, 100% { opacity: 0.03; }
+    50%      { opacity: 0.08; }
+  }
+  .grid-pulse {
+    background-image:
+      repeating-linear-gradient(0deg,   oklch(0.65 0.25 295 / 0.9) 0 1px, transparent 1px 56px),
+      repeating-linear-gradient(90deg,  oklch(0.65 0.25 295 / 0.9) 0 1px, transparent 1px 56px);
+    animation: grid-pulse 4s ease-in-out infinite;
+    mask-image: radial-gradient(ellipse 85% 70% at 50% 35%, #000 30%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% 35%, #000 30%, transparent 85%);
+    pointer-events: none;
+  }
+
+  /* Ticker: 30% faster + edge fade mask */
+  .animate-marquee-fast { animation: marquee 19.6s linear infinite; }
+  .ticker-mask {
+    mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  }
+  .ticker-glow { text-shadow: 0 0 8px var(--color-magenta); }
+
+  /* Pricing card pulsing glow */
+  @keyframes card-pulse-glow {
+    0%, 100% { box-shadow: 0 0 0px transparent; }
+    50%      { box-shadow: 0 0 20px var(--color-magenta), 0 0 40px rgba(255, 0, 200, 0.3); }
+  }
+  .pulse-glow-card { animation: card-pulse-glow 3s ease-in-out infinite; }
+
+  /* CTA shimmer sweep */
+  @keyframes cta-sweep {
+    0%       { transform: translateX(-120%) skewX(-18deg); }
+    35%, 100%{ transform: translateX(320%) skewX(-18deg); }
+  }
+  .cta-shimmer { position: relative; overflow: hidden; }
+  .cta-shimmer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+    animation: cta-sweep 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* Discover surfaces */
+  .discover-bg { background: radial-gradient(ellipse at 20% 50%, #2d0a4e 0%, #0d0015 60%); }
+  .glass-card {
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,100,200,0.15);
+    transition: border-color .3s ease, transform .3s ease, box-shadow .3s ease;
+  }
+  .glass-card:hover {
+    border-color: rgba(255,100,200,0.5);
+    transform: translateY(-4px);
+    box-shadow: 0 24px 60px -24px rgba(255,46,147,0.45);
+  }
+  .scanlines {
+    background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0 1px, transparent 1px 4px);
+  }
+  .search-glow:focus-within {
+    box-shadow: inset 0 0 0 1px var(--color-magenta), 0 0 20px rgba(255,0,200,0.15);
+  }
+  .pill-active-glow { box-shadow: 0 0 12px var(--color-magenta); }
 }
+
 
 /* ===================================================================
    MOBILE PERFORMANCE — kill GPU-killers on small screens

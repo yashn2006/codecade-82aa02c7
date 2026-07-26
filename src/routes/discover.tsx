@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Star, Map as MapIcon, LayoutGrid, X, Filter, Gamepad2, Clock, Wifi } from "lucide-react";
+import { Search, MapPin, Star, Map as MapIcon, LayoutGrid, X, Filter, Gamepad2, Clock, Monitor } from "lucide-react";
 import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 import corecadeLogo from "@/assets/corecade-logo.png.asset.json";
+
 
 export const Route = createFileRoute("/discover")({
   ssr: false,
@@ -42,6 +44,7 @@ function DiscoverPage() {
   const [city, setCity] = useState<string>("all");
   const [amenities, setAmenities] = useState<string[]>([]);
   const [openNow, setOpenNow] = useState(false);
+  const [liveOnly, setLiveOnly] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [view, setView] = useState<"grid" | "map">("grid");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -62,25 +65,63 @@ function DiscoverPage() {
     return Array.from(s).sort();
   }, [cafes]);
 
+  // Cafés with active sessions (only shown when the data actually reports them)
+  const liveCafes = useMemo(
+    () =>
+      cafes
+        .map((c) => ({ cafe: c, sessions: (c as Cafe & { active_sessions?: number }).active_sessions ?? 0 }))
+        .filter((x) => x.sessions > 0),
+    [cafes],
+  );
+  const liveIds = useMemo(() => new Set(liveCafes.map((x) => x.cafe.id)), [liveCafes]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return cafes.filter((c) => {
       if (city !== "all" && c.city?.toLowerCase() !== city.toLowerCase()) return false;
+      if (liveOnly && !liveIds.has(c.id)) return false;
       if (q && ![c.name, c.city, c.state, c.description].some((v) => v?.toLowerCase().includes(q))) return false;
       return true;
     });
-  }, [cafes, query, city]);
+  }, [cafes, query, city, liveOnly, liveIds]);
 
   return (
-    <div className="min-h-screen antialiased text-white" style={{ background: BG }}>
+    <div className="discover-bg relative min-h-screen antialiased text-white">
+      <div className="grid-pulse pointer-events-none fixed inset-0 z-0" aria-hidden />
+      <div className="relative z-10">
       <Navbar signedIn={signedIn} email={email} />
       <Hero
         query={query} setQuery={setQuery}
         city={city} setCity={setCity}
         cityList={cityList}
+        liveOnly={liveOnly} setLiveOnly={setLiveOnly}
       />
 
+
       <section className="mx-auto max-w-[1200px] px-5 pb-24 sm:px-8">
+        {liveCafes.length > 0 && (
+          <div className="mb-10">
+            <h2 className="font-display text-lg font-bold sm:text-xl">🔴 Live Right Now</h2>
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+              {liveCafes.map(({ cafe, sessions }) => (
+                <Link
+                  key={cafe.id}
+                  to="/c/$slug" params={{ slug: cafe.slug }}
+                  className="glass-card flex shrink-0 items-center gap-2.5 rounded-full px-4 py-2 text-sm font-medium text-white"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                  </span>
+                  {cafe.name}
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white/80">{sessions} live</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl font-bold sm:text-3xl">Featured Arenas</h2>
@@ -144,7 +185,9 @@ function DiscoverPage() {
       <footer className="border-t border-white/5 py-8 text-center text-xs text-white/40">
         © {new Date().getFullYear()} CoreCade · Built for India's gaming culture
       </footer>
+      </div>
     </div>
+
   );
 }
 
@@ -182,12 +225,17 @@ function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }
 
 /* ============ HERO ============ */
 function Hero({
-  query, setQuery, city, setCity, cityList,
-}: { query: string; setQuery: (s: string) => void; city: string; setCity: (c: string) => void; cityList: string[] }) {
+  query, setQuery, city, setCity, cityList, liveOnly, setLiveOnly,
+}: {
+  query: string; setQuery: (s: string) => void;
+  city: string; setCity: (c: string) => void; cityList: string[];
+  liveOnly: boolean; setLiveOnly: (v: boolean) => void;
+}) {
   const chips = ["all", ...POPULAR_CITIES.filter((c) => cityList.some((x) => x.toLowerCase() === c.toLowerCase())), ...cityList.filter((c) => !POPULAR_CITIES.some((p) => p.toLowerCase() === c.toLowerCase()))];
   return (
     <section className="relative pt-32 pb-14 sm:pt-40 sm:pb-20">
-      <div className="mx-auto max-w-3xl px-5 text-center sm:px-8">
+      <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
+
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur"
@@ -201,7 +249,7 @@ function Hero({
 
         <motion.h1
           initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
-          className="mt-6 font-display text-5xl font-black tracking-tight text-white sm:text-6xl"
+          className="mt-6 font-display font-black leading-[0.95] tracking-[-0.04em] text-white text-[2.75rem] sm:text-[4.5rem] xl:text-[5.5rem]"
         >
           Find Your Perfect Arena
         </motion.h1>
@@ -214,7 +262,7 @@ function Hero({
 
         <motion.div
           initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15 }}
-          className="mx-auto mt-8 flex w-full max-w-[600px] items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 pl-5 backdrop-blur-xl"
+          className="search-glow mx-auto mt-8 flex w-full max-w-2xl items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 pl-5 backdrop-blur-xl transition"
         >
           <Search className="h-4 w-4 shrink-0 text-white/40" />
           <input
@@ -239,14 +287,26 @@ function Hero({
               <button
                 key={c}
                 onClick={() => setCity(c)}
-                className={`rounded-full border px-4 py-1.5 text-xs font-medium transition ${active ? "border-transparent text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:text-white"}`}
+                className={`rounded-full border px-4 py-1.5 text-xs font-medium transition ${active ? "pill-active-glow border-transparent text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:text-white"}`}
                 style={active ? { background: MAGENTA } : undefined}
               >
                 {label}
               </button>
             );
           })}
+          <button
+            onClick={() => setLiveOnly(!liveOnly)}
+            className={`flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${liveOnly ? "pill-active-glow border-transparent text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:text-white"}`}
+            style={liveOnly ? { background: MAGENTA } : undefined}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            Live now
+          </button>
         </motion.div>
+
       </div>
     </section>
   );
@@ -256,6 +316,8 @@ function Hero({
 function CafeCard({ cafe, index, isMobile }: { cafe: Cafe; index: number; isMobile: boolean }) {
   const [hover, setHover] = useState(false);
   const gradient = `linear-gradient(135deg, #2a0f3f 0%, ${MAGENTA} 100%)`;
+  const rigs = (cafe as Cafe & { device_count?: number }).device_count ?? null;
+
 
   return (
     <motion.div
@@ -267,17 +329,20 @@ function CafeCard({ cafe, index, isMobile }: { cafe: Cafe; index: number; isMobi
     >
       <Link
         to="/c/$slug" params={{ slug: cafe.slug }}
-        className="block overflow-hidden rounded-2xl bg-white/[0.03] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.06]"
-        style={{ boxShadow: hover ? "0 20px 50px -20px rgba(255,46,147,.35)" : "0 0 0 1px rgba(255,255,255,.04)" }}
+        className="glass-card relative block h-[280px] overflow-hidden rounded-2xl"
       >
+        {/* top accent bar */}
+        <div className="absolute inset-x-0 top-0 z-10 h-[3px]" style={{ background: "var(--gradient-brand-hot)" }} />
+
         {/* image */}
-        <div className="relative h-[200px] overflow-hidden">
+        <div className="relative h-[120px] overflow-hidden">
           {cafe.cover_url ? (
             <img src={cafe.cover_url} alt={cafe.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
           ) : (
             <div className="h-full w-full" style={{ background: gradient }} />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+          <div className="scanlines pointer-events-none absolute inset-0 opacity-40" aria-hidden />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
 
           <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-300 backdrop-blur">
             <span className="relative flex h-1.5 w-1.5">
@@ -290,32 +355,45 @@ function CafeCard({ cafe, index, isMobile }: { cafe: Cafe; index: number; isMobi
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> 4.8
           </div>
 
-          <h3 className="absolute bottom-3 left-4 right-4 font-display text-lg font-bold text-white drop-shadow-lg">
+          <h3 className="absolute bottom-2 left-4 right-4 truncate font-display text-[18px] font-bold text-white drop-shadow-lg">
             {cafe.name}
           </h3>
         </div>
 
         {/* body */}
-        <div className="p-4">
+        <div className="flex h-[160px] flex-col p-4">
           <div className="flex items-center gap-1.5 text-[13px] text-white/50">
-            <MapPin className="h-3.5 w-3.5" />
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{[cafe.city, cafe.state].filter(Boolean).join(", ") || "Location"}</span>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {["PC", "Console", "VR", "WiFi"].map((a) => (
-              <span key={a} className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-medium text-white/60">{a}</span>
+              <span key={a} className="rounded-full bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-white/60">{a}</span>
             ))}
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-xs text-white/50">
-              from <span className="text-sm font-bold text-white">₹80</span>/hr
+          {rigs !== null && (
+            <div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-white/50">
+              <Monitor className="h-3.5 w-3.5 shrink-0" /> {rigs} rigs available
             </div>
-            <span className="text-xs font-semibold" style={{ color: MAGENTA }}>Step Inside →</span>
+          )}
+
+          <div className="mt-auto flex items-center justify-between">
+            <div className="text-xs text-white/50">
+              from <span className="text-sm font-bold" style={{ color: MAGENTA }}>₹80</span>
+              <span style={{ color: MAGENTA }}>/hr</span>
+            </div>
+            <span
+              className="text-xs font-semibold no-underline transition"
+              style={{ color: MAGENTA, textShadow: hover ? `0 0 10px ${MAGENTA}` : undefined }}
+            >
+              Step Inside →
+            </span>
           </div>
         </div>
       </Link>
+
 
       {/* hover popup */}
       <AnimatePresence>
@@ -538,19 +616,22 @@ function FiltersSheet({
 /* ============ STATS ============ */
 function StatsRow() {
   const items = [
-    { n: "120+", l: "Arenas" },
-    { n: "50,000+", l: "Sessions" },
-    { n: "18", l: "Cities" },
-    { n: "4.8★", l: "Avg Rating" },
+    { v: 120, suffix: "+", l: "Arenas" },
+    { v: 50000, suffix: "+", l: "Sessions" },
+    { v: 18, suffix: "", l: "Cities" },
+    { v: 4.8, suffix: "★", l: "Avg Rating", format: (n: number) => n.toFixed(1) },
   ];
   return (
     <div className="mt-20 grid grid-cols-2 gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-6 sm:grid-cols-4 sm:p-8">
       {items.map((it) => (
         <div key={it.l} className="text-center">
-          <div className="font-display text-2xl font-black text-white sm:text-3xl">{it.n}</div>
+          <div className="font-display text-2xl font-black text-white sm:text-3xl">
+            <AnimatedNumber value={it.v} suffix={it.suffix} duration={1500} format={it.format} />
+          </div>
           <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/40">{it.l}</div>
         </div>
       ))}
     </div>
   );
 }
+
