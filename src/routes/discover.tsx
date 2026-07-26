@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Star, Map as MapIcon, LayoutGrid, X, Filter, Gamepad2, Clock, Wifi } from "lucide-react";
+import { Search, MapPin, Star, Map as MapIcon, LayoutGrid, X, Filter, Gamepad2, Clock, Monitor } from "lucide-react";
 import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -314,6 +314,8 @@ function Hero({
 function CafeCard({ cafe, index, isMobile }: { cafe: Cafe; index: number; isMobile: boolean }) {
   const [hover, setHover] = useState(false);
   const gradient = `linear-gradient(135deg, #2a0f3f 0%, ${MAGENTA} 100%)`;
+  const rigs = (cafe as Cafe & { device_count?: number }).device_count ?? null;
+
 
   return (
     <motion.div
