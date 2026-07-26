@@ -183,7 +183,9 @@ function DiscoverPage() {
       <footer className="border-t border-white/5 py-8 text-center text-xs text-white/40">
         © {new Date().getFullYear()} CoreCade · Built for India's gaming culture
       </footer>
+      </div>
     </div>
+
   );
 }
 
