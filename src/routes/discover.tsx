@@ -325,17 +325,20 @@ function CafeCard({ cafe, index, isMobile }: { cafe: Cafe; index: number; isMobi
     >
       <Link
         to="/c/$slug" params={{ slug: cafe.slug }}
-        className="block overflow-hidden rounded-2xl bg-white/[0.03] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.06]"
-        style={{ boxShadow: hover ? "0 20px 50px -20px rgba(255,46,147,.35)" : "0 0 0 1px rgba(255,255,255,.04)" }}
+        className="glass-card relative block h-[280px] overflow-hidden rounded-2xl"
       >
+        {/* top accent bar */}
+        <div className="absolute inset-x-0 top-0 z-10 h-[3px]" style={{ background: "var(--gradient-brand-hot)" }} />
+
         {/* image */}
-        <div className="relative h-[200px] overflow-hidden">
+        <div className="relative h-[120px] overflow-hidden">
           {cafe.cover_url ? (
             <img src={cafe.cover_url} alt={cafe.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
           ) : (
             <div className="h-full w-full" style={{ background: gradient }} />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+          <div className="scanlines pointer-events-none absolute inset-0 opacity-40" aria-hidden />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
 
           <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-300 backdrop-blur">
             <span className="relative flex h-1.5 w-1.5">
@@ -348,32 +351,45 @@ function CafeCard({ cafe, index, isMobile }: { cafe: Cafe; index: number; isMobi
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> 4.8
           </div>
 
-          <h3 className="absolute bottom-3 left-4 right-4 font-display text-lg font-bold text-white drop-shadow-lg">
+          <h3 className="absolute bottom-2 left-4 right-4 truncate font-display text-[18px] font-bold text-white drop-shadow-lg">
             {cafe.name}
           </h3>
         </div>
 
         {/* body */}
-        <div className="p-4">
+        <div className="flex h-[160px] flex-col p-4">
           <div className="flex items-center gap-1.5 text-[13px] text-white/50">
-            <MapPin className="h-3.5 w-3.5" />
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{[cafe.city, cafe.state].filter(Boolean).join(", ") || "Location"}</span>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {["PC", "Console", "VR", "WiFi"].map((a) => (
-              <span key={a} className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-medium text-white/60">{a}</span>
+              <span key={a} className="rounded-full bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-white/60">{a}</span>
             ))}
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-xs text-white/50">
-              from <span className="text-sm font-bold text-white">₹80</span>/hr
+          {rigs !== null && (
+            <div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-white/50">
+              <Monitor className="h-3.5 w-3.5 shrink-0" /> {rigs} rigs available
             </div>
-            <span className="text-xs font-semibold" style={{ color: MAGENTA }}>Step Inside →</span>
+          )}
+
+          <div className="mt-auto flex items-center justify-between">
+            <div className="text-xs text-white/50">
+              from <span className="text-sm font-bold" style={{ color: MAGENTA }}>₹80</span>
+              <span style={{ color: MAGENTA }}>/hr</span>
+            </div>
+            <span
+              className="text-xs font-semibold no-underline transition"
+              style={{ color: MAGENTA, textShadow: hover ? `0 0 10px ${MAGENTA}` : undefined }}
+            >
+              Step Inside →
+            </span>
           </div>
         </div>
       </Link>
+
 
       {/* hover popup */}
       <AnimatePresence>
