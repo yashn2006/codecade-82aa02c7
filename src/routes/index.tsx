@@ -401,15 +401,16 @@ function Marquee() {
     "RLS-secured", "Made in India",
   ];
   return (
-    <section className="relative overflow-hidden border-y border-border/30 bg-background/30 py-6">
-      <div className="flex w-max animate-marquee gap-12 whitespace-nowrap">
+    <section className="ticker-mask relative overflow-hidden border-y border-border/30 bg-background/30 py-6">
+      <div className="flex w-max animate-marquee-fast gap-12 whitespace-nowrap">
         {[...items, ...items].map((it, i) => (
-          <div key={i} className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
+          <div key={i} className="ticker-glow flex items-center gap-3 font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
             <Sparkles className="h-3 w-3 text-primary" />
             {it}
           </div>
         ))}
       </div>
+
     </section>
   );
 }
