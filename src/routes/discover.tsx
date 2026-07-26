@@ -97,6 +97,29 @@ function DiscoverPage() {
 
 
       <section className="mx-auto max-w-[1200px] px-5 pb-24 sm:px-8">
+        {liveCafes.length > 0 && (
+          <div className="mb-10">
+            <h2 className="font-display text-lg font-bold sm:text-xl">🔴 Live Right Now</h2>
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+              {liveCafes.map(({ cafe, sessions }) => (
+                <Link
+                  key={cafe.id}
+                  to="/c/$slug" params={{ slug: cafe.slug }}
+                  className="glass-card flex shrink-0 items-center gap-2.5 rounded-full px-4 py-2 text-sm font-medium text-white"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                  </span>
+                  {cafe.name}
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white/80">{sessions} live</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl font-bold sm:text-3xl">Featured Arenas</h2>
