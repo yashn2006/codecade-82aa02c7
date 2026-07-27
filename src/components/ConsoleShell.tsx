@@ -1,15 +1,13 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup } from "@/components/Brand";
 import { NotificationBell } from "@/components/NotificationBell";
 import { CommandPalette } from "@/components/CommandPalette";
-
 
 export type NavItem = {
   label: string;
@@ -18,18 +16,34 @@ export type NavItem = {
   params?: Record<string, string>;
   exact?: boolean;
   hash?: string;
+  /** Section heading this item belongs to in the desktop sidebar. */
+  group?: string;
 };
 
+/** Bottom-bar tab (mobile). `more: true` opens the full menu sheet. */
+export type MobileTab = {
+  label: string;
+  icon: LucideIcon;
+  to?: string;
+  params?: Record<string, string>;
+  exact?: boolean;
+  /** Extra path prefixes that should light this tab up. */
+  match?: string[];
+  more?: boolean;
+};
 
 export function ConsoleShell({
-  badge, title, subtitle, nav, children, intensity = "default",
+  badge, title, subtitle, nav, tabs, children, intensity = "default", banner,
 }: {
   badge: string;
   title: string;
   subtitle?: string;
   nav: NavItem[];
+  tabs?: MobileTab[];
   children: ReactNode;
   intensity?: "default" | "hero" | "immersive";
+  /** Slim sticky strip rendered directly under the header (trial notices etc). */
+  banner?: ReactNode;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -43,7 +57,6 @@ export function ConsoleShell({
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
   }, []);
 
-  // close drawer on route change
   useEffect(() => { setOpen(false); }, [path, hash]);
 
   const signOut = async () => {
@@ -53,29 +66,57 @@ export function ConsoleShell({
     navigate({ to: "/auth", replace: true });
   };
 
-  const resolveTo = (item: NavItem) =>
-    item.params ? item.to.replace(/\$(\w+)/g, (_, k) => item.params![k] ?? "") : item.to;
+  const resolveTo = (to: string, params?: Record<string, string>) =>
+    params ? to.replace(/\$(\w+)/g, (_, k) => params[k] ?? "") : to;
 
   const isActive = (item: NavItem) => {
-    const target = resolveTo(item);
+    const target = resolveTo(item.to, item.params);
     const pathMatches = item.exact ? path === target : path === target || path.startsWith(target + "/");
     if (!pathMatches) return false;
-    // If any sibling item on this same path defines a hash, treat items as
-    // hash-scoped: only the matching hash is active (empty hash matches "").
-    const hashScoped = safeNav.some((n) => resolveTo(n) === target && n.hash !== undefined);
+    const hashScoped = safeNav.some((n) => resolveTo(n.to, n.params) === target && n.hash !== undefined);
     if (!hashScoped) return true;
     const current = (hash ?? "").replace(/^#/, "");
     const wanted = (item.hash ?? "").replace(/^#/, "");
     return current === wanted;
   };
 
+  // ---- desktop grouping -------------------------------------------------
+  const groups = useMemo(() => {
+    const out: { label: string | null; items: NavItem[] }[] = [];
+    for (const item of safeNav) {
+      const key = item.group ?? null;
+      const last = out[out.length - 1];
+      if (last && last.label === key) last.items.push(item);
+      else out.push({ label: key, items: [item] });
+    }
+    return out;
+  }, [safeNav]);
 
-  // iOS-style bottom nav: 4 primary tabs + "More" pill if there are extras
-  const PRIMARY_COUNT = 4;
-  const primaryNav = safeNav.slice(0, PRIMARY_COUNT);
-  const overflowNav = safeNav.slice(PRIMARY_COUNT);
-  const hasOverflow = overflowNav.length > 0;
-  const moreActive = overflowNav.some(isActive);
+  // ---- mobile tabs ------------------------------------------------------
+  const mobileTabs: MobileTab[] = useMemo(() => {
+    if (tabs?.length) return tabs;
+    const primary = safeNav.slice(0, 4).map((n) => ({
+      label: n.label.split(" ")[0], icon: n.icon, to: n.to, params: n.params, exact: n.exact,
+    }));
+    return safeNav.length > 4
+      ? [...primary, { label: "More", icon: Menu, more: true }]
+      : primary;
+  }, [tabs, safeNav]);
+
+  const tabActive = (t: MobileTab) => {
+    if (t.more) return false;
+    if (!t.to) return false;
+    const target = resolveTo(t.to, t.params);
+    const hit = t.exact ? path === target : path === target || path.startsWith(target + "/");
+    if (hit) return true;
+    return (t.match ?? []).some((m) => {
+      const r = resolveTo(m, t.params);
+      return path === r || path.startsWith(r + "/");
+    });
+  };
+  const anyTabActive = mobileTabs.some(tabActive);
+
+  const avatar = (email[0] ?? "?").toUpperCase();
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -83,231 +124,217 @@ export function ConsoleShell({
       <CommandPalette />
 
       <div className="flex min-h-screen">
-
-        {/* === Desktop sidebar === */}
-        <aside className="hidden lg:flex lg:w-[260px] lg:flex-shrink-0 lg:flex-col lg:border-r lg:border-border/70 lg:bg-card/60 lg:backdrop-blur-xl">
-          <div className="flex h-16 items-center px-5 border-b border-border/70">
-            <BrandLockup size={28} badge={badge} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
+        {/* ============ Desktop sidebar (220px) ============ */}
+        <aside
+          className="hidden lg:flex lg:w-[220px] lg:flex-shrink-0 lg:flex-col"
+          style={{
+            background: "rgba(0,0,0,0.4)",
+            backdropFilter: "blur(12px)",
+            borderRight: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <div className="flex h-[52px] items-center px-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <BrandLockup size={22} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
           </div>
 
+          <div className="px-4 py-3">
+            <div className="truncate font-display text-sm font-bold leading-tight">{title}</div>
+            {subtitle && (
+              <div className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                {subtitle}
+              </div>
+            )}
+          </div>
 
-          <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-            {safeNav.map((item, i) => {
-              const active = isActive(item);
-              return (
-                <Link
-                  key={item.label}
-                  to={item.to}
-                  params={item.params}
-                  hash={item.hash}
-
-                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                    active
-                      ? "bg-primary/10 text-primary shadow-[0_0_24px_-6px_oklch(0.7_0.26_335/0.55)] ring-1 ring-primary/30"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:ring-1 hover:ring-primary/15"
-                  }`}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="nav-active-bar"
-                      className="absolute inset-y-1.5 left-0 w-1 rounded-r-full bg-primary"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <item.icon className={`h-4 w-4 transition-transform group-hover:scale-110 ${active ? "text-primary" : ""}`} />
-                  <span className="truncate">{item.label}</span>
-                  {active && (
-                    <motion.span
-                      initial={{ scale: 0 }} animate={{ scale: 1 }}
-                      className="ml-auto h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_currentColor]"
-                    />
-                  )}
-                  <span style={{ ['--i' as string]: i }} />
-                </Link>
-              );
-            })}
+          <nav className="flex-1 overflow-y-auto px-2 pb-4">
+            {groups.map((g) => (
+              <div key={g.label ?? "root"} className="mb-3">
+                {g.label && (
+                  <div className="px-3 pb-1.5 pt-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70">
+                    {g.label}
+                  </div>
+                )}
+                <div className="space-y-0.5">
+                  {g.items.map((item) => {
+                    const active = isActive(item);
+                    return (
+                      <Link
+                        key={item.label}
+                        to={item.to}
+                        params={item.params}
+                        hash={item.hash}
+                        className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+                          active ? "text-primary" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                        }`}
+                        style={active ? {
+                          background: "rgba(255,0,200,0.08)",
+                          borderLeft: "2px solid var(--color-magenta, oklch(0.7 0.26 335))",
+                        } : { borderLeft: "2px solid transparent" }}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
-          <div className="border-t border-border/70 p-3">
-            <div className="flex items-center gap-2 rounded-xl bg-secondary/60 p-2.5">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground">
-                {(email[0] ?? "?").toUpperCase()}
+
+          <div className="p-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="flex items-center gap-2 rounded-xl bg-white/5 p-2">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-accent text-[11px] font-bold text-primary-foreground">
+                {avatar}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-xs font-medium">{email || "—"}</div>
-                <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">signed in</div>
+                <div className="truncate text-[11px] font-medium">{email || "—"}</div>
               </div>
               <button
                 onClick={signOut}
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-background hover:text-destructive transition"
+                className="rounded-md p-1.5 text-muted-foreground transition hover:bg-background hover:text-destructive"
                 aria-label="Sign out"
-                title="Sign out"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
         </aside>
 
-        {/* === Main column === */}
-        <div className="relative flex min-w-0 flex-1 flex-col bg-background/85 backdrop-blur-xl">
-          {/* Desktop top bar — notification bell lives here so the dropdown
-              has room to open downward instead of clipping at the sidebar. */}
-          <header className="sticky top-0 z-30 hidden h-12 items-center justify-end gap-1 border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl lg:flex">
-            <NotificationBell />
-          </header>
+        {/* ============ Main column ============ */}
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          {/* Header bar — 52px, mobile + desktop */}
+          <header
+            className="sticky top-0 z-30 flex h-[52px] items-center justify-between gap-3 px-3 sm:px-4"
+            style={{
+              background: "rgba(0,0,0,0.6)",
+              backdropFilter: "blur(20px)",
+              borderBottom: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="lg:hidden">
+                <BrandLockup size={20} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
+              </span>
+              <span className="hidden shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-primary sm:inline">
+                {badge}
+              </span>
+            </div>
 
-          {/* Mobile top bar — clean: logo + bell. Nav lives in the bottom bar. */}
-          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/40 bg-background/70 px-4 backdrop-blur-2xl lg:hidden">
-            <BrandLockup size={22} badge={badge} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
+            <div className="hidden min-w-0 flex-1 justify-center lg:flex">
+              <span className="truncate font-display text-sm font-bold">{title}</span>
+            </div>
 
-            <div className="flex items-center gap-1">
-
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald-300 sm:flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_currentColor]" />
+                Console online
+              </span>
               <NotificationBell />
               <button
                 onClick={signOut}
-                className="rounded-full p-2 text-muted-foreground transition active:scale-90 hover:bg-secondary"
+                title={email || "Sign out"}
                 aria-label="Sign out"
+                className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-[11px] font-bold text-primary-foreground transition active:scale-90"
               >
-                <LogOut className="h-4 w-4" />
+                {avatar}
               </button>
             </div>
           </header>
 
-          {/* Main content */}
-          <main className="min-w-0 px-3 pb-24 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card/60 via-card/40 to-card/20 px-4 py-5 shadow-pop backdrop-blur-xl sm:px-6 sm:py-6"
-            >
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,oklch(0.32_0.18_320/0.35),transparent_55%),radial-gradient(ellipse_at_bottom_right,oklch(0.32_0.2_260/0.3),transparent_55%)]" aria-hidden />
+          {banner ? <div className="sticky top-[52px] z-20">{banner}</div> : null}
 
-              <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.28em] text-primary shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-                    </span>
-                    {badge}
-                  </div>
-                  <motion.h1
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1, duration: 0.6 }}
-                    className="mt-3 max-w-full font-display text-3xl font-extrabold leading-tight tracking-normal sm:text-4xl lg:text-5xl"
-                  >
-                    <span className="text-gradient-hot">{title}</span>
-                  </motion.h1>
-                  {subtitle && (
-                    <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className="hidden font-mono text-[11px] text-muted-foreground sm:inline">{email}</span>
-                  <div className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-emerald-300 sm:flex">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_currentColor]" />
-                    Console online
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+          {/* Main content */}
+          <main className="min-w-0 px-3 pb-28 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
                 key={path}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                className="mt-6"
+                transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
               >
                 {children}
               </motion.div>
             </AnimatePresence>
           </main>
 
-
-          {/* === iOS-grade mobile bottom nav === */}
+          {/* ============ Mobile bottom nav — 56px ============ */}
           <nav
             className="fixed inset-x-0 bottom-0 z-30 lg:hidden"
-            style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
+            style={{
+              background: "rgba(10,0,20,0.95)",
+              backdropFilter: "blur(20px)",
+              borderTop: "1px solid rgba(255,100,200,0.15)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
             aria-label="Primary"
           >
-            <div className="mx-3 mb-2 overflow-hidden rounded-[28px] border border-white/10 bg-card/60 shadow-[0_18px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur-2xl supports-[backdrop-filter]:bg-card/40">
-              <div className={`relative grid ${hasOverflow ? "grid-cols-5" : "grid-cols-4"}`}>
-                {primaryNav.map((item) => {
-                  const active = isActive(item);
-                  return (
-                    <Link
-                      key={item.label}
-                      to={item.to}
-                      params={item.params}
-                      hash={item.hash}
-                      className="relative isolate flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium tracking-wide transition active:scale-95"
-                      aria-current={active ? "page" : undefined}
-                    >
-
-                      {active && (
-                        <motion.span
-                          layoutId="mob-nav-pill"
-                          className="pointer-events-none absolute inset-x-2 inset-y-1 -z-10 rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]"
-                          transition={{ type: "spring", stiffness: 500, damping: 38 }}
-                        />
-                      )}
-                      <item.icon className={`h-[18px] w-[18px] transition ${active ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className={`truncate px-1 ${active ? "text-primary" : "text-muted-foreground"}`}>
-                        {item.label.split(" ")[0]}
-                      </span>
-                    </Link>
-                  );
-                })}
-                {hasOverflow && (
-                  <button
-                    type="button"
-                    onPointerDown={() => setOpen(true)}
-                    className="relative isolate flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium tracking-wide transition active:scale-95"
-                    aria-label="More menu"
-                  >
-                    {moreActive && (
-                      <span className="absolute inset-x-2 inset-y-1 -z-10 rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_-6px_oklch(0.72_0.26_330/0.6)]" />
+            <div className="grid h-14" style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0,1fr))` }}>
+              {mobileTabs.map((t) => {
+                const active = t.more ? (open || !anyTabActive) && t.more && open : tabActive(t);
+                const cls = `relative flex h-14 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition active:scale-95 ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`;
+                const inner = (
+                  <>
+                    {active && (
+                      <span
+                        className="pointer-events-none absolute inset-x-3 top-0 h-[2px] rounded-full bg-primary"
+                        style={{ boxShadow: "0 0 10px var(--color-magenta, oklch(0.7 0.26 335))" }}
+                      />
                     )}
-                    <Menu className={`h-[18px] w-[18px] transition ${moreActive ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className={moreActive ? "text-primary" : "text-muted-foreground"}>More</span>
-                  </button>
-                )}
-              </div>
+                    <t.icon className="h-[18px] w-[18px]" />
+                    <span className="truncate px-1">{t.label}</span>
+                  </>
+                );
+                if (t.more || !t.to) {
+                  return (
+                    <button key={t.label} type="button" onPointerDown={() => setOpen(true)} className={cls} aria-label="More menu">
+                      {inner}
+                    </button>
+                  );
+                }
+                return (
+                  <Link
+                    key={t.label}
+                    to={t.to}
+                    params={t.params}
+                    className={cls}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {inner}
+                  </Link>
+                );
+              })}
             </div>
           </nav>
         </div>
       </div>
 
-      {/* === iOS-style "More" full-screen sheet === */}
+      {/* ============ "More" sheet ============ */}
       <AnimatePresence>
         {open && (
           <>
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.18 }}
               onClick={() => setOpen(false)}
               className="fixed inset-0 z-40 bg-ink/60 backdrop-blur-md lg:hidden"
             />
             <motion.aside
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 420, damping: 38, mass: 0.7 }}
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-card/95 shadow-[0_-30px_80px_-20px_rgba(0,0,0,0.7)] backdrop-blur-2xl lg:hidden"
+              transition={{ type: "spring", stiffness: 460, damping: 40, mass: 0.6 }}
+              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[28px] border-t border-white/10 bg-card/95 backdrop-blur-2xl lg:hidden"
               style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)", willChange: "transform" }}
               aria-label="More navigation"
             >
               <div className="flex justify-center pt-2.5">
                 <span className="h-1.5 w-12 rounded-full bg-white/20" />
               </div>
-              <div className="flex items-center justify-between px-5 pb-3 pt-4">
+              <div className="flex items-center justify-between px-5 pb-3 pt-3">
                 <div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">{badge}</div>
-                  <div className="font-display text-xl font-extrabold">Menu</div>
+                  <div className="font-display text-lg font-extrabold">{title}</div>
                 </div>
                 <button
                   onClick={() => setOpen(false)}
@@ -317,30 +344,38 @@ export function ConsoleShell({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="grid flex-1 grid-cols-3 gap-2.5 overflow-y-auto px-4 pb-4">
-                {safeNav.map((item) => {
-                  const active = isActive(item);
-                  return (
-                    <Link
-                      key={item.label}
-                      to={item.to}
-                      params={item.params}
-                      hash={item.hash}
-                      onClick={() => setOpen(false)}
-
-                      className={`group flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border p-3 text-center transition active:scale-95 ${
-                        active
-                          ? "border-primary/50 bg-primary/15 text-primary shadow-[0_0_28px_-8px_oklch(0.72_0.26_330/0.7)]"
-                          : "border-white/10 bg-background/40 text-foreground hover:border-primary/30"
-                      }`}
-                    >
-                      <div className={`grid h-10 w-10 place-items-center rounded-xl ${active ? "bg-primary/20" : "bg-secondary/60"}`}>
-                        <item.icon className={`h-5 w-5 ${active ? "text-primary" : "text-foreground"}`} />
+              <div className="flex-1 overflow-y-auto px-4 pb-4">
+                {groups.map((g) => (
+                  <div key={g.label ?? "root"} className="mb-4">
+                    {g.label && (
+                      <div className="px-1 pb-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70">
+                        {g.label}
                       </div>
-                      <span className="line-clamp-2 text-[11px] font-medium leading-tight">{item.label}</span>
-                    </Link>
-                  );
-                })}
+                    )}
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {g.items.map((item) => {
+                        const active = isActive(item);
+                        return (
+                          <Link
+                            key={item.label}
+                            to={item.to}
+                            params={item.params}
+                            hash={item.hash}
+                            onClick={() => setOpen(false)}
+                            className={`flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition active:scale-95 ${
+                              active
+                                ? "border-primary/50 bg-primary/15 text-primary"
+                                : "border-white/10 bg-background/40 text-foreground"
+                            }`}
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span className="line-clamp-2 text-[10px] font-medium leading-tight">{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </motion.aside>
           </>
