@@ -1,5 +1,4 @@
-import { motion } from "framer-motion";
-import { Sparkles, AlertOctagon, Clock } from "lucide-react";
+import { Sparkles, AlertTriangle, Clock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 export type TrialInfo = {
@@ -14,58 +13,46 @@ function daysLeft(endsAt: string | null | undefined): number {
   return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
+/** Slim 40px sticky strip. Renders nothing on an active subscription. */
 export function TrialBanner({ cafe }: { cafe: TrialInfo | null | undefined }) {
   if (!cafe) return null;
   const status = cafe.subscription_status ?? "trialing";
   if (status === "active") return null;
   const left = daysLeft(cafe.trial_ends_at);
   const expired = status === "expired" || left === 0;
+  const urgent = expired || left <= 3;
 
-  if (expired) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-        className="mb-4 overflow-hidden rounded-2xl border border-rose-500/40 bg-gradient-to-r from-rose-500/15 via-card/60 to-rose-500/10 p-4 backdrop-blur"
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-rose-500/20 text-rose-300">
-            <AlertOctagon className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="font-display text-base font-bold text-rose-200">Free trial ended — café in read-only mode</div>
-            <div className="text-xs text-foreground/70">Upgrade to a paid plan to take new bookings, run sessions and access POS.</div>
-          </div>
-          <Link to="/" hash="pricing" className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-rose-400">
-            <Sparkles className="h-3.5 w-3.5" /> Upgrade now
-          </Link>
-        </div>
-      </motion.div>
-    );
-  }
-
-  const urgent = left <= 3;
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-      className={`mb-4 overflow-hidden rounded-2xl border p-3 backdrop-blur ${
-        urgent ? "border-amber-400/40 bg-amber-400/10" : "border-primary/30 bg-primary/5"
-      }`}
+    <div
+      className="flex h-10 items-center justify-between gap-3 px-3 sm:px-4"
+      style={{
+        background: expired ? "rgba(239,68,68,0.1)" : urgent ? "rgba(245,158,11,0.1)" : "rgba(255,0,200,0.07)",
+        borderBottom: `1px solid ${expired ? "rgba(239,68,68,0.3)" : urgent ? "rgba(245,158,11,0.3)" : "rgba(255,0,200,0.25)"}`,
+        backdropFilter: "blur(16px)",
+      }}
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <div className={`grid h-8 w-8 place-items-center rounded-lg ${urgent ? "bg-amber-400/20 text-amber-200" : "bg-primary/20 text-primary"}`}>
-          <Clock className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1 text-sm">
-          <span className="font-semibold">Free trial:</span>{" "}
-          <span className={urgent ? "text-amber-200" : "text-foreground/80"}>
-            {left} {left === 1 ? "day" : "days"} left
-          </span>
-          <span className="ml-2 text-xs text-muted-foreground">— ends {new Date(cafe.trial_ends_at!).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
-        </div>
-        <Link to="/" hash="pricing" className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/25">
-          <Sparkles className="h-3 w-3" /> Upgrade
-        </Link>
+      <div className="flex min-w-0 items-center gap-2 text-[12px]">
+        {expired
+          ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-300" />
+          : <Clock className={`h-3.5 w-3.5 shrink-0 ${urgent ? "text-amber-300" : "text-primary"}`} />}
+        <span className="truncate">
+          {expired ? (
+            <><span className="font-semibold text-rose-200">Trial ended</span>
+              <span className="text-foreground/70"> · Upgrade to unlock all features</span></>
+          ) : (
+            <><span className="font-semibold">{left} {left === 1 ? "day" : "days"} left</span>
+              <span className="text-foreground/70"> in your free trial</span></>
+          )}
+        </span>
       </div>
-    </motion.div>
+      <Link
+        to="/"
+        hash="pricing"
+        className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold text-primary-foreground"
+        style={{ background: "var(--gradient-brand-hot)" }}
+      >
+        <Sparkles className="h-3 w-3" /> Upgrade →
+      </Link>
+    </div>
   );
 }
