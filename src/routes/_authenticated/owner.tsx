@@ -4,13 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, Cpu, CalendarRange, ShoppingBag, Users, Wallet,
-  Trophy, BookOpen, LineChart, Globe, BadgeCheck, Receipt, UsersRound, ArrowRight, Building2,
+  BookOpen, LineChart, BadgeCheck, UsersRound, ArrowRight, Building2,
   Plus, TrendingUp, Activity, IndianRupee, LifeBuoy,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { EmptyState } from "@/components/EmptyState";
-import { TrialBanner } from "@/components/TrialBanner";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { ReferralCard } from "@/components/ReferralCard";
 import { Button } from "@/components/ui/button";
@@ -43,21 +42,16 @@ export const Route = createFileRoute("/_authenticated/owner")({
   component: OwnerHub,
 });
 
-const SECTIONS = [
-  { to: "/cafe/$slug",               label: "Overview",     icon: LayoutDashboard, color: "oklch(0.74 0.21 15)"  },
-  { to: "/cafe/$slug/floor",         label: "Live Floor",   icon: BadgeCheck,      color: "oklch(0.7 0.26 335)"  },
-  { to: "/cafe/$slug/devices",       label: "Devices",      icon: Cpu,             color: "oklch(0.78 0.18 200)" },
-  { to: "/cafe/$slug/bookings",      label: "Bookings",     icon: CalendarRange,   color: "oklch(0.65 0.25 295)" },
-  { to: "/cafe/$slug/pos",           label: "POS",          icon: ShoppingBag,     color: "oklch(0.74 0.21 15)"  },
-  { to: "/cafe/$slug/menu",          label: "Menu",         icon: BookOpen,        color: "oklch(0.7 0.26 335)"  },
-  { to: "/cafe/$slug/memberships",   label: "Memberships",  icon: UsersRound,      color: "oklch(0.78 0.18 200)" },
-  { to: "/cafe/$slug/customers",     label: "Customers",    icon: Users,           color: "oklch(0.65 0.25 295)" },
-  { to: "/cafe/$slug/wallet",        label: "Wallet",       icon: Wallet,          color: "oklch(0.74 0.21 15)"  },
-  { to: "/cafe/$slug/ledger",        label: "Ledger",       icon: Receipt,         color: "oklch(0.7 0.26 335)"  },
-  { to: "/cafe/$slug/tournaments",   label: "Tournaments",  icon: Trophy,          color: "oklch(0.78 0.18 200)" },
-  { to: "/cafe/$slug/staff",         label: "Staff",        icon: Users,           color: "oklch(0.65 0.25 295)" },
-  { to: "/cafe/$slug/page",          label: "Public Page",  icon: Globe,           color: "oklch(0.74 0.21 15)"  },
-  { to: "/cafe/$slug/analytics",     label: "Analytics",    icon: LineChart,       color: "oklch(0.7 0.26 335)"  },
+const QUICK = [
+  { to: "/cafe/$slug",             label: "Overview",    icon: LayoutDashboard },
+  { to: "/cafe/$slug/floor",       label: "Live Floor",  icon: BadgeCheck },
+  { to: "/cafe/$slug/devices",     label: "Devices",     icon: Cpu },
+  { to: "/cafe/$slug/bookings",    label: "Bookings",    icon: CalendarRange },
+  { to: "/cafe/$slug/pos",         label: "POS",         icon: ShoppingBag },
+  { to: "/cafe/$slug/menu",        label: "Menu",        icon: BookOpen },
+  { to: "/cafe/$slug/memberships", label: "Memberships", icon: UsersRound },
+  { to: "/cafe/$slug/customers",   label: "Customers",   icon: Users },
+  { to: "/cafe/$slug/analytics",   label: "Analytics",   icon: LineChart },
 ] as const;
 
 function OwnerHub() {
@@ -74,38 +68,42 @@ function OwnerHub() {
     <ConsoleShell
       badge="Owner"
       title="Your Cafés"
-      subtitle="Revenue, bookings and every console section across all your cafés."
+      subtitle="Owner hub"
       nav={[
         { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true },
         { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true },
       ]}
     >
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">
-          {cafes.length} café{cafes.length === 1 ? "" : "s"} owned · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}
+      {/* HERO */}
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <span className="text-gradient-hot">Your Cafés</span>
+          </h1>
+          <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            {cafes.length} café{cafes.length === 1 ? "" : "s"} · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             to="/owner/help"
-            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-sm font-semibold backdrop-blur hover:border-primary/50 hover:bg-card"
+            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-sm font-semibold backdrop-blur hover:border-primary/50"
           >
-            <LifeBuoy className="h-4 w-4 text-primary" /> Help Center
+            <LifeBuoy className="h-4 w-4 text-primary" /> Help
           </Link>
           <CreateCafeButton />
         </div>
       </div>
 
-      {/* Totals strip */}
-      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile icon={IndianRupee} label="Revenue today" value={`₹${totals.revenueToday.toLocaleString("en-IN")}`} accent="primary" />
-        <StatTile icon={TrendingUp}  label="Revenue all-time" value={`₹${totals.revenue.toLocaleString("en-IN")}`} accent="azure" />
-        <StatTile icon={CalendarRange} label="Total bookings" value={String(totals.bookings)} accent="violet" />
-        <StatTile icon={Activity}    label="Active sessions" value={String(totals.activeSessions)} accent="magenta" />
+      {/* KPI CARDS */}
+      <div className="mb-6 -mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+        <KpiCard icon={IndianRupee}   tone="#22d3a8" label="Revenue today"   value={`₹${totals.revenueToday.toLocaleString("en-IN")}`} />
+        <KpiCard icon={TrendingUp}    tone="#ef4fb6" label="Revenue all-time" value={`₹${totals.revenue.toLocaleString("en-IN")}`} />
+        <KpiCard icon={CalendarRange} tone="#7dd3fc" label="Total bookings"   value={String(totals.bookings)} />
+        <KpiCard icon={Activity}      tone="#f5b042" label="Active sessions"  value={String(totals.activeSessions)} />
       </div>
 
-      <div className="mb-8"><ReferralCard /></div>
-
-
+      <div className="mb-6"><ReferralCard /></div>
 
       {isLoading ? (
         <div className="h-48 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
@@ -116,28 +114,29 @@ function OwnerHub() {
           description="Create your first café to unlock the full console — devices, bookings, POS, memberships and more."
         />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {cafes.map((cafe, idx) => (
             <motion.section
               key={cafe.id}
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/40 p-6 backdrop-blur"
+              transition={{ delay: idx * 0.04 }}
+              className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur sm:p-6"
             >
-              <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full blur-[80px] opacity-50"
-                   style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.5), transparent 70%)" }} />
-              <div className="relative">
-                <TrialBanner cafe={cafe} />
-                <OnboardingChecklist cafe={cafe} />
-              </div>
-              <div className="relative flex flex-wrap items-center justify-between gap-3">
+              <div className="relative mb-4"><OnboardingChecklist cafe={cafe} /></div>
+
+              <div className="relative flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
+                  <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
                     {cafe.city ?? "—"} · /{cafe.slug}
+                    {cafe.activeSessions > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-emerald-300">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" /> live
+                      </span>
+                    )}
                     {!cafe.is_active && <Badge variant="destructive" className="h-4">paused</Badge>}
                   </div>
-                  <h2 className="mt-1 font-display text-3xl font-extrabold tracking-tight">{cafe.name}</h2>
+                  <h2 className="mt-1 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">{cafe.name}</h2>
                 </div>
                 <Link
                   to="/cafe/$slug"
@@ -149,8 +148,7 @@ function OwnerHub() {
                 </Link>
               </div>
 
-              {/* Per-cafe stats */}
-              <div className="relative mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="relative mt-4 grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
                 <MiniStat label="Today" value={`₹${cafe.revenueToday.toLocaleString("en-IN")}`} />
                 <MiniStat label="All-time" value={`₹${cafe.revenue.toLocaleString("en-IN")}`} />
                 <MiniStat label="Bookings" value={String(cafe.bookings)} />
@@ -159,24 +157,17 @@ function OwnerHub() {
                 <MiniStat label="Customers" value={String(cafe.customers)} />
               </div>
 
-              <div className="relative mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {SECTIONS.map((s) => (
+              {/* Quick action grid — 3x3 */}
+              <div className="relative mt-5 grid grid-cols-3 gap-2.5">
+                {QUICK.map((s) => (
                   <Link
                     key={s.label}
                     to={s.to}
                     params={{ slug: cafe.slug }}
-                    className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/40 p-4 backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/50 hover:bg-background/70"
+                    className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_0_24px_-8px_oklch(0.7_0.26_335/0.9)]"
                   >
-                    <span
-                      className="absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-30 blur-2xl transition group-hover:opacity-70"
-                      style={{ background: `radial-gradient(circle, ${s.color}, transparent 70%)` }}
-                      aria-hidden
-                    />
-                    <div className="relative flex items-center justify-between">
-                      <s.icon className="h-5 w-5 text-foreground/90" />
-                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" />
-                    </div>
-                    <div className="relative mt-3 font-display text-sm font-semibold">{s.label}</div>
+                    <s.icon className="h-[18px] w-[18px] text-foreground/80 transition group-hover:text-primary" />
+                    <span className="text-[11px] font-semibold leading-tight">{s.label}</span>
                   </Link>
                 ))}
               </div>
@@ -188,30 +179,34 @@ function OwnerHub() {
   );
 }
 
-function StatTile({ icon: Icon, label, value, accent }: {
-  icon: typeof Wallet; label: string; value: string;
-  accent: "primary" | "azure" | "violet" | "magenta";
+function KpiCard({ icon: Icon, tone, label, value }: {
+  icon: typeof Wallet; tone: string; label: string; value: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur">
-      <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-50 blur-2xl" style={{ background: `oklch(var(--${accent}) / 0.5)` }} />
-      <div className="relative flex items-center gap-2">
-        <Icon className="h-4 w-4 text-primary" />
-        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{label}</span>
+    <div
+      className="group relative min-w-[68vw] shrink-0 snap-start overflow-hidden rounded-2xl p-5 transition-transform duration-200 hover:scale-[1.02] sm:min-w-0"
+      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16 }}
+    >
+      <div className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${tone}22`, color: tone }}>
+        <Icon className="h-[18px] w-[18px]" />
       </div>
-      <div className="relative mt-2 font-display text-3xl font-extrabold tabular-nums">{value}</div>
+      <div className="mt-3 font-display text-[32px] font-extrabold leading-none tabular-nums">{value}</div>
+      <div className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+      <div className="mt-3 h-6 w-full rounded-md opacity-40"
+           style={{ background: `linear-gradient(90deg, transparent, ${tone}44, transparent)` }} aria-hidden />
     </div>
   );
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border/40 bg-background/40 p-3">
+    <div className="rounded-xl border border-white/8 bg-background/40 p-3">
       <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
       <div className="mt-1 font-display text-lg font-bold tabular-nums">{value}</div>
     </div>
   );
 }
+
 
 function CreateCafeButton() {
   const [open, setOpen] = useState(false);

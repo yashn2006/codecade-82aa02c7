@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
-  Gamepad2, Play, Square, Plus, Filter, Activity, Sparkles, Lock, Pause, Wrench, Check, UserPlus, Zap,
+  Gamepad2, Play, Square, Zap, MonitorPlay, Headset, Car, Cpu, Pause, Wrench,
+  Check, Lock, UserPlus, IndianRupee, ArrowRight,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listDevices, setDeviceStatus, type DeviceStatus } from "@/lib/devices.functions";
@@ -12,43 +13,183 @@ import { listSessions, startSession, endSession } from "@/lib/sessions.functions
 import { listCustomers, createCustomer } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
-import { SessionTimer } from "@/components/SessionTimer";
-import { StationPod, SuspendCountdown } from "@/components/StationPod";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import { LiveAnalyticsPanel } from "@/components/LiveAnalyticsPanel";
-import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
-} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/")({
   head: () => ({
     meta: [
-      { title: "Café Overview — CoreCade" },
-      { name: "description", content: "Live floor pulse, today's revenue, and quick actions for your café." },
-      { property: "og:title", content: "Café Overview — CoreCade" },
-      { property: "og:description", content: "Live floor pulse, today's revenue, and quick actions for your café." },
+      { title: "Live Floor — CoreCade" },
+      { name: "description", content: "Mission-control view of every station, live session and rupee on your café floor." },
+      { property: "og:title", content: "Live Floor — CoreCade" },
+      { property: "og:description", content: "Mission-control view of every station, live session and rupee on your café floor." },
     ],
   }),
   component: LiveFloor,
 });
 
+/* ------------------------------------------------------------------ */
+/* helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+const TYPE_ICON: Record<string, typeof Cpu> = {
+  pc: MonitorPlay, console: Gamepad2, vr: Headset, racing: Car, other: Cpu,
+};
+
+const STATUS_BAR: Record<DeviceStatus, string> = {
+  in_use: "#22c55e",
+  available: "#22d3a8",
+  reserved: "#f5b042",
+  suspended: "#94a3b8",
+  maintenance: "#f87171",
+};
+
 const FILTERS: { id: "all" | DeviceStatus; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "available", label: "Available" },
   { id: "in_use", label: "Live" },
-  { id: "reserved", label: "Reserved" },
+  { id: "available", label: "Free" },
+  { id: "reserved", label: "Booked" },
   { id: "suspended", label: "Suspended" },
   { id: "maintenance", label: "Maintenance" },
 ];
 
+function fmtClock(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+}
+function billed(startedAt: string, rate: number, now: number) {
+  const minutes = Math.max(1, Math.ceil((now - new Date(startedAt).getTime()) / 60000));
+  return Math.ceil((rate * minutes) / 60);
+}
+
+type SessionRow = {
+  id: string; device_id: string; started_at: string; status: string;
+  customers?: { full_name?: string } | null;
+};
+type DeviceRow = {
+  id: string; name: string; type: string; hourly_rate: number; status: string;
+  zone?: string | null; zone_color?: string | null; suspend_until?: string | null;
+};
+
+/* ------------------------------------------------------------------ */
+/* Station pod (memoised)                                              */
+/* ------------------------------------------------------------------ */
+
+const Pod = memo(function Pod({
+  device, session, now, onOpen, onStart,
+}: {
+  device: DeviceRow;
+  session?: SessionRow;
+  now: number;
+  onOpen: () => void;
+  onStart: () => void;
+}) {
+  const status = (device.status as DeviceStatus) ?? "available";
+  const Icon = TYPE_ICON[device.type] ?? Cpu;
+  const live = status === "in_use" && !!session;
+  const booked = status === "reserved";
+  const bar = STATUS_BAR[status] ?? "#94a3b8";
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group relative flex h-[160px] flex-col overflow-hidden rounded-[14px] text-left transition-transform duration-150 active:scale-[0.98]"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        boxShadow: live ? "0 0 0 1px rgba(34,197,94,0.25), 0 0 26px -12px rgba(34,197,94,0.9)" : undefined,
+      }}
+      aria-label={`${device.name} — ${status}`}
+    >
+      <span className="absolute inset-x-0 top-0 h-[4px]" style={{ background: bar }} aria-hidden />
+      {live && (
+        <span
+          className="pointer-events-none absolute inset-0 animate-pulse-soft"
+          style={{ background: "radial-gradient(120% 80% at 50% 0%, rgba(34,197,94,0.10), transparent 70%)" }}
+          aria-hidden
+        />
+      )}
+
+      <div className="relative flex items-start justify-between gap-2 px-3 pb-1 pt-3">
+        <span className="min-w-0 truncate font-display text-sm font-bold">{device.name}</span>
+        <Icon className="h-4 w-4 shrink-0 opacity-70" style={{ color: bar }} />
+      </div>
+
+      {live ? (
+        <div className="relative flex flex-1 flex-col justify-between px-3 pb-3">
+          <div className="min-w-0">
+            <div className="truncate text-[13px] font-bold text-primary">
+              {session?.customers?.full_name ?? "Walk-in"}
+            </div>
+            <div className="mt-1 font-mono text-[15px] font-bold tabular-nums text-emerald-400">
+              {fmtClock(now - new Date(session!.started_at).getTime())}
+            </div>
+            <div className="font-mono text-[12px] tabular-nums text-foreground/90">
+              ₹{billed(session!.started_at, device.hourly_rate, now)}
+            </div>
+          </div>
+          <span className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-foreground/80">
+            Details <ArrowRight className="h-3 w-3" />
+          </span>
+        </div>
+      ) : booked ? (
+        <div className="relative flex flex-1 flex-col justify-between px-3 pb-3">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-amber-300">✦ Reserved</div>
+            <div className="mt-1 font-mono text-[11px] text-muted-foreground">₹{device.hourly_rate}/hr</div>
+          </div>
+          <span
+            onClick={(e) => { e.stopPropagation(); onStart(); }}
+            className="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-400/50 bg-amber-400/15 py-1.5 text-[11px] font-semibold text-amber-200"
+          >
+            Check in
+          </span>
+        </div>
+      ) : (
+        <div className="relative flex flex-1 flex-col justify-between px-3 pb-3">
+          <div className="grid flex-1 place-items-center">
+            <div className="text-center">
+              <div className="font-mono text-[13px] tabular-nums text-muted-foreground">₹{device.hourly_rate}/hr</div>
+              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">
+                {device.zone || status.replace("_", " ")}
+              </div>
+            </div>
+          </div>
+          {status === "available" && (
+            <div className="grid grid-cols-2 gap-1.5">
+              <span
+                onClick={(e) => { e.stopPropagation(); onStart(); }}
+                className="inline-flex items-center justify-center rounded-lg py-1.5 text-[11px] font-bold text-primary-foreground"
+                style={{ background: "var(--gradient-brand-hot)" }}
+              >
+                Start
+              </span>
+              <span className="inline-flex items-center justify-center rounded-lg border border-white/15 py-1.5 text-[11px] font-semibold text-foreground/80">
+                Book
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </button>
+  );
+});
+
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
+
 function LiveFloor() {
   const { slug } = Route.useParams();
+  const isMobile = useIsMobile();
   const getCafe = useServerFn(getCafeBySlug);
   const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
   const cafeId = cafe?.id;
@@ -58,20 +199,15 @@ function LiveFloor() {
   const lCus = useServerFn(listCustomers);
 
   const devicesQ = useQuery({
-    queryKey: ["devices", cafeId],
-    queryFn: () => lDev({ data: { cafe_id: cafeId! } }),
-    enabled: !!cafeId,
-    refetchInterval: 5000,
+    queryKey: ["devices", cafeId], queryFn: () => lDev({ data: { cafe_id: cafeId! } }),
+    enabled: !!cafeId, refetchInterval: 8000,
   });
   const sessionsQ = useQuery({
-    queryKey: ["sessions", cafeId],
-    queryFn: () => lSes({ data: { cafe_id: cafeId! } }),
-    enabled: !!cafeId,
-    refetchInterval: 5000,
+    queryKey: ["sessions", cafeId], queryFn: () => lSes({ data: { cafe_id: cafeId! } }),
+    enabled: !!cafeId, refetchInterval: 8000,
   });
   const customersQ = useQuery({
-    queryKey: ["customers", cafeId],
-    queryFn: () => lCus({ data: { cafe_id: cafeId! } }),
+    queryKey: ["customers", cafeId], queryFn: () => lCus({ data: { cafe_id: cafeId! } }),
     enabled: !!cafeId,
   });
 
@@ -88,27 +224,36 @@ function LiveFloor() {
 
   const startM = useMutation({
     mutationFn: start,
-    onSuccess: () => { toast.success("Session started"); invalidate(); },
+    onSuccess: () => { toast.success("Session started"); invalidate(); setPanel(null); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const endM = useMutation({
     mutationFn: end,
-    onSuccess: (r) => { toast.success(`Session ended · ${r.minutes}m · ₹${r.amount}`); invalidate(); },
+    onSuccess: (r) => { toast.success(`Session ended · ${r.minutes}m · ₹${r.amount}`); invalidate(); setPanel(null); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const statusM = useMutation({
     mutationFn: setStatus,
-    onSuccess: () => { toast.success("Station updated"); invalidate(); },
+    onSuccess: () => { toast.success("Station updated"); invalidate(); setPanel(null); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  const [picker, setPicker] = useState<null | { deviceId: string }>(null);
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [walkInOpen, setWalkInOpen] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [panel, setPanel] = useState<string | null>(null);       // device id
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const devices = devicesQ.data ?? [];
-  const sessions = sessionsQ.data ?? [];
+  // Single ticker for the whole floor.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const devices = (devicesQ.data ?? []) as unknown as DeviceRow[];
+  const sessions = (sessionsQ.data ?? []) as unknown as SessionRow[];
   const customers = customersQ.data ?? [];
+
   const activeByDevice = useMemo(
     () => new Map(sessions.filter((s) => s.status === "active").map((s) => [s.device_id, s])),
     [sessions],
@@ -123,96 +268,102 @@ function LiveFloor() {
     return c;
   }, [devices]);
 
-  const revenueToday = sessions
-    .filter((s) => s.ended_at && new Date(s.ended_at).toDateString() === new Date().toDateString())
-    .reduce((sum, s) => sum + (s.amount ?? 0), 0);
+  const runningTotal = useMemo(() => {
+    let sum = 0;
+    for (const d of devices) {
+      const s = activeByDevice.get(d.id);
+      if (s) sum += billed(s.started_at, d.hourly_rate, now);
+    }
+    return sum;
+  }, [devices, activeByDevice, now]);
 
-  const filteredDevices = filter === "all" ? devices : devices.filter((d) => d.status === filter);
+  const revenueToday = useMemo(() => {
+    const today = new Date().toDateString();
+    return (sessionsQ.data ?? []).reduce(
+      (sum, s) => sum + ((s as { ended_at?: string | null; amount?: number | null }).ended_at &&
+        new Date((s as { ended_at: string }).ended_at).toDateString() === today
+        ? ((s as { amount?: number | null }).amount ?? 0) : 0),
+      0,
+    );
+  }, [sessionsQ.data]);
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  const filtered = filter === "all" ? devices : devices.filter((d) => d.status === filter);
+  const selected = devices.find((d) => d.id === panel) ?? null;
+  const selectedSession = selected ? activeByDevice.get(selected.id) : undefined;
 
-  return (
-    <div className="space-y-6">
-      {/* Cinematic live analytics — revenue spark, 24h heatmap, top stations */}
-      <LiveAnalyticsPanel sessions={sessions} devices={devices} activeCount={counts.in_use} />
+  const filteredCustomers = customers.filter((c) =>
+    !search || (c.full_name ?? "").toLowerCase().includes(search.toLowerCase()) || (c.phone ?? "").includes(search),
+  );
 
-      {/* Hero strip — floor pulse */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/40 p-5 backdrop-blur-xl"
-      >
-        <div className="pointer-events-none absolute -left-12 -top-12 h-56 w-56 rounded-full bg-violet/30 blur-3xl animate-pulse-soft" />
-        <div className="pointer-events-none absolute -right-10 bottom-[-3rem] h-56 w-56 rounded-full bg-azure/30 blur-3xl animate-pulse-soft" />
-        <div className="pointer-events-none absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-            maskImage: "radial-gradient(ellipse at 50% 0%, black 30%, transparent 80%)",
-          }}
-        />
-        <div className="relative grid gap-4 sm:grid-cols-4">
-          <FloorStat tone="#22d3a8" label="Available" value={counts.available} icon={Sparkles} />
-          <FloorStat tone="#ef4fb6" label="Live now"  value={counts.in_use} icon={Activity} pulse />
-          <FloorStat tone="#f5b042" label="Reserved"  value={counts.reserved} icon={Lock} />
-          <FloorStat tone="#94a3b8" label="Today"     value={revenueToday} icon={Activity} prefix="₹" />
-        </div>
-
-        {/* Walk-in mega-CTA */}
-        <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-background/30 p-3 backdrop-blur">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-magenta to-rose text-primary-foreground shadow-magenta">
-              <Zap className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-display text-sm font-bold leading-tight">Customer walked in?</div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                Capture them &amp; allot a station in one tap
-              </div>
-            </div>
-          </div>
-          <Button
-            onClick={() => setWalkInOpen(true)}
-            disabled={counts.available === 0}
-            className="gap-1.5 text-primary-foreground glow-magenta"
-            style={{ background: "var(--gradient-brand-hot)" }}
-          >
-            <UserPlus className="h-4 w-4" />
-            {counts.available === 0 ? "No stations free" : "New walk-in"}
-          </Button>
-        </div>
-      </motion.div>
-
-
-
-      {/* Filter ribbon */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-card/40 px-2 py-1.5 backdrop-blur">
-          <Filter className="ml-1 h-3.5 w-3.5 text-muted-foreground" />
-          {FILTERS.map((f) => {
-            const n = f.id === "all" ? devices.length : counts[f.id as DeviceStatus];
-            const active = filter === f.id;
-            return (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`group relative rounded-lg px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] transition ${
-                  active ? "bg-background/80 text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {f.label} <span className="ml-1 opacity-60">{n}</span>
-                {active && (
-                  <motion.span layoutId="filter-dot" className="absolute -bottom-0.5 left-2 right-2 h-px bg-primary" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <div className="ml-auto font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          Right-click or tap a station to control →
+  if (!cafeId || devicesQ.isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-[52px] animate-pulse rounded-2xl border border-white/8 bg-white/[0.03]" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-[160px] animate-pulse rounded-[14px] border border-white/8 bg-white/[0.03]" />
+          ))}
         </div>
       </div>
+    );
+  }
 
-      {/* Floor */}
+  return (
+    <div className="space-y-4">
+      {/* ===== HUD BAR ===== */}
+      <div
+        className="sticky top-[52px] z-20 -mx-3 flex h-[52px] items-center gap-3 overflow-x-auto px-3 sm:mx-0 sm:rounded-2xl"
+        style={{
+          background: "rgba(10,0,20,0.9)",
+          backdropFilter: "blur(20px)",
+          border: "1px solid rgba(255,255,255,0.07)",
+        }}
+      >
+        <div className="flex shrink-0 items-center gap-3 font-mono text-[12px] tabular-nums">
+          <span className="text-emerald-400">🟢 {counts.in_use} LIVE</span>
+          <span className="text-sky-300">🔵 {counts.available} FREE</span>
+          <span className="text-amber-300">🟡 {counts.reserved} BOOKED</span>
+        </div>
+        <span className="h-5 w-px shrink-0 bg-white/10" />
+        <div className="flex shrink-0 items-center gap-3 font-mono text-[12px] tabular-nums text-muted-foreground">
+          <span className="text-foreground">⚡ ₹{runningTotal.toLocaleString("en-IN")} running</span>
+          <span>₹{revenueToday.toLocaleString("en-IN")} today</span>
+        </div>
+        <Button
+          onClick={() => setWalkInOpen(true)}
+          disabled={counts.available === 0}
+          className="ml-auto h-9 shrink-0 gap-1.5 text-primary-foreground"
+          style={{ background: "var(--gradient-brand-hot)" }}
+        >
+          <UserPlus className="h-4 w-4" /> Session
+        </Button>
+      </div>
+
+      {/* ===== FILTER PILLS ===== */}
+      <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
+        {FILTERS.map((f) => {
+          const n = f.id === "all" ? devices.length : counts[f.id as DeviceStatus];
+          const active = filter === f.id;
+          return (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`shrink-0 rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] transition ${
+                active ? "text-primary-foreground" : "border border-white/10 text-muted-foreground hover:text-foreground"
+              }`}
+              style={active ? {
+                background: "var(--gradient-brand-hot)",
+                boxShadow: "0 0 14px -2px oklch(0.7 0.26 335 / 0.8)",
+              } : undefined}
+            >
+              {f.label}
+              <span className={`ml-1.5 rounded-full px-1.5 ${active ? "bg-black/25" : "bg-white/10"}`}>{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ===== STATION GRID ===== */}
       {devices.length === 0 ? (
         <EmptyState
           icon={Gamepad2}
@@ -220,200 +371,153 @@ function LiveFloor() {
           description="Head to Devices to add your first PC, console, or VR rig."
         />
       ) : (
-        <div
-          className="relative rounded-3xl border border-border/60 bg-[radial-gradient(120%_80%_at_50%_-10%,oklch(0.18_0.05_285)_0%,oklch(0.08_0.02_285)_60%)] p-5"
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5"
         >
-          {/* Floor lines */}
-          <div
-            className="pointer-events-none absolute inset-0 rounded-3xl opacity-50"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(167,139,250,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(125,211,252,0.08) 1px, transparent 1px)",
-              backgroundSize: "44px 44px",
-              maskImage: "radial-gradient(ellipse 80% 65% at 50% 50%, black 50%, transparent 100%)",
-            }}
-            aria-hidden
-          />
-          <div className="relative grid gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-            {filteredDevices.map((d, i) => {
-              const status = (d.status as DeviceStatus) ?? "available";
-              const active = activeByDevice.get(d.id);
-              const caption =
-                status === "suspended" && d.suspend_until
-                  ? <SuspendCountdown until={d.suspend_until} />
-                  : status === "in_use" && active
-                  ? (active.customers as { full_name?: string } | null)?.full_name ?? "Walk-in"
-                  : null;
-
-              const overlay = status === "in_use" && active
-                ? (
-                  <div className="space-y-2 rounded-md border border-border/40 bg-background/30 p-2">
-                    <SessionTimer startedAt={active.started_at} hourlyRate={d.hourly_rate} />
-                    <Button
-                      size="sm" variant="outline" className="w-full gap-1.5 h-7"
-                      onClick={(e) => { e.stopPropagation(); endM.mutate({ data: { id: active.id } }); }}
-                      disabled={endM.isPending}
-                    ><Square className="h-3 w-3" /> End</Button>
-                  </div>
-                ) : null;
-
-              return (
-                <DropdownMenu key={d.id}>
-                  <DropdownMenuTrigger asChild>
-                    <div>
-                      <StationPod
-                        index={i}
-                        name={d.name}
-                        type={d.type as "pc" | "console" | "vr" | "racing" | "other"}
-                        status={status}
-                        hourlyRate={d.hourly_rate}
-                        caption={caption ?? undefined}
-                        overlay={overlay}
-                        accent={(d as { zone_color?: string | null }).zone_color}
-                      />
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="center" className="w-56">
-                    <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                      {d.name}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {status !== "in_use" && status !== "maintenance" && (
-                      <DropdownMenuItem onClick={() => setPicker({ deviceId: d.id })}>
-                        <Play className="mr-2 h-3.5 w-3.5 text-primary" /> Start session
-                      </DropdownMenuItem>
-                    )}
-                    {status === "in_use" && active && (
-                      <DropdownMenuItem onClick={() => endM.mutate({ data: { id: active.id } })}>
-                        <Square className="mr-2 h-3.5 w-3.5 text-magenta" /> End session
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => statusM.mutate({ data: { id: d.id, status: "reserved" } })}>
-                      <Lock className="mr-2 h-3.5 w-3.5 text-amber-400" /> Mark reserved
-                    </DropdownMenuItem>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <Pause className="mr-2 h-3.5 w-3.5 text-slate-300" /> Suspend for…
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        {[15, 30, 60, 120].map((m) => (
-                          <DropdownMenuItem
-                            key={m}
-                            onClick={() => statusM.mutate({ data: { id: d.id, status: "suspended", suspend_minutes: m } })}
-                          >
-                            {m} minutes
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuItem onClick={() => statusM.mutate({ data: { id: d.id, status: "maintenance" } })}>
-                      <Wrench className="mr-2 h-3.5 w-3.5 text-rose-400" /> Maintenance
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => statusM.mutate({ data: { id: d.id, status: "available" } })}>
-                      <Check className="mr-2 h-3.5 w-3.5 text-emerald-400" /> Mark available
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              );
-            })}
-          </div>
-        </div>
+          {filtered.map((d) => (
+            <Pod
+              key={d.id}
+              device={d}
+              session={activeByDevice.get(d.id)}
+              now={now}
+              onOpen={() => setPanel(d.id)}
+              onStart={() => setPanel(d.id)}
+            />
+          ))}
+        </motion.div>
       )}
 
-      {/* Customer picker */}
-      <Dialog open={!!picker} onOpenChange={(v) => !v && setPicker(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Start session</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Button
-              variant="outline" className="w-full justify-start"
-              onClick={() => {
-                if (!picker) return;
-                startM.mutate({ data: { cafe_id: cafeId, device_id: picker.deviceId } });
-                setPicker(null);
-              }}
-            >Walk-in (no customer)</Button>
-            <div className="max-h-64 overflow-y-auto rounded-xl border border-border/40">
-              {customers.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">No customers yet</div>
-              ) : customers.map((c) => (
-                <button
-                  key={c.id}
-                  className="flex w-full items-center justify-between border-b border-border/40 px-3 py-2 text-left text-sm last:border-0 hover:bg-background/40"
-                  onClick={() => {
-                    if (!picker) return;
-                    startM.mutate({ data: { cafe_id: cafeId, device_id: picker.deviceId, customer_id: c.id } });
-                    setPicker(null);
-                  }}
-                >
-                  <span>{c.full_name}</span>
-                  <span className="font-mono text-xs text-muted-foreground">{c.phone}</span>
-                </button>
-              ))}
+      {/* ===== STATION PANEL ===== */}
+      <Sheet open={!!panel} onOpenChange={(v) => !v && setPanel(null)}>
+        <SheetContent
+          side={isMobile ? "bottom" : "right"}
+          className={isMobile ? "max-h-[88vh] overflow-y-auto rounded-t-[28px] p-5" : "w-full overflow-y-auto p-6 sm:max-w-md"}
+        >
+          {selected && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent font-display text-lg font-black text-primary-foreground">
+                  {(selectedSession?.customers?.full_name ?? selected.name).slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-display text-lg font-extrabold">
+                    {selectedSession?.customers?.full_name ?? selected.name}
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                    {selected.name} · ₹{selected.hourly_rate}/hr
+                  </div>
+                </div>
+                <span className="ml-auto shrink-0 rounded-full border border-white/15 bg-white/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em]">
+                  {selectedSession ? (selectedSession.customers?.full_name ? "Member" : "Walk-in") : selected.status.replace("_", " ")}
+                </span>
+              </div>
+
+              {selectedSession ? (
+                <>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center">
+                    <div className="font-mono text-[36px] font-bold leading-none tabular-nums text-emerald-400">
+                      {fmtClock(now - new Date(selectedSession.started_at).getTime())}
+                    </div>
+                    <div className="mt-2 font-display text-[32px] font-extrabold leading-none tabular-nums text-primary">
+                      ₹{billed(selectedSession.started_at, selected.hourly_rate, now)}
+                    </div>
+                    <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                      running total
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => endM.mutate({ data: { id: selectedSession.id } })}
+                    disabled={endM.isPending}
+                    className="w-full gap-2 text-primary-foreground"
+                    style={{ background: "var(--gradient-brand-hot)" }}
+                  >
+                    <Square className="h-4 w-4" /> End session
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" className="gap-1.5"
+                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "suspended", suspend_minutes: 15 } })}>
+                      <Pause className="h-3.5 w-3.5" /> Pause 15m
+                    </Button>
+                    <Button variant="outline" className="gap-1.5"
+                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "maintenance" } })}>
+                      <Wrench className="h-3.5 w-3.5" /> Maintenance
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                      Find customer
+                    </Label>
+                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or phone…" />
+                    <div className="max-h-52 overflow-y-auto rounded-xl border border-white/10">
+                      {filteredCustomers.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-muted-foreground">No customers matched</div>
+                      ) : filteredCustomers.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => startM.mutate({ data: { cafe_id: cafeId, device_id: selected.id, customer_id: c.id } })}
+                          className="flex w-full items-center justify-between border-b border-white/5 px-3 py-2 text-left text-sm last:border-0 hover:bg-white/5"
+                        >
+                          <span className="truncate">{c.full_name}</span>
+                          <span className="font-mono text-xs text-muted-foreground">{c.phone}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => startM.mutate({ data: { cafe_id: cafeId, device_id: selected.id } })}
+                    disabled={startM.isPending}
+                    className="w-full gap-2 text-primary-foreground"
+                    style={{ background: "var(--gradient-brand-hot)" }}
+                  >
+                    <Play className="h-4 w-4" /> Start walk-in session →
+                  </Button>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button size="sm" variant="outline" className="gap-1.5"
+                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "reserved" } })}>
+                      <Lock className="h-3.5 w-3.5" /> Reserve
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1.5"
+                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "maintenance" } })}>
+                      <Wrench className="h-3.5 w-3.5" /> Fix
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1.5"
+                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "available" } })}>
+                      <Check className="h-3.5 w-3.5" /> Free
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
-            <Button variant="ghost" className="w-full gap-1.5" onClick={() => { setPicker(null); setQuickAddOpen(true); }}>
-              <Plus className="h-3.5 w-3.5" /> Quick-add customer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          )}
+        </SheetContent>
+      </Sheet>
 
-      <Dialog open={quickAddOpen} onOpenChange={setQuickAddOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Add customer</DialogTitle></DialogHeader>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              try {
-                await addCust({ data: { cafe_id: cafeId, full_name: String(fd.get("full_name")), phone: String(fd.get("phone") || "") || null, email: String(fd.get("email") || "") || null } });
-                toast.success("Customer added");
-                qc.invalidateQueries({ queryKey: ["customers", cafeId] });
-                setQuickAddOpen(false);
-              } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Failed");
-              }
-            }}
-            className="space-y-3"
-          >
-            <div className="space-y-1"><Label>Name</Label><Input name="full_name" required /></div>
-            <div className="space-y-1"><Label>Phone</Label><Input name="phone" /></div>
-            <div className="space-y-1"><Label>Email</Label><Input name="email" type="email" /></div>
-            <DialogFooter><Button type="submit" style={{ background: "var(--gradient-brand-hot)" }}>Add</Button></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Walk-in — capture customer + assign device in one go */}
+      {/* ===== WALK-IN ===== */}
       <Dialog open={walkInOpen} onOpenChange={setWalkInOpen}>
-        <DialogContent className="overflow-hidden p-0 sm:max-w-lg">
-          <div className="relative bg-gradient-to-br from-magenta/20 via-card to-rose/15 p-5">
-            <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-magenta/30 blur-3xl" />
-            <div className="relative flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-magenta to-rose text-primary-foreground shadow-magenta">
-                <Zap className="h-5 w-5" />
-              </div>
-              <div>
-                <DialogTitle className="font-display text-lg">Walk-in customer</DialogTitle>
-                <p className="text-xs text-muted-foreground">
-                  {counts.available} station{counts.available === 1 ? "" : "s"} free right now.
-                </p>
-              </div>
-            </div>
-          </div>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" /> New session
+            </DialogTitle>
+          </DialogHeader>
           <form
-            className="space-y-3 p-5"
+            className="space-y-3"
             onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
               const fullName = String(fd.get("full_name") || "").trim();
               const phone = String(fd.get("phone") || "").trim();
               const deviceId = String(fd.get("device_id") || "");
-              const skipCustomer = !fullName && !phone;
               try {
                 let customerId: string | undefined;
-                if (!skipCustomer) {
+                if (fullName || phone) {
                   const cust = await addCust({
                     data: { cafe_id: cafeId, full_name: fullName || "Walk-in", phone: phone || null, email: null },
                   });
@@ -429,11 +533,11 @@ function LiveFloor() {
           >
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Name <span className="opacity-60">(optional)</span></Label>
+                <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Name (optional)</Label>
                 <Input name="full_name" placeholder="Walk-in" autoFocus />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Phone <span className="opacity-60">(optional)</span></Label>
+                <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Phone (optional)</Label>
                 <Input name="phone" type="tel" inputMode="tel" placeholder="+91…" />
               </div>
             </div>
@@ -452,57 +556,16 @@ function LiveFloor() {
                   </option>
                 ))}
               </select>
-              {counts.available === 0 && (
-                <p className="text-xs text-destructive">No free stations. End a session first.</p>
-              )}
             </div>
             <DialogFooter className="pt-2">
-              <Button
-                type="submit"
-                disabled={counts.available === 0 || startM.isPending}
-                className="gap-1.5 text-primary-foreground glow-magenta"
-                style={{ background: "var(--gradient-brand-hot)" }}
-              >
-                <Play className="h-4 w-4" /> Seat &amp; start session
+              <Button type="submit" disabled={counts.available === 0 || startM.isPending}
+                className="gap-1.5 text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
+                <IndianRupee className="h-4 w-4" /> Seat &amp; start
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-
-function FloorStat({
-  tone, label, value, icon: Icon, pulse, prefix,
-}: { tone: string; label: string; value: number; icon: typeof Activity; pulse?: boolean; prefix?: string }) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-background/30 p-4 backdrop-blur">
-      <div
-        className="absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl opacity-60"
-        style={{ background: tone }}
-      />
-      <div className="relative flex items-center justify-between">
-        <div
-          className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"
-          style={{ background: `${tone}22` }}
-        >
-          <Icon className="h-4 w-4" style={{ color: tone }} />
-        </div>
-        {pulse && (
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: tone }} />
-            <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: tone }} />
-          </span>
-        )}
-      </div>
-      <div className="relative mt-3 font-display text-3xl font-extrabold tabular-nums">
-        {prefix}{value}
-      </div>
-      <div className="relative mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-        {label}
-      </div>
     </div>
   );
 }
