@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
-  Gamepad2, Play, Square, Plus, Zap, MonitorPlay, Headset, Car, Cpu, Pause, Wrench,
+  Gamepad2, Play, Square, Zap, MonitorPlay, Headset, Car, Cpu, Pause, Wrench,
   Check, Lock, UserPlus, IndianRupee, ArrowRight,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
