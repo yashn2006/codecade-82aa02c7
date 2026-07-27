@@ -271,7 +271,7 @@ export function ConsoleShell({
           >
             <div className="grid h-14" style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0,1fr))` }}>
               {mobileTabs.map((t) => {
-                const active = t.more ? (open || !anyTabActive) && t.more && open : tabActive(t);
+                const active = t.more ? open || !anyTabActive : tabActive(t);
                 const cls = `relative flex h-14 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition active:scale-95 ${
                   active ? "text-primary" : "text-muted-foreground"
                 }`;
