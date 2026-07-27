@@ -58,32 +58,42 @@ function CafeLayout() {
     <ConsoleShell
       badge="Café Console"
       title={cafe?.name ?? "Café"}
-      subtitle={cafe ? `${cafe.city ?? ""}${cafe.city ? " · " : ""}/${cafe.slug}` : "Loading workspace…"}
+      subtitle={cafe ? `/${cafe.slug}` : "Loading workspace…"}
       intensity="immersive"
+      banner={<TrialBanner cafe={cafe as { trial_ends_at?: string | null; subscription_status?: string | null; plan?: string | null } | null | undefined} />}
+      tabs={[
+        { label: "Floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
+        { label: "Ops", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug }, match: ["/cafe/$slug/devices", "/cafe/$slug/floor"] },
+        { label: "Money", icon: Receipt, to: "/cafe/$slug/pos", params: { slug }, match: ["/cafe/$slug/wallet", "/cafe/$slug/ledger"] },
+        { label: "People", icon: Users, to: "/cafe/$slug/customers", params: { slug }, match: ["/cafe/$slug/staff", "/cafe/$slug/memberships"] },
+        { label: "More", icon: LayoutGrid, more: true },
+      ]}
       nav={[
-        { label: "Live floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
-        { label: "Analytics", icon: LineChart, to: "/cafe/$slug/analytics", params: { slug } },
-        { label: "Reports", icon: BarChart3, to: "/cafe/$slug/reports", params: { slug } },
-        { label: "Floor builder", icon: LayoutGrid, to: "/cafe/$slug/floor", params: { slug } },
-        { label: "Menu", icon: UtensilsCrossed, to: "/cafe/$slug/menu", params: { slug } },
-        { label: "POS counter", icon: Receipt, to: "/cafe/$slug/pos", params: { slug } },
-        { label: "Devices", icon: Cpu, to: "/cafe/$slug/devices", params: { slug } },
-        { label: "Bookings", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug } },
-        { label: "Tournaments", icon: Trophy, to: "/cafe/$slug/tournaments", params: { slug } },
-        { label: "Customers", icon: Users, to: "/cafe/$slug/customers", params: { slug } },
-        { label: "Wallet", icon: Wallet, to: "/cafe/$slug/wallet", params: { slug } },
-        { label: "Memberships", icon: Crown, to: "/cafe/$slug/memberships", params: { slug } },
-        { label: "Ledger", icon: ScrollText, to: "/cafe/$slug/ledger", params: { slug } },
-        { label: "Audit log", icon: History, to: "/cafe/$slug/audit", params: { slug } },
-        { label: "Public page", icon: Globe, to: "/cafe/$slug/page", params: { slug } },
-        { label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
-        { label: "Support", icon: LifeBuoy, to: "/cafe/$slug/support", params: { slug } },
+        { group: "Operations", label: "Live floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
+        { group: "Operations", label: "Floor builder", icon: LayoutGrid, to: "/cafe/$slug/floor", params: { slug } },
+        { group: "Operations", label: "Devices", icon: Cpu, to: "/cafe/$slug/devices", params: { slug } },
+        { group: "Operations", label: "Bookings", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug } },
+
+        { group: "Revenue", label: "POS counter", icon: Receipt, to: "/cafe/$slug/pos", params: { slug } },
+        { group: "Revenue", label: "Wallet", icon: Wallet, to: "/cafe/$slug/wallet", params: { slug } },
+        { group: "Revenue", label: "Ledger", icon: ScrollText, to: "/cafe/$slug/ledger", params: { slug } },
+        { group: "Revenue", label: "Reports", icon: BarChart3, to: "/cafe/$slug/reports", params: { slug } },
+        { group: "Revenue", label: "Analytics", icon: LineChart, to: "/cafe/$slug/analytics", params: { slug } },
+
+        { group: "Community", label: "Customers", icon: Users, to: "/cafe/$slug/customers", params: { slug } },
+        { group: "Community", label: "Memberships", icon: Crown, to: "/cafe/$slug/memberships", params: { slug } },
+        { group: "Community", label: "Tournaments", icon: Trophy, to: "/cafe/$slug/tournaments", params: { slug } },
+        { group: "Community", label: "Staff", icon: Settings, to: "/cafe/$slug/staff", params: { slug } },
+
+        { group: "Manage", label: "Menu", icon: UtensilsCrossed, to: "/cafe/$slug/menu", params: { slug } },
+        { group: "Manage", label: "Public page", icon: Globe, to: "/cafe/$slug/page", params: { slug } },
+        { group: "Manage", label: "Audit log", icon: History, to: "/cafe/$slug/audit", params: { slug } },
+        { group: "Manage", label: "Support", icon: LifeBuoy, to: "/cafe/$slug/support", params: { slug } },
       ]}
     >
       <CafeBreadcrumbs slug={slug} cafeName={cafe?.name ?? null} />
       <div className="mb-4 space-y-3">
         <MaintenanceBanner window={platform} title="CoreCade network maintenance" />
-        <TrialBanner cafe={cafe as { trial_ends_at?: string | null; subscription_status?: string | null; plan?: string | null } | null | undefined} />
         {cafe && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/30 px-4 py-2.5 backdrop-blur">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -113,6 +123,7 @@ function CafeLayout() {
           </div>
         )}
       </div>
+
       {locked ? <RestrictedOverlay message={lockMessage} trial={trialEnded && !restricted} /> : null}
       <div className={locked ? "pointer-events-none select-none opacity-30 blur-[2px]" : ""} aria-hidden={locked}>
         <Outlet />
