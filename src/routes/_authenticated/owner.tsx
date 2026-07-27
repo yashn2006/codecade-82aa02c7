@@ -4,13 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, Cpu, CalendarRange, ShoppingBag, Users, Wallet,
-  Trophy, BookOpen, LineChart, Globe, BadgeCheck, Receipt, UsersRound, ArrowRight, Building2,
+  BookOpen, LineChart, BadgeCheck, UsersRound, ArrowRight, Building2,
   Plus, TrendingUp, Activity, IndianRupee, LifeBuoy,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { EmptyState } from "@/components/EmptyState";
-import { TrialBanner } from "@/components/TrialBanner";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { ReferralCard } from "@/components/ReferralCard";
 import { Button } from "@/components/ui/button";
@@ -167,7 +166,7 @@ function OwnerHub() {
                     params={{ slug: cafe.slug }}
                     className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_0_24px_-8px_oklch(0.7_0.26_335/0.9)]"
                   >
-                    <s.icon className="h-4.5 w-4.5 h-[18px] w-[18px] text-foreground/80 transition group-hover:text-primary" />
+                    <s.icon className="h-[18px] w-[18px] text-foreground/80 transition group-hover:text-primary" />
                     <span className="text-[11px] font-semibold leading-tight">{s.label}</span>
                   </Link>
                 ))}
@@ -189,7 +188,7 @@ function KpiCard({ icon: Icon, tone, label, value }: {
       style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16 }}
     >
       <div className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${tone}22`, color: tone }}>
-        <Icon className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+        <Icon className="h-[18px] w-[18px]" />
       </div>
       <div className="mt-3 font-display text-[32px] font-extrabold leading-none tabular-nums">{value}</div>
       <div className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
