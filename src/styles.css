@@ -461,3 +461,57 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Live floor pods ---------- */
+@keyframes breathe-green {
+  0%, 100% { box-shadow: 0 0 20px rgba(0,255,100,0.12); }
+  50%      { box-shadow: 0 0 34px rgba(0,255,100,0.28); }
+}
+.pod-live { animation: breathe-green 2s ease-in-out infinite; }
+
+@keyframes glow-pulse-magenta {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,0,200,0.25); }
+  50%      { box-shadow: 0 0 26px rgba(255,0,200,0.55); }
+}
+.btn-glow-magenta { animation: glow-pulse-magenta 2.4s ease-in-out infinite; }
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.8); }
+}
+.animate-dot-pulse { animation: dot-pulse 1.6s ease-in-out infinite; }
+
+/* ---------- Form validation ---------- */
+@keyframes shake-x {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+.animate-shake { animation: shake-x 380ms ease-in-out; }
+
+/* Native selects inside modals get the same skin as inputs */
+.field-select {
+  height: 44px;
+  width: 100%;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 0 14px;
+  font-size: 15px;
+  color: inherit;
+  appearance: none;
+  transition: all 150ms ease;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ff4fd8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+.field-select:focus {
+  outline: none;
+  border-color: rgba(255,100,200,0.6);
+  box-shadow: 0 0 0 3px rgba(255,0,200,0.1);
+  background-color: rgba(255,255,255,0.07);
+}
+.field-select option { background: #12001f; color: #fff; }
