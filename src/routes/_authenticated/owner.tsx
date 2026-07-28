@@ -1,11 +1,11 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, Cpu, CalendarRange, ShoppingBag, Users, Wallet,
   BookOpen, LineChart, BadgeCheck, UsersRound, ArrowRight, Building2,
-  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy,
+  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy, Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
