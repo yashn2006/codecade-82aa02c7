@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
   Gamepad2, Play, Square, Zap, MonitorPlay, Headset, Car, Cpu, Pause, Wrench,
-  Check, Lock, UserPlus, IndianRupee, ArrowRight,
+  Check, Lock, IndianRupee, ArrowRight, Search, Printer, ArrowLeftRight,
+  Clock3,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listDevices, setDeviceStatus, type DeviceStatus } from "@/lib/devices.functions";
@@ -14,7 +15,7 @@ import { listCustomers, createCustomer } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogIcon } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -40,14 +41,6 @@ const TYPE_ICON: Record<string, typeof Cpu> = {
   pc: MonitorPlay, console: Gamepad2, vr: Headset, racing: Car, other: Cpu,
 };
 
-const STATUS_BAR: Record<DeviceStatus, string> = {
-  in_use: "#22c55e",
-  available: "#22d3a8",
-  reserved: "#f5b042",
-  suspended: "#94a3b8",
-  maintenance: "#f87171",
-};
-
 const FILTERS: { id: "all" | DeviceStatus; label: string }[] = [
   { id: "all", label: "All" },
   { id: "in_use", label: "Live" },
@@ -67,6 +60,14 @@ function fmtClock(ms: number) {
 function billed(startedAt: string, rate: number, now: number) {
   const minutes = Math.max(1, Math.ceil((now - new Date(startedAt).getTime()) / 60000));
   return Math.ceil((rate * minutes) / 60);
+}
+function initials(text: string) {
+  return text.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+}
+function avatarGradient(seed: string) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
+  return `linear-gradient(135deg, hsl(${h} 85% 58%), hsl(${(h + 60) % 360} 85% 52%))`;
 }
 
 type SessionRow = {
@@ -95,91 +96,133 @@ const Pod = memo(function Pod({
   const Icon = TYPE_ICON[device.type] ?? Cpu;
   const live = status === "in_use" && !!session;
   const booked = status === "reserved";
-  const bar = STATUS_BAR[status] ?? "#94a3b8";
+  const broken = status === "maintenance";
+  const paused = status === "suspended";
+
+  const skin = live
+    ? { bg: "rgba(0,255,100,0.04)", border: "1px solid rgba(0,255,100,0.3)", bar: "linear-gradient(90deg,#00ff64,#0ea5e9)" }
+    : booked
+      ? { bg: "rgba(255,170,0,0.04)", border: "1px solid rgba(255,170,0,0.3)", bar: "linear-gradient(90deg,#ffaa00,#ff6a00)" }
+      : paused
+        ? { bg: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,50,50,0.2)", bar: "linear-gradient(90deg,#94a3b8,#64748b)" }
+        : broken
+          ? { bg: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,50,50,0.2)", bar: "linear-gradient(90deg,#ff3232,#b91c1c)" }
+          : { bg: "rgba(255,255,255,0.03)", border: "1px solid rgba(0,212,255,0.2)", bar: "linear-gradient(90deg,#00d4ff,#22d3a8)" };
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
-      className="group relative flex h-[160px] flex-col overflow-hidden rounded-[14px] text-left transition-transform duration-150 active:scale-[0.98]"
-      style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        boxShadow: live ? "0 0 0 1px rgba(34,197,94,0.25), 0 0 26px -12px rgba(34,197,94,0.9)" : undefined,
-      }}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+      className={`group relative flex min-h-[200px] cursor-pointer flex-col overflow-hidden rounded-2xl p-4 text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.99] ${live ? "pod-live" : ""}`}
+      style={{ background: skin.bg, border: skin.border }}
       aria-label={`${device.name} — ${status}`}
     >
-      <span className="absolute inset-x-0 top-0 h-[4px]" style={{ background: bar }} aria-hidden />
-      {live && (
-        <span
-          className="pointer-events-none absolute inset-0 animate-pulse-soft"
-          style={{ background: "radial-gradient(120% 80% at 50% 0%, rgba(34,197,94,0.10), transparent 70%)" }}
-          aria-hidden
-        />
-      )}
-
-      <div className="relative flex items-start justify-between gap-2 px-3 pb-1 pt-3">
-        <span className="min-w-0 truncate font-display text-sm font-bold">{device.name}</span>
-        <Icon className="h-4 w-4 shrink-0 opacity-70" style={{ color: bar }} />
-      </div>
+      <span className="absolute inset-x-0 top-0 h-[4px]" style={{ background: skin.bar }} aria-hidden />
 
       {live ? (
-        <div className="relative flex flex-1 flex-col justify-between px-3 pb-3">
-          <div className="min-w-0">
-            <div className="truncate text-[13px] font-bold text-primary">
-              {session?.customers?.full_name ?? "Walk-in"}
-            </div>
-            <div className="mt-1 font-mono text-[15px] font-bold tabular-nums text-emerald-400">
+        <div className="relative flex flex-1 flex-col">
+          <div className="flex items-start justify-between gap-2">
+            <span className="min-w-0 truncate text-[14px] font-bold">{device.name}</span>
+            <span className="shrink-0 rounded-full bg-[rgba(0,255,100,0.15)] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald-300">
+              ● Live
+            </span>
+          </div>
+          <div className="mt-1.5 truncate text-[18px] font-bold text-primary">
+            {session?.customers?.full_name ?? "Walk-in"}
+          </div>
+          <span className="mt-1 inline-flex w-fit rounded-full border border-white/12 bg-white/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/70">
+            {session?.customers?.full_name ? "Member" : "Walk-in"}
+          </span>
+          <div className="mt-auto pt-3">
+            <div className="font-mono text-[28px] font-bold leading-none tabular-nums text-emerald-400">
               {fmtClock(now - new Date(session!.started_at).getTime())}
             </div>
-            <div className="font-mono text-[12px] tabular-nums text-foreground/90">
+            <div className="mt-1 text-[20px] font-bold tabular-nums">
               ₹{billed(session!.started_at, device.hourly_rate, now)}
             </div>
+            <span className="mt-2.5 inline-flex w-full items-center justify-center gap-1 rounded-xl border border-emerald-400/40 bg-emerald-400/5 py-2 text-[12px] font-semibold text-emerald-300 transition group-hover:bg-emerald-400/12">
+              Details <ArrowRight className="h-3.5 w-3.5" />
+            </span>
           </div>
-          <span className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-foreground/80">
-            Details <ArrowRight className="h-3 w-3" />
-          </span>
         </div>
       ) : booked ? (
-        <div className="relative flex flex-1 flex-col justify-between px-3 pb-3">
-          <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-amber-300">✦ Reserved</div>
-            <div className="mt-1 font-mono text-[11px] text-muted-foreground">₹{device.hourly_rate}/hr</div>
+        <div className="relative flex flex-1 flex-col">
+          <div className="truncate text-[14px] font-bold">{device.name}</div>
+          <div className="mt-3 grid flex-1 place-items-center text-center">
+            <div>
+              <div className="rounded-full border border-amber-400/40 bg-amber-400/12 px-3 py-1 font-mono text-[12px] font-bold uppercase tracking-[0.16em] text-amber-300">
+                ✦ Reserved
+              </div>
+              <div className="mt-2 truncate text-[13px] font-semibold text-foreground/90">
+                {session?.customers?.full_name ?? "Held station"}
+              </div>
+              <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">₹{device.hourly_rate}/hr</div>
+            </div>
           </div>
-          <span
+          <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); onStart(); }}
-            className="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-400/50 bg-amber-400/15 py-1.5 text-[11px] font-semibold text-amber-200"
+            className="mt-2 inline-flex w-full items-center justify-center gap-1 rounded-xl border border-amber-400/50 bg-amber-400/15 py-2 text-[12px] font-bold text-amber-200 transition hover:bg-amber-400/25"
           >
             Check in
-          </span>
+          </button>
         </div>
-      ) : (
-        <div className="relative flex flex-1 flex-col justify-between px-3 pb-3">
-          <div className="grid flex-1 place-items-center">
-            <div className="text-center">
-              <div className="font-mono text-[13px] tabular-nums text-muted-foreground">₹{device.hourly_rate}/hr</div>
-              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">
-                {device.zone || status.replace("_", " ")}
+      ) : paused || broken ? (
+        <div className="relative flex flex-1 flex-col">
+          <div className="truncate text-[14px] font-bold">{device.name}</div>
+          <div className="grid flex-1 place-items-center text-center">
+            <div>
+              <div className={`font-mono text-[13px] font-bold uppercase tracking-[0.16em] ${paused ? "text-slate-300" : "text-rose-300"}`}>
+                {paused ? "⏸ Suspended" : "✖ Maintenance"}
+              </div>
+              <div className="mt-1.5 text-[11px] text-muted-foreground">
+                {paused
+                  ? device.suspend_until
+                    ? `Back at ${new Date(device.suspend_until).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
+                    : "Temporarily out of rotation"
+                  : "Under repair — not bookable"}
               </div>
             </div>
           </div>
-          {status === "available" && (
-            <div className="grid grid-cols-2 gap-1.5">
-              <span
-                onClick={(e) => { e.stopPropagation(); onStart(); }}
-                className="inline-flex items-center justify-center rounded-lg py-1.5 text-[11px] font-bold text-primary-foreground"
-                style={{ background: "var(--gradient-brand-hot)" }}
-              >
-                Start
-              </span>
-              <span className="inline-flex items-center justify-center rounded-lg border border-white/15 py-1.5 text-[11px] font-semibold text-foreground/80">
-                Book
+          <span className="inline-flex w-full items-center justify-center rounded-xl border border-white/12 py-2 text-[12px] font-semibold text-foreground/70">
+            Manage
+          </span>
+        </div>
+      ) : (
+        <div className="relative flex flex-1 flex-col">
+          <div className="flex items-start justify-between gap-2">
+            <span className="min-w-0 truncate text-[28px] font-bold leading-none">{device.name}</span>
+          </div>
+          <div className="grid flex-1 place-items-center py-3">
+            <div className="text-center">
+              <Icon
+                className="mx-auto h-12 w-12 text-[#22d3a8] transition-all duration-150 group-hover:scale-105"
+                style={{ filter: "drop-shadow(0 0 10px rgba(0,212,255,0.45))" }}
+              />
+              <div className="mt-2 font-mono text-[12px] text-muted-foreground">₹{device.hourly_rate}/hr</div>
+              <span className="mt-2 inline-flex rounded-full border border-[rgba(0,212,255,0.35)] bg-[rgba(0,212,255,0.1)] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-[#5ee9ff]">
+                Available
               </span>
             </div>
-          )}
+          </div>
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onStart(); }}
+              className="inline-flex h-9 w-full items-center justify-center rounded-xl text-[12px] font-bold text-primary-foreground transition hover:brightness-110"
+              style={{ background: "var(--gradient-brand-hot)" }}
+            >
+              Start
+            </button>
+            <span className="inline-flex h-8 w-full items-center justify-center rounded-xl border border-white/15 text-[12px] font-semibold text-foreground/80">
+              Book
+            </span>
+          </div>
         </div>
       )}
-    </button>
+    </div>
   );
 });
 
@@ -299,9 +342,9 @@ function LiveFloor() {
     return (
       <div className="space-y-4">
         <div className="h-[52px] animate-pulse rounded-2xl border border-white/8 bg-white/[0.03]" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-[160px] animate-pulse rounded-[14px] border border-white/8 bg-white/[0.03]" />
+            <div key={i} className="skeleton h-[200px] rounded-2xl border border-white/8" />
           ))}
         </div>
       </div>
@@ -326,16 +369,18 @@ function LiveFloor() {
         </div>
         <span className="h-5 w-px shrink-0 bg-white/10" />
         <div className="flex shrink-0 items-center gap-3 font-mono text-[12px] tabular-nums text-muted-foreground">
-          <span className="text-foreground">⚡ ₹{runningTotal.toLocaleString("en-IN")} running</span>
+          <span className={`font-bold text-foreground ${counts.in_use > 0 ? "animate-pulse-soft ticker-glow" : ""}`}>
+            ⚡ ₹{runningTotal.toLocaleString("en-IN")} running
+          </span>
           <span>₹{revenueToday.toLocaleString("en-IN")} today</span>
         </div>
         <Button
           onClick={() => setWalkInOpen(true)}
           disabled={counts.available === 0}
-          className="ml-auto h-9 shrink-0 gap-1.5 text-primary-foreground"
+          className="btn-glow-magenta ml-auto h-9 shrink-0 gap-1.5 text-primary-foreground"
           style={{ background: "var(--gradient-brand-hot)" }}
         >
-          <UserPlus className="h-4 w-4" /> Session
+          <Zap className="h-4 w-4" /> Session
         </Button>
       </div>
 
@@ -373,7 +418,7 @@ function LiveFloor() {
       ) : (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5"
+          className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5"
         >
           {filtered.map((d) => (
             <Pod
@@ -392,67 +437,104 @@ function LiveFloor() {
       <Sheet open={!!panel} onOpenChange={(v) => !v && setPanel(null)}>
         <SheetContent
           side={isMobile ? "bottom" : "right"}
-          className={isMobile ? "max-h-[88vh] overflow-y-auto rounded-t-[28px] p-5" : "w-full overflow-y-auto p-6 sm:max-w-md"}
+          className={isMobile
+            ? "max-h-[92vh] overflow-y-auto rounded-t-[28px] border-t border-[rgba(255,100,200,0.2)] bg-[rgba(10,0,20,0.97)] p-5 backdrop-blur-[24px]"
+            : "w-full overflow-y-auto border-l border-[rgba(255,100,200,0.2)] bg-[rgba(10,0,20,0.97)] p-6 backdrop-blur-[24px] sm:max-w-[400px]"}
         >
           {selected && (
             <div className="space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent font-display text-lg font-black text-primary-foreground">
-                  {(selectedSession?.customers?.full_name ?? selected.name).slice(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate font-display text-lg font-extrabold">
-                    {selectedSession?.customers?.full_name ?? selected.name}
-                  </div>
-                  <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {selected.name} · ₹{selected.hourly_rate}/hr
-                  </div>
-                </div>
-                <span className="ml-auto shrink-0 rounded-full border border-white/15 bg-white/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em]">
-                  {selectedSession ? (selectedSession.customers?.full_name ? "Member" : "Walk-in") : selected.status.replace("_", " ")}
+              {/* header */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  {selected.name}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] ${
+                    selectedSession
+                      ? "bg-[rgba(0,255,100,0.15)] text-emerald-300"
+                      : "border border-white/15 bg-white/5 text-foreground/70"
+                  }`}
+                >
+                  {selectedSession ? "● Live" : selected.status.replace("_", " ")}
                 </span>
               </div>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full font-display text-base font-black text-black/80"
+                  style={{ background: avatarGradient(selectedSession?.customers?.full_name ?? selected.name) }}
+                >
+                  {initials(selectedSession?.customers?.full_name ?? selected.name)}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-display text-[24px] font-extrabold leading-tight">
+                    {selectedSession?.customers?.full_name ?? selected.name}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-2">
+                    <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/70">
+                      {selectedSession ? (selectedSession.customers?.full_name ? "Member" : "Walk-in") : `₹${selected.hourly_rate}/hr`}
+                    </span>
+                    {selected.zone && (
+                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        {selected.zone}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="h-px bg-white/8" />
 
               {selectedSession ? (
                 <>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center">
-                    <div className="font-mono text-[36px] font-bold leading-none tabular-nums text-emerald-400">
+                    <div className="font-mono text-[44px] font-bold leading-none tabular-nums text-emerald-400">
                       {fmtClock(now - new Date(selectedSession.started_at).getTime())}
                     </div>
-                    <div className="mt-2 font-display text-[32px] font-extrabold leading-none tabular-nums text-primary">
+                    <div className="mt-2 font-display text-[36px] font-extrabold leading-none tabular-nums text-primary">
                       ₹{billed(selectedSession.started_at, selected.hourly_rate, now)}
                     </div>
                     <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                      running total
+                      running total · ₹{selected.hourly_rate}/hr
                     </div>
                   </div>
+
+                  <div className="h-px bg-white/8" />
 
                   <Button
                     onClick={() => endM.mutate({ data: { id: selectedSession.id } })}
                     disabled={endM.isPending}
-                    className="w-full gap-2 text-primary-foreground"
+                    className="h-12 w-full gap-2 rounded-xl text-[15px] font-bold text-primary-foreground"
                     style={{ background: "var(--gradient-brand-hot)" }}
                   >
-                    <Square className="h-4 w-4" /> End session
+                    <Square className="h-4 w-4" /> {endM.isPending ? "Ending…" : "End session"}
                   </Button>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" className="gap-1.5"
+                    <Button variant="outline" className="h-11 gap-1.5 rounded-xl"
                       onClick={() => statusM.mutate({ data: { id: selected.id, status: "suspended", suspend_minutes: 15 } })}>
-                      <Pause className="h-3.5 w-3.5" /> Pause 15m
+                      <Pause className="h-3.5 w-3.5" /> Pause
                     </Button>
-                    <Button variant="outline" className="gap-1.5"
+                    <Button variant="outline" className="h-11 gap-1.5 rounded-xl"
+                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "suspended", suspend_minutes: 30 } })}>
+                      <Clock3 className="h-3.5 w-3.5" /> +30 min
+                    </Button>
+                    <Button variant="outline" className="h-11 gap-1.5 rounded-xl"
                       onClick={() => statusM.mutate({ data: { id: selected.id, status: "maintenance" } })}>
-                      <Wrench className="h-3.5 w-3.5" /> Maintenance
+                      <ArrowLeftRight className="h-3.5 w-3.5" /> Maintenance
+                    </Button>
+                    <Button variant="outline" className="h-11 gap-1.5 rounded-xl" onClick={() => window.print()}>
+                      <Printer className="h-3.5 w-3.5" /> Receipt
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                      Find customer
-                    </Label>
-                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or phone…" />
+                    <Label>Find customer</Label>
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or phone…" className="pl-9" />
+                    </div>
                     <div className="max-h-52 overflow-y-auto rounded-xl border border-white/10">
                       {filteredCustomers.length === 0 ? (
                         <div className="p-4 text-center text-xs text-muted-foreground">No customers matched</div>
@@ -460,10 +542,16 @@ function LiveFloor() {
                         <button
                           key={c.id}
                           onClick={() => startM.mutate({ data: { cafe_id: cafeId, device_id: selected.id, customer_id: c.id } })}
-                          className="flex w-full items-center justify-between border-b border-white/5 px-3 py-2 text-left text-sm last:border-0 hover:bg-white/5"
+                          className="flex w-full items-center gap-3 border-b border-white/5 px-3 py-2 text-left text-sm last:border-0 hover:bg-white/5"
                         >
-                          <span className="truncate">{c.full_name}</span>
-                          <span className="font-mono text-xs text-muted-foreground">{c.phone}</span>
+                          <span
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold text-black/80"
+                            style={{ background: avatarGradient(c.full_name ?? "?") }}
+                          >
+                            {initials(c.full_name ?? "?")}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate">{c.full_name}</span>
+                          <span className="shrink-0 font-mono text-xs text-muted-foreground">{c.phone}</span>
                         </button>
                       ))}
                     </div>
@@ -472,22 +560,22 @@ function LiveFloor() {
                   <Button
                     onClick={() => startM.mutate({ data: { cafe_id: cafeId, device_id: selected.id } })}
                     disabled={startM.isPending}
-                    className="w-full gap-2 text-primary-foreground"
+                    className="cta-shimmer h-[52px] w-full gap-2 rounded-xl text-[15px] font-bold text-primary-foreground"
                     style={{ background: "var(--gradient-brand-hot)" }}
                   >
-                    <Play className="h-4 w-4" /> Start walk-in session →
+                    <Play className="h-4 w-4" /> {startM.isPending ? "Starting…" : "Start walk-in session →"}
                   </Button>
 
                   <div className="grid grid-cols-3 gap-2">
-                    <Button size="sm" variant="outline" className="gap-1.5"
+                    <Button size="sm" variant="outline" className="h-11 gap-1.5 rounded-xl"
                       onClick={() => statusM.mutate({ data: { id: selected.id, status: "reserved" } })}>
                       <Lock className="h-3.5 w-3.5" /> Reserve
                     </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5"
+                    <Button size="sm" variant="outline" className="h-11 gap-1.5 rounded-xl"
                       onClick={() => statusM.mutate({ data: { id: selected.id, status: "maintenance" } })}>
                       <Wrench className="h-3.5 w-3.5" /> Fix
                     </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5"
+                    <Button size="sm" variant="outline" className="h-11 gap-1.5 rounded-xl"
                       onClick={() => statusM.mutate({ data: { id: selected.id, status: "available" } })}>
                       <Check className="h-3.5 w-3.5" /> Free
                     </Button>
@@ -501,14 +589,13 @@ function LiveFloor() {
 
       {/* ===== WALK-IN ===== */}
       <Dialog open={walkInOpen} onOpenChange={setWalkInOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-primary" /> New session
-            </DialogTitle>
+            <DialogIcon><Zap className="h-5 w-5" /></DialogIcon>
+            <DialogTitle>New session</DialogTitle>
           </DialogHeader>
           <form
-            className="space-y-3"
+            className="space-y-4"
             onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.currentTarget);
@@ -533,21 +620,21 @@ function LiveFloor() {
           >
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Name (optional)</Label>
+                <Label>Name (optional)</Label>
                 <Input name="full_name" placeholder="Walk-in" autoFocus />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Phone (optional)</Label>
+                <Label>Phone (optional)</Label>
                 <Input name="phone" type="tel" inputMode="tel" placeholder="+91…" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Allot a station</Label>
+              <Label>Allot a station</Label>
               <select
                 name="device_id"
                 required
                 defaultValue={devices.find((d) => d.status === "available")?.id ?? ""}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                className="field-select"
               >
                 <option value="" disabled>Choose…</option>
                 {devices.filter((d) => d.status === "available").map((d) => (
@@ -557,10 +644,11 @@ function LiveFloor() {
                 ))}
               </select>
             </div>
-            <DialogFooter className="pt-2">
+            <DialogFooter className="pt-1">
               <Button type="submit" disabled={counts.available === 0 || startM.isPending}
-                className="gap-1.5 text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
-                <IndianRupee className="h-4 w-4" /> Seat &amp; start
+                className="h-12 w-full gap-1.5 rounded-xl text-[15px] font-bold text-primary-foreground"
+                style={{ background: "var(--gradient-brand-hot)" }}>
+                <IndianRupee className="h-4 w-4" /> {startM.isPending ? "Processing…" : "Seat & start"}
               </Button>
             </DialogFooter>
           </form>
@@ -569,3 +657,4 @@ function LiveFloor() {
     </div>
   );
 }
+

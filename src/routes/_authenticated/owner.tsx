@@ -1,11 +1,11 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, Cpu, CalendarRange, ShoppingBag, Users, Wallet,
   BookOpen, LineChart, BadgeCheck, UsersRound, ArrowRight, Building2,
-  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy,
+  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy, Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -216,24 +216,35 @@ function CreateCafeButton() {
   const [closeTime, setCloseTime] = useState("23:00");
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  const [form, setForm] = useState({
+    description: "", city: "", state: "", address: "", phone: "", email: "",
+  });
+  const [err, setErr] = useState<string | null>(null);
+  const setField = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const navigate = useNavigate();
 
   const qc = useQueryClient();
   const create = useServerFn(createCafe);
   const m = useMutation({
     mutationFn: create,
-    onSuccess: () => {
+    onSuccess: (created) => {
       toast.success("🎉 Café created — welcome to CoreCade!");
       qc.invalidateQueries({ queryKey: ["owner-dashboard"] });
       qc.invalidateQueries({ queryKey: ["my-owned-cafes"] });
+      const newSlug = (created as { slug?: string } | undefined)?.slug ?? slug;
       setOpen(false);
       setStep(0);
       setName(""); setSlug("");
+      setForm({ description: "", city: "", state: "", address: "", phone: "", email: "" });
+      if (newSlug) navigate({ to: "/cafe/$slug", params: { slug: newSlug } });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
   const reset = () => {
-    setStep(0); setName(""); setSlug("");
+    setStep(0); setName(""); setSlug(""); setErr(null);
+    setForm({ description: "", city: "", state: "", address: "", phone: "", email: "" });
     setOpenDays([1, 2, 3, 4, 5, 6, 0]); setOpenTime("10:00"); setCloseTime("23:00");
   };
 
@@ -289,18 +300,23 @@ function CreateCafeButton() {
           }}
           onSubmit={(e) => {
             e.preventDefault();
-            if (step !== 2) return; // only submit from final step
-            const fd = new FormData(e.currentTarget);
+            if (step !== 2 || m.isPending) return; // only submit from final step
+            const cleanName = name.trim();
+            const cleanSlug = slug.toLowerCase().trim();
+            if (cleanName.length < 3) { setStep(0); setErr("Café name needs at least 3 characters."); return; }
+            if (!cleanSlug) { setStep(0); setErr("Pick a public URL for your café."); return; }
+            if (!form.address.trim()) { setErr("Address is required so players can find you."); return; }
+            setErr(null);
             m.mutate({
               data: {
-                name: name || String(fd.get("name") || ""),
-                slug: (slug || String(fd.get("slug") || "")).toLowerCase().trim(),
-                city: String(fd.get("city") || "") || null,
-                state: String(fd.get("state") || "") || null,
-                address: String(fd.get("address") || "") || null,
-                phone: String(fd.get("phone") || "") || null,
-                email: String(fd.get("email") || "") || null,
-                description: String(fd.get("description") || "") || null,
+                name: cleanName,
+                slug: cleanSlug,
+                city: form.city.trim() || null,
+                state: form.state.trim() || null,
+                address: form.address.trim() || null,
+                phone: form.phone.trim() || null,
+                email: form.email.trim() || null,
+                description: form.description.trim() || null,
                 open_time: openTime || null,
                 close_time: closeTime || null,
                 open_days: openDays.length ? openDays : null,
@@ -341,7 +357,7 @@ function CreateCafeButton() {
               </div>
               <div className="space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Pitch line (optional)</Label>
-                <Textarea name="description" rows={2} maxLength={1000}
+                <Textarea name="description" rows={2} maxLength={1000} value={form.description} onChange={setField("description")}
                   placeholder="India's loudest LAN café. 32 RTX rigs, cold coffee, and a Valorant league every Saturday."
                 />
               </div>
@@ -422,25 +438,31 @@ function CreateCafeButton() {
             <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">City</Label>
-                <Input name="city" placeholder="Bengaluru" className="h-11" />
+                <Input name="city" placeholder="Bengaluru" value={form.city} onChange={setField("city")} className="h-11" />
               </div>
               <div className="space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">State</Label>
-                <Input name="state" placeholder="Karnataka" className="h-11" />
+                <Input name="state" placeholder="Karnataka" value={form.state} onChange={setField("state")} className="h-11" />
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Address</Label>
-                <Input name="address" placeholder="Shop 12, MG Road" className="h-11" />
+                <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Address *</Label>
+                <Input name="address" required placeholder="Shop 12, MG Road" value={form.address} onChange={setField("address")} className="h-11" />
               </div>
               <div className="space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Phone</Label>
-                <Input name="phone" placeholder="+91 98765 43210" className="h-11" />
+                <Input name="phone" placeholder="+91 98765 43210" value={form.phone} onChange={setField("phone")} className="h-11" />
               </div>
               <div className="space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Public email</Label>
-                <Input name="email" type="email" placeholder="hi@cafe.com" className="h-11" />
+                <Input name="email" type="email" placeholder="hi@cafe.com" value={form.email} onChange={setField("email")} className="h-11" />
               </div>
             </motion.div>
+          )}
+
+          {err && (
+            <div className="animate-shake rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+              {err}
+            </div>
           )}
 
           {/* Footer nav */}
@@ -456,8 +478,8 @@ function CreateCafeButton() {
             {step < 2 ? (
               <Button
                 type="button"
-                disabled={step === 0 && (!name || !slug)}
-                onClick={() => setStep((s) => Math.min(2, s + 1))}
+                disabled={step === 0 && (name.trim().length < 3 || !slug)}
+                onClick={() => { setErr(null); setStep((s) => Math.min(2, s + 1)); }}
                 className="gap-2 text-primary-foreground"
                 style={{ background: "var(--gradient-brand-hot)" }}
               >
@@ -469,7 +491,7 @@ function CreateCafeButton() {
                 className="gap-2 text-primary-foreground"
                 style={{ background: "var(--gradient-brand-hot)" }}
               >
-                {m.isPending ? "Launching…" : "🚀 Launch café"}
+                {m.isPending ? (<><Loader2 className="h-4 w-4 animate-spin" /> Launching…</>) : "🚀 Launch café"}
               </Button>
             )}
           </DialogFooter>
