@@ -55,7 +55,25 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
+  <div
+    className={cn(
+      "flex flex-col space-y-1.5 border-b border-white/[0.07] pb-4 pr-10 text-left",
+      className,
+    )}
+    {...props}
+  />
+);
+
+/** Magenta icon chip for modal headers. */
+const DialogIcon = ({ className, children }: { className?: string; children: React.ReactNode }) => (
+  <div
+    className={cn(
+      "mb-3 grid h-10 w-10 place-items-center rounded-full bg-[rgba(255,0,200,0.15)] text-primary",
+      className,
+    )}
+  >
+    {children}
+  </div>
 );
 DialogHeader.displayName = "DialogHeader";
 
@@ -73,7 +91,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("font-display text-[20px] font-bold leading-tight tracking-tight text-foreground", className)}
     {...props}
   />
 ));
@@ -99,6 +117,7 @@ export {
   DialogClose,
   DialogContent,
   DialogHeader,
+  DialogIcon,
   DialogFooter,
   DialogTitle,
   DialogDescription,
