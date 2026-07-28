@@ -168,10 +168,11 @@ export function ConsoleShell({
                         }`}
                         style={active ? {
                           background: "rgba(255,0,200,0.08)",
-                          borderLeft: "2px solid var(--color-magenta, oklch(0.7 0.26 335))",
-                        } : { borderLeft: "2px solid transparent" }}
+                          borderLeft: "3px solid var(--color-magenta, oklch(0.7 0.26 335))",
+                          boxShadow: "inset 0 0 24px -12px var(--color-magenta, oklch(0.7 0.26 335))",
+                        } : { borderLeft: "3px solid transparent" }}
                       >
-                        <item.icon className="h-4 w-4 shrink-0" />
+                        <item.icon className={`h-4 w-4 shrink-0 transition-colors ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`} />
                         <span className="truncate">{item.label}</span>
                       </Link>
                     );
@@ -226,7 +227,7 @@ export function ConsoleShell({
 
             <div className="flex shrink-0 items-center gap-1.5">
               <span className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald-300 sm:flex">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_currentColor]" />
+                <span className="h-1.5 w-1.5 animate-dot-pulse rounded-full bg-emerald-300 shadow-[0_0_10px_currentColor]" />
                 Console online
               </span>
               <NotificationBell />

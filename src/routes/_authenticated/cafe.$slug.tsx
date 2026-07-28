@@ -161,12 +161,12 @@ function CafeBreadcrumbs({ slug, cafeName }: { slug: string; cafeName: string | 
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       aria-label="Breadcrumb"
-      className="mb-3 flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-border/50 bg-card/40 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur"
+      className="sticky top-[92px] z-10 mb-3 flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-border/50 bg-card/70 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur-xl"
     >
       <Link to="/owner" className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition hover:bg-accent/40 hover:text-foreground">
         <Home className="h-3 w-3" /> Owner Hub
       </Link>
-      <ChevronRight className="h-3 w-3 opacity-50" />
+      <ChevronRight className="h-3 w-3 shrink-0 text-primary/80" />
       <Link
         to="/cafe/$slug"
         params={{ slug }}
@@ -177,8 +177,8 @@ function CafeBreadcrumbs({ slug, cafeName }: { slug: string; cafeName: string | 
       </Link>
       {sectionMeta ? (
         <>
-          <ChevronRight className="h-3 w-3 opacity-50" />
-          <span aria-current="page" className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-foreground">
+          <ChevronRight className="h-3 w-3 shrink-0 text-primary/80" />
+          <span aria-current="page" className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-1.5 py-0.5 font-bold text-foreground">
             <sectionMeta.icon className="h-3 w-3" /> {sectionMeta.label}
           </span>
         </>
