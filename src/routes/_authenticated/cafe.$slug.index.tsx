@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
   Gamepad2, Play, Square, Zap, MonitorPlay, Headset, Car, Cpu, Pause, Wrench,
-  Check, Lock, UserPlus, IndianRupee, ArrowRight, Search, Printer, ArrowLeftRight,
+  Check, Lock, IndianRupee, ArrowRight, Search, Printer, ArrowLeftRight,
   Clock3,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
@@ -658,4 +658,3 @@ function LiveFloor() {
   );
 }
 
-export { UserPlus };
