@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SetupRouteImport } from './routes/setup'
@@ -17,6 +18,7 @@ import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as RedirectingRouteImport } from './routes/redirecting'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -64,6 +66,11 @@ import { Route as AuthenticatedCafeSlugAuditRouteImport } from './routes/_authen
 import { Route as AuthenticatedCafeSlugAnalyticsRouteImport } from './routes/_authenticated/cafe.$slug.analytics'
 import { Route as AuthenticatedCafeSlugTournamentsIdRouteImport } from './routes/_authenticated/cafe.$slug.tournaments.$id'
 
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -102,6 +109,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeaturesRoute = FeaturesRouteImport.update({
@@ -367,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -375,6 +388,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
@@ -422,6 +436,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -430,6 +445,7 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
@@ -477,6 +493,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -485,6 +502,7 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/owner': typeof AuthenticatedOwnerRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
@@ -534,6 +552,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/features'
+    | '/forgot-password'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -542,6 +561,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
+    | '/verify-email'
     | '/admin'
     | '/owner'
     | '/portal'
@@ -589,6 +609,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/features'
+    | '/forgot-password'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -597,6 +618,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
+    | '/verify-email'
     | '/owner'
     | '/portal'
     | '/api/sitemap.xml'
@@ -643,6 +665,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/features'
+    | '/forgot-password'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -651,6 +674,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
+    | '/verify-email'
     | '/_authenticated/admin'
     | '/_authenticated/owner'
     | '/_authenticated/portal'
@@ -700,6 +724,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DiscoverRoute: typeof DiscoverRoute
   FeaturesRoute: typeof FeaturesRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   RedirectingRoute: typeof RedirectingRoute
@@ -708,6 +733,7 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   ApiSitemapDotxmlRoute: typeof ApiSitemapDotxmlRoute
   CSlugRoute: typeof CSlugRouteWithChildren
   ApiPublicCronTrialEmailsRoute: typeof ApiPublicCronTrialEmailsRoute
@@ -715,6 +741,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -769,6 +802,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/features': {
@@ -1229,6 +1269,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DiscoverRoute: DiscoverRoute,
   FeaturesRoute: FeaturesRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RedirectingRoute: RedirectingRoute,
@@ -1237,6 +1278,7 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   ApiSitemapDotxmlRoute: ApiSitemapDotxmlRoute,
   CSlugRoute: CSlugRouteWithChildren,
   ApiPublicCronTrialEmailsRoute: ApiPublicCronTrialEmailsRoute,
