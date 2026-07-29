@@ -386,6 +386,38 @@ function AuthPage() {
                 </div>
               )}
 
+              {mode === "signup" && (
+                <label className="flex cursor-pointer items-start gap-3 text-xs text-muted-foreground">
+                  <span
+                    className={`mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[6px] border transition ${
+                      agreed
+                        ? "border-transparent bg-[linear-gradient(135deg,#ff006e,#7000ff)] text-white"
+                        : "border-white/20 bg-white/5"
+                    }`}
+                  >
+                    {agreed && (
+                      <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span>
+                    I agree to the{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer" className="text-primary hover:underline">Terms of Service</a>{" "}
+                    and{" "}
+                    <a href="/privacy" target="_blank" rel="noreferrer" className="text-primary hover:underline">Privacy Policy</a>.
+                  </span>
+                </label>
+              )}
+
+
+
               <SubmitButton
                 disabled={loading || success}
                 valid={formValid}
