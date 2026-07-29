@@ -26,6 +26,7 @@ type Mode = "signin" | "signup" | "forgot";
 function AuthPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [shake, setShake] = useState(false);
@@ -56,6 +57,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [agreed, setAgreed] = useState(false);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   // Stronger on signup: 10+ chars with letters + digits. Sign-in keeps the
@@ -66,7 +69,11 @@ function AuthPage() {
     : password.length >= 8;
   const nameValid = mode !== "signup" || fullName.trim().length >= 2;
   const formValid =
-    mode === "forgot" ? emailValid : emailValid && pwValid && nameValid;
+    mode === "forgot"
+      ? emailValid
+      : mode === "signup"
+        ? emailValid && pwValid && nameValid && agreed
+        : emailValid && pwValid;
 
   const triggerShake = () => {
     setShake(true);
