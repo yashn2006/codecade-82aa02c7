@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSupabaseUserReady } from "@/lib/auth-routing";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
+import { BrandLockup } from "@/components/Brand";
 
 function AuthenticatedLayout() {
   useIdleLogout(30 * 60 * 1000);
