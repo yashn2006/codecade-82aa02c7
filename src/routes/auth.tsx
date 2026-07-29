@@ -316,20 +316,22 @@ function AuthPage() {
                       <span className="inline-flex h-12 shrink-0 items-center gap-1 rounded-xl border border-border/70 bg-background/60 px-3 font-mono text-xs text-muted-foreground">
                         🇮🇳 +91
                       </span>
-                      <FieldShell icon={<Phone className="h-4 w-4" />}>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          inputMode="numeric"
-                          value={phone}
-                          onChange={(e) => {
-                            const d = e.target.value.replace(/\D/g, "").slice(0, 10);
-                            setPhone(d.length > 5 ? `${d.slice(0, 5)} ${d.slice(5)}` : d);
-                          }}
-                          placeholder="98765 43210"
-                          className="h-12 border-0 bg-transparent pl-10 focus-visible:ring-0"
-                        />
-                      </FieldShell>
+                      <div className="flex-1">
+                        <FieldShell icon={<Phone className="h-4 w-4" />}>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            inputMode="numeric"
+                            value={phone}
+                            onChange={(e) => {
+                              const d = e.target.value.replace(/\D/g, "").slice(0, 10);
+                              setPhone(d.length > 5 ? `${d.slice(0, 5)} ${d.slice(5)}` : d);
+                            }}
+                            placeholder="98765 43210"
+                            className="h-12 w-full border-0 bg-transparent pl-10 focus-visible:ring-0"
+                          />
+                        </FieldShell>
+                      </div>
                     </div>
                     <p className="text-[11px] text-muted-foreground">Optional — used for booking alerts.</p>
                   </motion.div>
