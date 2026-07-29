@@ -358,9 +358,9 @@ function AuthPage() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
                     {mode === "signin" && (
-                      <button type="button" onClick={() => setMode("forgot")} className="text-xs text-primary hover:underline">
+                      <Link to="/forgot-password" className="text-xs text-primary hover:underline">
                         Forgot?
-                      </button>
+                      </Link>
                     )}
                   </div>
                   <FieldShell icon={<Lock className="h-4 w-4" />}>
