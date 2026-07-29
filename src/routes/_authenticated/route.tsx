@@ -35,7 +35,7 @@ function AuthPending() {
           <BrandLockup size={44} />
         </div>
         <div className="h-1 w-32 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-1/3 rounded-full bg-[linear-gradient(90deg,#ff006e,#7000ff)] [animation:sweep-x_1.1s_ease-in-out_infinite]" />
+          <div className="h-full w-1/3 rounded-full bg-[linear-gradient(90deg,#ff006e,#7000ff)] animate-pulse" />
         </div>
         <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
           securing session
