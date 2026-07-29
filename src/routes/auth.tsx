@@ -91,31 +91,40 @@ function AuthPage() {
             ? "Enter a valid email."
             : !nameValid
               ? "Tell us your name."
-              : mode === "signup"
+              : mode === "signup" && !pwValid
                 ? "Password needs 10+ characters with letters and numbers."
-                : "Password must be 8+ characters.";
+                : mode === "signup" && !agreed
+                  ? "Please accept the Terms and Privacy Policy."
+                  : "Password must be 8+ characters.";
       toast.error(why);
       return;
     }
     setLoading(true);
     try {
       if (mode === "signup") {
+        const digits = phone.replace(/\D/g, "").slice(-10);
+        const e164 = digits.length === 10 ? `+91${digits}` : undefined;
         const { data: signUpData, error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: `${window.location.origin}/portal`,
-            data: { full_name: fullName },
+            data: { full_name: fullName, phone: e164 ?? null },
           },
         });
         if (error) throw error;
+        if (signUpData.session && e164) {
+          await supabase
+            .from("profiles")
+            .update({ phone: e164 })
+            .eq("id", signUpData.session.user.id);
+        }
         // If Supabase returns a user with no session, email confirmation is
         // required — do NOT lock into the "Entering…" state; drop back to
         // sign-in so the user can retry once they've confirmed.
         if (!signUpData.session) {
-          toast.success("Check your email to confirm your account, then sign in.");
-          setMode("signin");
-          setPassword("");
-          setSuccess(false);
+          window.sessionStorage.setItem("cc_pending_email", email);
+          toast.success("Check your email for the verification code.");
+          navigate({ to: "/verify-email", search: { email } as never });
           return;
         }
         toast.success("Account created.");
