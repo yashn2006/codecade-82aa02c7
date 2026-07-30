@@ -358,22 +358,33 @@ function LiveFloor() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="console-atmos space-y-4">
+      <div className="orb-a" aria-hidden />
+      <div className="orb-b" aria-hidden />
       {/* ===== HUD BAR ===== */}
       <div
-        className="sticky top-[52px] z-20 -mx-3 flex h-[52px] items-center gap-3 overflow-x-auto px-3 sm:mx-0 sm:rounded-2xl"
+        className="sticky top-[52px] z-20 -mx-3 flex h-[56px] items-center gap-2.5 overflow-x-auto px-3 sm:mx-0 sm:rounded-2xl"
         style={{
           background: "rgba(10,0,20,0.9)",
           backdropFilter: "blur(20px)",
           border: "1px solid rgba(255,255,255,0.07)",
         }}
       >
-        <div className="flex shrink-0 items-center gap-3 font-mono text-[12px] tabular-nums">
-          <span className="text-emerald-400">🟢 {counts.in_use} LIVE</span>
-          <span className="text-sky-300">🔵 {counts.available} FREE</span>
-          <span className="text-amber-300">🟡 {counts.reserved} BOOKED</span>
+        <div className="flex shrink-0 items-center gap-2 font-mono text-[11px] tabular-nums">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-emerald-300">
+            <span className={`h-1.5 w-1.5 rounded-full bg-emerald-400 ${counts.in_use > 0 ? "animate-pulse" : ""}`} />
+            {counts.in_use} LIVE
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/25 bg-sky-400/10 px-2.5 py-1 text-sky-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+            {counts.available} FREE
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 text-amber-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            {counts.reserved} BOOKED
+          </span>
         </div>
-        <span className="h-5 w-px shrink-0 bg-white/10" />
+        <span className="h-6 w-px shrink-0 bg-white/10" />
         <div className="flex shrink-0 items-center gap-3 font-mono text-[12px] tabular-nums text-muted-foreground">
           <span className={`font-bold text-foreground ${counts.in_use > 0 ? "animate-pulse-soft ticker-glow" : ""}`}>
             ⚡ ₹{runningTotal.toLocaleString("en-IN")} running
@@ -399,16 +410,10 @@ function LiveFloor() {
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
-              className={`shrink-0 rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] transition ${
-                active ? "text-primary-foreground" : "border border-white/10 text-muted-foreground hover:text-foreground"
-              }`}
-              style={active ? {
-                background: "var(--gradient-brand-hot)",
-                boxShadow: "0 0 14px -2px oklch(0.7 0.26 335 / 0.8)",
-              } : undefined}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] ${active ? "pill-on" : "pill-off"}`}
             >
               {f.label}
-              <span className={`ml-1.5 rounded-full px-1.5 ${active ? "bg-black/25" : "bg-white/10"}`}>{n}</span>
+              <span className={`ml-1.5 rounded-full px-1.5 ${active ? "bg-black/30" : "bg-white/10"}`}>{n}</span>
             </button>
           );
         })}
@@ -426,18 +431,20 @@ function LiveFloor() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5"
         >
-          {filtered.map((d) => (
+          {filtered.map((d, i) => (
             <Pod
               key={d.id}
               device={d}
               session={activeByDevice.get(d.id)}
               now={now}
+              index={i}
               onOpen={() => setPanel(d.id)}
               onStart={() => setPanel(d.id)}
             />
           ))}
         </motion.div>
       )}
+
 
       {/* ===== STATION PANEL ===== */}
       <Sheet open={!!panel} onOpenChange={(v) => !v && setPanel(null)}>
