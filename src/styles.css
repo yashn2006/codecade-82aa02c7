@@ -358,6 +358,106 @@
   }
   .ticker-glow { text-shadow: 0 0 8px var(--color-magenta); }
 
+  /* ---------- Console atmosphere (Live Floor + Owner Hub) ---------- */
+  .console-atmos {
+    position: relative;
+    isolation: isolate;
+  }
+  .console-atmos::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 15% 10%, rgba(120,0,255,0.22) 0%, transparent 45%),
+      radial-gradient(ellipse at 85% 90%, rgba(255,0,120,0.18) 0%, transparent 45%),
+      radial-gradient(ellipse at 50% 50%, rgba(0,100,255,0.07) 0%, transparent 60%);
+  }
+  .console-atmos::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 20%, transparent 90%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 20%, transparent 90%);
+  }
+
+  @keyframes orb-float-1 {
+    0%, 100% { transform: translate(0, 0); }
+    50%      { transform: translate(100px, 80px); }
+  }
+  @keyframes orb-float-2 {
+    0%, 100% { transform: translate(0, 0); }
+    50%      { transform: translate(-90px, -70px); }
+  }
+  .orb-a {
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    border-radius: 9999px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(120,0,255,0.12), transparent 70%);
+    animation: orb-float-1 20s ease-in-out infinite;
+    will-change: transform;
+  }
+  .orb-b {
+    position: fixed;
+    bottom: -150px; right: -150px;
+    width: 500px; height: 500px;
+    border-radius: 9999px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(255,0,120,0.10), transparent 70%);
+    animation: orb-float-2 25s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* Station pod hover */
+  .pod {
+    transition: transform 200ms cubic-bezier(.4,0,.2,1), box-shadow 200ms cubic-bezier(.4,0,.2,1), border-color 200ms;
+    will-change: transform;
+  }
+  .pod:hover { transform: translateY(-4px) scale(1.02); }
+  .pod-free:hover {
+    border-color: rgba(0,212,255,0.5) !important;
+    box-shadow: 0 0 30px rgba(0,212,255,0.2), 0 16px 40px rgba(0,0,0,0.4);
+  }
+  .pod-live:hover {
+    border-color: rgba(0,255,100,0.55) !important;
+  }
+
+  /* Filter pills */
+  .pill-off {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.45);
+    backdrop-filter: blur(8px);
+    transition: all 150ms ease;
+  }
+  .pill-off:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.85);
+  }
+  .pill-on {
+    background: rgba(255,0,110,0.15);
+    border: 1px solid #ff006e;
+    color: #fff;
+    box-shadow: 0 0 16px rgba(255,0,110,0.25), inset 0 0 20px rgba(255,0,110,0.05);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orb-a, .orb-b { animation: none; }
+  }
+
+
   /* Pricing card pulsing glow */
   @keyframes card-pulse-glow {
     0%, 100% { box-shadow: 0 0 0px transparent; }
