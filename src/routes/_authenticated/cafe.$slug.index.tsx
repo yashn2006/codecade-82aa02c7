@@ -227,7 +227,8 @@ const Pod = memo(function Pod({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
+
   );
 });
 
