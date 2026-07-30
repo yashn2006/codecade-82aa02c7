@@ -179,7 +179,9 @@ function OwnerHub() {
           ))}
         </div>
       )}
+      </div>
     </ConsoleShell>
+
   );
 }
 
