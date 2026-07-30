@@ -74,8 +74,12 @@ function OwnerHub() {
         { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true },
       ]}
     >
+      <div className="console-atmos">
+      <div className="orb-a" aria-hidden />
+      <div className="orb-b" aria-hidden />
       {/* HERO */}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+
         <div className="min-w-0">
           <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
             <span className="text-gradient-hot">Your Cafés</span>
