@@ -74,8 +74,12 @@ function OwnerHub() {
         { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true },
       ]}
     >
+      <div className="console-atmos">
+      <div className="orb-a" aria-hidden />
+      <div className="orb-b" aria-hidden />
       {/* HERO */}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+
         <div className="min-w-0">
           <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
             <span className="text-gradient-hot">Your Cafés</span>
@@ -175,7 +179,9 @@ function OwnerHub() {
           ))}
         </div>
       )}
+      </div>
     </ConsoleShell>
+
   );
 }
 
@@ -184,9 +190,11 @@ function KpiCard({ icon: Icon, tone, label, value }: {
 }) {
   return (
     <div
-      className="group relative min-w-[68vw] shrink-0 snap-start overflow-hidden rounded-2xl p-5 transition-transform duration-200 hover:scale-[1.02] sm:min-w-0"
-      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16 }}
+      className="group relative min-w-[68vw] shrink-0 snap-start overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] sm:min-w-0"
+      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, boxShadow: `0 0 0 rgba(0,0,0,0)` }}
     >
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-[2px] opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${tone}, transparent)` }} aria-hidden />
+
       <div className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${tone}22`, color: tone }}>
         <Icon className="h-[18px] w-[18px]" />
       </div>
