@@ -84,11 +84,12 @@ type DeviceRow = {
 /* ------------------------------------------------------------------ */
 
 const Pod = memo(function Pod({
-  device, session, now, onOpen, onStart,
+  device, session, now, index = 0, onOpen, onStart,
 }: {
   device: DeviceRow;
   session?: SessionRow;
   now: number;
+  index?: number;
   onOpen: () => void;
   onStart: () => void;
 }) {
@@ -100,26 +101,30 @@ const Pod = memo(function Pod({
   const paused = status === "suspended";
 
   const skin = live
-    ? { bg: "rgba(0,255,100,0.04)", border: "1px solid rgba(0,255,100,0.3)", bar: "linear-gradient(90deg,#00ff64,#0ea5e9)" }
+    ? { bg: "rgba(0,255,100,0.025)", border: "1px solid rgba(0,255,100,0.3)", bar: "linear-gradient(90deg,#00ff88,#00d4aa)" }
     : booked
-      ? { bg: "rgba(255,170,0,0.04)", border: "1px solid rgba(255,170,0,0.3)", bar: "linear-gradient(90deg,#ffaa00,#ff6a00)" }
+      ? { bg: "rgba(255,170,0,0.03)", border: "1px solid rgba(255,170,0,0.3)", bar: "linear-gradient(90deg,#ffaa00,#ff6a00)" }
       : paused
         ? { bg: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,50,50,0.2)", bar: "linear-gradient(90deg,#94a3b8,#64748b)" }
         : broken
           ? { bg: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,50,50,0.2)", bar: "linear-gradient(90deg,#ff3232,#b91c1c)" }
-          : { bg: "rgba(255,255,255,0.03)", border: "1px solid rgba(0,212,255,0.2)", bar: "linear-gradient(90deg,#00d4ff,#22d3a8)" };
+          : { bg: "rgba(255,255,255,0.025)", border: "1px solid rgba(0,212,255,0.18)", bar: "linear-gradient(90deg,#00d4ff,#0080ff)" };
 
   return (
-    <div
+    <motion.div
       role="button"
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
-      className={`group relative flex min-h-[200px] cursor-pointer flex-col overflow-hidden rounded-2xl p-4 text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.99] ${live ? "pod-live" : ""}`}
-      style={{ background: skin.bg, border: skin.border }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: "spring", damping: 20, stiffness: 260, delay: Math.min(index, 12) * 0.05 }}
+      className={`pod group relative flex min-h-[220px] cursor-pointer flex-col overflow-hidden rounded-[20px] p-4 text-left active:scale-[0.99] ${live ? "pod-live" : status === "available" ? "pod-free" : ""}`}
+      style={{ background: skin.bg, border: skin.border, backdropFilter: "blur(12px)" }}
       aria-label={`${device.name} — ${status}`}
     >
-      <span className="absolute inset-x-0 top-0 h-[4px]" style={{ background: skin.bar }} aria-hidden />
+      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: skin.bar }} aria-hidden />
+
 
       {live ? (
         <div className="relative flex flex-1 flex-col">
