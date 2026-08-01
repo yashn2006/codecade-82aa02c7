@@ -238,7 +238,7 @@ const Pod = memo(function Pod({
 
 function LiveFloor() {
   const { slug } = Route.useParams();
-  const isMobile = useIsMobile();
+  const updateDev = useServerFn(updateDevice);
   const getCafe = useServerFn(getCafeBySlug);
   const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
   const cafeId = cafe?.id;
