@@ -446,159 +446,28 @@ function LiveFloor() {
       )}
 
 
-      {/* ===== STATION PANEL ===== */}
-      <Sheet open={!!panel} onOpenChange={(v) => !v && setPanel(null)}>
-        <SheetContent
-          side={isMobile ? "bottom" : "right"}
-          className={isMobile
-            ? "max-h-[92vh] overflow-y-auto rounded-t-[28px] border-t border-[rgba(255,100,200,0.2)] bg-[rgba(10,0,20,0.97)] p-5 backdrop-blur-[24px]"
-            : "w-full overflow-y-auto border-l border-[rgba(255,100,200,0.2)] bg-[rgba(10,0,20,0.97)] p-6 backdrop-blur-[24px] sm:max-w-[400px]"}
-        >
-          {selected && (
-            <div className="space-y-5">
-              {/* header */}
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {selected.name}
-                </span>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] ${
-                    selectedSession
-                      ? "bg-[rgba(0,255,100,0.15)] text-emerald-300"
-                      : "border border-white/15 bg-white/5 text-foreground/70"
-                  }`}
-                >
-                  {selectedSession ? "● Live" : selected.status.replace("_", " ")}
-                </span>
-              </div>
+      {/* ===== STATION CENTER MODAL ===== */}
+      {selected && (
+        <StationModal
+          device={selected}
+          session={selectedSession}
+          now={now}
+          customers={customers as never}
+          onClose={() => setPanel(null)}
+          starting={startM.isPending}
+          ending={endM.isPending}
+          saving={updateM.isPending}
+          onStart={(customerId) =>
+            startM.mutate({ data: { cafe_id: cafeId, device_id: selected.id, customer_id: customerId } })
+          }
+          onEnd={() => selectedSession && endM.mutate({ data: { id: selectedSession.id } })}
+          onSetStatus={(status, opts) =>
+            statusM.mutate({ data: { id: selected.id, status, ...(opts ?? {}) } })
+          }
+          onSaveEdit={(patch) => updateM.mutate({ data: { id: selected.id, patch } })}
+        />
+      )}
 
-              <div className="flex items-center gap-3">
-                <div
-                  className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full font-display text-base font-black text-black/80"
-                  style={{ background: avatarGradient(selectedSession?.customers?.full_name ?? selected.name) }}
-                >
-                  {initials(selectedSession?.customers?.full_name ?? selected.name)}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate font-display text-[24px] font-extrabold leading-tight">
-                    {selectedSession?.customers?.full_name ?? selected.name}
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2">
-                    <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/70">
-                      {selectedSession ? (selectedSession.customers?.full_name ? "Member" : "Walk-in") : `₹${selected.hourly_rate}/hr`}
-                    </span>
-                    {selected.zone && (
-                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                        {selected.zone}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-px bg-white/8" />
-
-              {selectedSession ? (
-                <>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center">
-                    <div className="font-mono text-[44px] font-bold leading-none tabular-nums text-emerald-400">
-                      {fmtClock(now - new Date(selectedSession.started_at).getTime())}
-                    </div>
-                    <div className="mt-2 font-display text-[36px] font-extrabold leading-none tabular-nums text-primary">
-                      ₹{billed(selectedSession.started_at, selected.hourly_rate, now)}
-                    </div>
-                    <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                      running total · ₹{selected.hourly_rate}/hr
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-white/8" />
-
-                  <Button
-                    onClick={() => endM.mutate({ data: { id: selectedSession.id } })}
-                    disabled={endM.isPending}
-                    className="h-12 w-full gap-2 rounded-xl text-[15px] font-bold text-primary-foreground"
-                    style={{ background: "var(--gradient-brand-hot)" }}
-                  >
-                    <Square className="h-4 w-4" /> {endM.isPending ? "Ending…" : "End session"}
-                  </Button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" className="h-11 gap-1.5 rounded-xl"
-                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "suspended", suspend_minutes: 15 } })}>
-                      <Pause className="h-3.5 w-3.5" /> Pause
-                    </Button>
-                    <Button variant="outline" className="h-11 gap-1.5 rounded-xl"
-                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "suspended", suspend_minutes: 30 } })}>
-                      <Clock3 className="h-3.5 w-3.5" /> +30 min
-                    </Button>
-                    <Button variant="outline" className="h-11 gap-1.5 rounded-xl"
-                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "maintenance" } })}>
-                      <ArrowLeftRight className="h-3.5 w-3.5" /> Maintenance
-                    </Button>
-                    <Button variant="outline" className="h-11 gap-1.5 rounded-xl" onClick={() => window.print()}>
-                      <Printer className="h-3.5 w-3.5" /> Receipt
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label>Find customer</Label>
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or phone…" className="pl-9" />
-                    </div>
-                    <div className="max-h-52 overflow-y-auto rounded-xl border border-white/10">
-                      {filteredCustomers.length === 0 ? (
-                        <div className="p-4 text-center text-xs text-muted-foreground">No customers matched</div>
-                      ) : filteredCustomers.map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => startM.mutate({ data: { cafe_id: cafeId, device_id: selected.id, customer_id: c.id } })}
-                          className="flex w-full items-center gap-3 border-b border-white/5 px-3 py-2 text-left text-sm last:border-0 hover:bg-white/5"
-                        >
-                          <span
-                            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold text-black/80"
-                            style={{ background: avatarGradient(c.full_name ?? "?") }}
-                          >
-                            {initials(c.full_name ?? "?")}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate">{c.full_name}</span>
-                          <span className="shrink-0 font-mono text-xs text-muted-foreground">{c.phone}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={() => startM.mutate({ data: { cafe_id: cafeId, device_id: selected.id } })}
-                    disabled={startM.isPending}
-                    className="cta-shimmer h-[52px] w-full gap-2 rounded-xl text-[15px] font-bold text-primary-foreground"
-                    style={{ background: "var(--gradient-brand-hot)" }}
-                  >
-                    <Play className="h-4 w-4" /> {startM.isPending ? "Starting…" : "Start walk-in session →"}
-                  </Button>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button size="sm" variant="outline" className="h-11 gap-1.5 rounded-xl"
-                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "reserved" } })}>
-                      <Lock className="h-3.5 w-3.5" /> Reserve
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-11 gap-1.5 rounded-xl"
-                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "maintenance" } })}>
-                      <Wrench className="h-3.5 w-3.5" /> Fix
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-11 gap-1.5 rounded-xl"
-                      onClick={() => statusM.mutate({ data: { id: selected.id, status: "available" } })}>
-                      <Check className="h-3.5 w-3.5" /> Free
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
 
       {/* ===== WALK-IN ===== */}
       <Dialog open={walkInOpen} onOpenChange={setWalkInOpen}>
