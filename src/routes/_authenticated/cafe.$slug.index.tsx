@@ -286,6 +286,12 @@ function LiveFloor() {
     onSuccess: () => { toast.success("Station updated"); invalidate(); setPanel(null); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+  const updateM = useMutation({
+    mutationFn: updateDev,
+    onSuccess: () => { toast.success("Station saved"); invalidate(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
 
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
   const [panel, setPanel] = useState<string | null>(null);       // device id
