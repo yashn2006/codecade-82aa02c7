@@ -9,16 +9,16 @@ import {
   Clock3,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
-import { listDevices, setDeviceStatus, type DeviceStatus } from "@/lib/devices.functions";
+import { listDevices, setDeviceStatus, updateDevice, type DeviceStatus } from "@/lib/devices.functions";
 import { listSessions, startSession, endSession } from "@/lib/sessions.functions";
 import { listCustomers, createCustomer } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { StationModal } from "@/components/StationModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogIcon } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useIsMobile } from "@/hooks/use-mobile";
+
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/")({
