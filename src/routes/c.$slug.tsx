@@ -15,6 +15,7 @@ import { BookingFlow } from "@/components/BookingFlow";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/c/$slug")({
   head: ({ params, loaderData }) => {
