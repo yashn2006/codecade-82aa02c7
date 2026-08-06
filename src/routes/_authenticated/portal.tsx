@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { PageSkeleton, Skeleton } from "@/components/LoadingSkeleton";
+import { PageSkeleton } from "@/components/LoadingSkeleton";
 import { listMyBookings } from "@/lib/bookings.functions";
 import { getMyRoles } from "@/lib/me.functions";
 import { getMyOwnedCafes } from "@/lib/cafes.functions";
@@ -773,5 +773,3 @@ function ProfileTab() {
     </div>
   );
 }
-
-export { Skeleton };
