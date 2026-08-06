@@ -208,3 +208,85 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---------- Customer portal: home / wallet / tournaments ----------
+
+async function myCustomerIds(supa: { from: (t: string) => any }, userId: string) {
+  const { data } = await supa.from("customers").select("id, cafe_id, wallet_balance, cafes(name, slug, city)").eq("user_id", userId);
+  return (data ?? []) as { id: string; cafe_id: string; wallet_balance: number; cafes: { name?: string; slug?: string; city?: string } | null }[];
+}
+
+export const getMyPortalHome = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const customers = await myCustomerIds(context.supabase, context.userId);
+    const ids = customers.map((c) => c.id);
+    const empty = { customers, activeSession: null, nextBooking: null, memberships: [], activity: [] as any[] };
+    if (!ids.length) return empty;
+
+    const [{ data: sessions }, { data: bookings }, { data: memberships }, { data: txs }] = await Promise.all([
+      supabaseAdmin.from("sessions")
+        .select("id, cafe_id, started_at, amount, status, devices(name, type, hourly_rate), cafes(name, slug)")
+        .in("customer_id", ids).eq("status", "active").order("started_at", { ascending: false }).limit(1),
+      supabaseAdmin.from("bookings")
+        .select("id, cafe_id, scheduled_at, duration_minutes, status, deposit_amount, devices(name, type), cafes(name, slug, address)")
+        .in("customer_id", ids).in("status", ["pending", "confirmed"])
+        .gte("scheduled_at", new Date().toISOString()).order("scheduled_at", { ascending: true }).limit(1),
+      supabaseAdmin.from("customer_memberships")
+        .select("id, customer_id, starts_at, ends_at, hours_remaining, memberships(name, hours_included, price)")
+        .in("customer_id", ids).gt("ends_at", new Date().toISOString()).order("ends_at", { ascending: true }),
+      supabaseAdmin.from("wallet_transactions")
+        .select("id, amount, kind, note, created_at, cafe_id")
+        .in("customer_id", ids).order("created_at", { ascending: false }).limit(5),
+    ]);
+
+    return {
+      customers,
+      activeSession: (sessions ?? [])[0] ?? null,
+      nextBooking: (bookings ?? [])[0] ?? null,
+      memberships: memberships ?? [],
+      activity: txs ?? [],
+    };
+  });
+
+export const getMyWalletLedger = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const customers = await myCustomerIds(context.supabase, context.userId);
+    const ids = customers.map((c) => c.id);
+    if (!ids.length) return { customers, transactions: [] as any[], balance: 0 };
+    const { data: transactions } = await supabaseAdmin
+      .from("wallet_transactions")
+      .select("id, amount, kind, note, created_at, cafe_id, customer_id")
+      .in("customer_id", ids).order("created_at", { ascending: false }).limit(100);
+    const balance = customers.reduce((s, c) => s + (c.wallet_balance ?? 0), 0);
+    return { customers, transactions: transactions ?? [], balance };
+  });
+
+export const getMyTournaments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: profile } = await context.supabase
+      .from("profiles").select("email, phone").eq("id", context.userId).maybeSingle();
+    const contacts = [profile?.email, profile?.phone].filter(Boolean) as string[];
+
+    let mine: any[] = [];
+    if (contacts.length) {
+      const { data } = await supabaseAdmin
+        .from("tournament_registrations")
+        .select("id, team_name, contact, paid, tournaments(id, title, game, format, prize_pool, entry_fee, starts_at, status, cafe_id, cafes(name, slug))")
+        .in("contact", contacts).order("created_at", { ascending: false }).limit(30);
+      mine = data ?? [];
+    }
+
+    const { data: upcoming } = await supabaseAdmin
+      .from("tournaments")
+      .select("id, title, game, format, prize_pool, entry_fee, starts_at, status, cafes(name, slug, city)")
+      .eq("status", "upcoming").gte("starts_at", new Date().toISOString())
+      .order("starts_at", { ascending: true }).limit(10);
+
+    return { mine, upcoming: upcoming ?? [] };
+  });

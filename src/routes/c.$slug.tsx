@@ -11,9 +11,11 @@ import {
 import { getPublicCafe } from "@/lib/cafe-page.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BookingFlow } from "@/components/BookingFlow";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/c/$slug")({
   head: ({ params, loaderData }) => {
@@ -96,6 +98,24 @@ function PublicCafePage() {
   const titleY = useTransform(scrollYProgress, [0, 1], [0, -80]);
 
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getSession().then(({ data: s }) => { if (alive) setSignedIn(!!s.session?.access_token); });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setSignedIn(!!session?.access_token));
+    return () => { alive = false; sub.subscription.unsubscribe(); };
+  }, []);
+
+  function openBooking() {
+    if (signedIn === false) {
+      toast.info("Sign in to confirm your slot");
+      window.location.href = `/auth?redirect=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
+    setBookingOpen(true);
+  }
 
   if (isLoading)
     return (
@@ -114,6 +134,7 @@ function PublicCafePage() {
     );
 
   const { cafe, page, devices, menu, tournaments, activeDeviceIds, platform } = data;
+  const minRate = devices.length ? Math.min(...devices.map((d) => d.hourly_rate ?? 0).filter((r) => r > 0)) : 0;
   const freeCount = devices.filter((d) => !activeDeviceIds.includes(d.id) && d.status !== "maintenance").length;
   const heroUrl = page?.hero_url ?? cafe.cover_url;
   const theme = (page?.theme ?? {}) as { accent?: string; bg?: string; mode?: string; logo?: string };
@@ -184,6 +205,7 @@ function PublicCafePage() {
           heroScale={heroScale}
           heroOpacity={heroOpacity}
           titleY={titleY}
+          onBook={openBooking}
         />
       </section>
 
@@ -370,20 +392,39 @@ function PublicCafePage() {
       )}
 
 
-      <footer className="mx-auto mt-16 max-w-6xl px-4 py-10 text-center text-xs text-white/40">
+      <footer className="mx-auto mt-16 max-w-6xl px-4 pb-24 pt-10 text-center text-xs text-white/40">
         Powered by <span className="bg-gradient-to-r from-fuchsia-300 via-violet-300 to-blue-300 bg-clip-text font-semibold text-transparent">CoreCade</span>
       </footer>
 
-      {/* STICKY MOBILE CTA */}
+      {/* STICKY BOOKING BAR */}
       {!inMaintenance && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#04030c]/90 p-3 backdrop-blur-2xl sm:hidden">
-          <Link to="/portal" className="block">
-            <Button size="lg" className="w-full border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white shadow-[0_0_28px_rgba(255,82,224,.5)]">
-              Book a rig at {cafe.name} <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-between gap-3 px-4"
+          style={{
+            background: "rgba(4,0,14,0.95)",
+            backdropFilter: "blur(20px)",
+            borderTop: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          <div className="text-sm text-white/60">
+            {minRate ? <>from <span className="font-semibold text-white">₹{minRate}</span>/hr</> : "Reserve your rig"}
+          </div>
+          <Button
+            onClick={openBooking}
+            className="group/sb relative h-12 overflow-hidden border-0 px-6 text-white"
+            style={{ background: `linear-gradient(135deg, ${accent}, #7b2fff)`, boxShadow: `0 0 30px ${accent}66` }}
+          >
+            <span className="relative z-10 inline-flex items-center">Book a Slot <ArrowRight className="ml-2 h-4 w-4" /></span>
+            <span aria-hidden className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover/sb:translate-x-full" />
+          </Button>
         </div>
       )}
+
+      <BookingFlow
+        open={bookingOpen}
+        onOpenChange={setBookingOpen}
+        cafe={{ id: cafe.id, name: cafe.name, city: cafe.city }}
+      />
 
       {/* LIGHTBOX */}
       <AnimatePresence>
@@ -466,8 +507,9 @@ function Lightbox({ images, index, onClose, onIndex }: {
 // ─────────────────────────────────────────────────────────────────────────────
 function HeroStage({
   cafe, page, heroUrl, logoUrl, accent, freeCount, totalDevices, inMaintenance,
-  heroY, heroScale, heroOpacity, titleY,
+  heroY, heroScale, heroOpacity, titleY, onBook,
 }: {
+  onBook: () => void;
   cafe: { name: string; city?: string | null };
   page: { tagline?: string | null } | null;
   heroUrl: string | null | undefined;
@@ -603,10 +645,10 @@ function HeroStage({
                 Bookings paused · maintenance
               </Button>
             ) : (
-              <Link to="/portal">
-                <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 320, damping: 20 }}>
-                  <Button
+              <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ type: "spring", stiffness: 320, damping: 20 }}>
+                <Button
                     size="lg"
+                    onClick={onBook}
                     className="group/cta relative overflow-hidden border-0 text-white"
                     style={{
                       background: `linear-gradient(135deg, ${accent}, #7b2fff, #2d8eff)`,
@@ -614,7 +656,7 @@ function HeroStage({
                     }}
                   >
                     <span className="relative z-10 inline-flex items-center">
-                      Book a rig <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover/cta:translate-x-1" />
+                      Book a Slot <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover/cta:translate-x-1" />
                     </span>
                     <span
                       aria-hidden
@@ -622,7 +664,6 @@ function HeroStage({
                     />
                   </Button>
                 </motion.div>
-              </Link>
             )}
 
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 backdrop-blur">

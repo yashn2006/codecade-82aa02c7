@@ -1,3 +1,4 @@
+import { DemoFloor } from "@/components/DemoFloor";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useRef } from "react";
@@ -48,6 +49,7 @@ function Landing() {
       <Marquee />
       <Cinematic />
       <Features />
+      <DemoFloor />
       <Stats />
       <Pricing />
       <Contact />
@@ -221,7 +223,7 @@ function Hero() {
             </Link>
 
             <a
-              href="#features"
+              href="#demo"
               className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/40 px-6 py-3.5 text-sm font-semibold backdrop-blur transition hover:border-primary/50 hover:bg-background/60"
             >
               Explore the OS
