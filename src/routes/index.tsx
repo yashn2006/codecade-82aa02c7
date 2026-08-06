@@ -1,3 +1,4 @@
+import { DemoFloor } from "@/components/DemoFloor";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useRef } from "react";
