@@ -57,13 +57,15 @@ export function DemoFloor() {
 
   return (
     <section id="demo" className="relative px-4 py-20 sm:px-6">
-      <div className="mx-auto max-w-[1100px]">
+      <div className="mx-auto max-w-[1180px]">
         <div className="text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
             • Live demo
           </span>
-          <h2 className="mt-4 font-display text-4xl font-black sm:text-[52px]">Try it yourself.</h2>
-          <p className="mt-2 text-base text-muted-foreground">No signup. No credit card. Just click around.</p>
+          <h2 className="mt-4 font-display text-4xl font-black sm:text-[52px]">The real dashboard.</h2>
+          <p className="mt-2 text-base text-muted-foreground">
+            A working café owner console — click around, start sessions, take orders. Nothing is saved.
+          </p>
         </div>
 
         <div
@@ -75,53 +77,143 @@ export function DemoFloor() {
               "radial-gradient(ellipse at 20% 0%, rgba(120,0,255,0.20), transparent 50%), radial-gradient(ellipse at 80% 100%, rgba(255,0,150,0.15), transparent 50%), #04000e",
           }}
         >
-          {/* frame header */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-amber-300">
-                Demo mode
-              </span>
-              <span className="text-xs text-white/50">Click any station — changes are local, nothing is saved.</span>
+          {/* browser chrome */}
+          <div className="flex items-center gap-3 border-b border-white/10 bg-black/30 px-4 py-2.5">
+            <div className="flex gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
             </div>
-            <Button
-              size="sm" variant="outline"
-              className="border-white/20 bg-transparent text-white hover:bg-white/10"
-              onClick={() => { setDevices(INITIAL.map((d) => ({ ...d }))); setOpenId(null); toast.success("Demo reset"); }}
-            >
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset demo
-            </Button>
+            <div className="flex-1 truncate rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1 text-center font-mono text-[10px] text-white/45">
+              corecade.app/cafe/neon-arena/{tab}
+            </div>
+            <span className="hidden rounded-full border border-amber-400/40 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.2em] text-amber-300 sm:inline">
+              Demo mode
+            </span>
           </div>
 
-          {/* HUD */}
-          <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-4">
-            <Hud label="Live now" value={String(live.length)} tone="emerald" />
-            <Hud label="Available" value={String(devices.filter((d) => d.status === "available").length)} tone="teal" />
-            <Hud label="Reserved" value={String(devices.filter((d) => d.status === "reserved").length)} tone="amber" />
-            <Hud label="Running ₹" value={inr(revenue)} tone="magenta" pulse />
-          </div>
+          <div className="flex min-h-[560px]">
+            {/* sidebar */}
+            <aside className="hidden w-[196px] shrink-0 flex-col border-r border-white/10 bg-black/25 p-3 md:flex">
+              <div className="flex items-center gap-2 px-2 py-2">
+                <div className="grid h-8 w-8 place-items-center rounded-xl" style={{ background: "linear-gradient(135deg,#ff006e,#7b2fff)" }}>
+                  <Zap className="h-4 w-4 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-display text-sm font-bold text-white">Neon Arena</div>
+                  <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-emerald-400">● online</div>
+                </div>
+              </div>
+              <nav className="mt-3 space-y-1">
+                {NAV.map((n) => {
+                  const I = n.icon;
+                  const on = tab === n.key;
+                  return (
+                    <button
+                      key={n.key} type="button" onClick={() => setTab(n.key)}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] transition",
+                        on ? "bg-fuchsia-500/15 text-white shadow-[inset_0_0_0_1px_rgba(244,114,232,0.35)]" : "text-white/55 hover:bg-white/5 hover:text-white",
+                      )}
+                    >
+                      <I className="h-4 w-4" style={on ? { color: "#f472e8" } : undefined} />
+                      {n.label}
+                    </button>
+                  );
+                })}
+              </nav>
+              <div className="mt-auto rounded-xl border border-amber-400/25 bg-amber-500/10 p-3">
+                <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-amber-300">Trial</div>
+                <div className="mt-1 text-xs text-white/70">12 of 15 days left</div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-emerald-400" style={{ width: "80%" }} />
+                </div>
+              </div>
+            </aside>
 
-          {/* filters */}
-          <div className="flex flex-wrap gap-2 px-4 pb-3">
-            {FILTERS.map((f) => (
-              <button
-                key={f} type="button" onClick={() => setFilter(f)}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition",
-                  filter === f ? "border-fuchsia-500/60 bg-fuchsia-500/15 text-fuchsia-300" : "border-white/12 text-white/50 hover:text-white",
-                )}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+            {/* main */}
+            <div className="min-w-0 flex-1">
+              {/* topbar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">
+                  Neon Arena <span className="mx-1.5 text-fuchsia-400">/</span> {NAV.find((n) => n.key === tab)?.label}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm" variant="outline"
+                    className="h-8 border-white/20 bg-transparent text-xs text-white hover:bg-white/10"
+                    onClick={() => { setDevices(INITIAL.map((d) => ({ ...d }))); setOpenId(null); toast.success("Demo reset"); }}
+                  >
+                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset
+                  </Button>
+                  <div className="grid h-8 w-8 place-items-center rounded-full bg-fuchsia-500/20 font-display text-xs font-bold text-fuchsia-200">NA</div>
+                </div>
+              </div>
 
-          {/* pods */}
-          <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3">
-            {shown.map((d, i) => (
-              <Pod key={d.id} d={d} now={now} index={i} onClick={() => setOpenId(d.id)} />
-            ))}
+              {/* mobile nav */}
+              <div className="flex gap-2 overflow-x-auto border-b border-white/10 px-3 py-2 md:hidden">
+                {NAV.map((n) => (
+                  <button
+                    key={n.key} type="button" onClick={() => setTab(n.key)}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] transition",
+                      tab === n.key ? "border-fuchsia-500/60 bg-fuchsia-500/15 text-fuchsia-300" : "border-white/12 text-white/50",
+                    )}
+                  >
+                    {n.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* HUD */}
+              <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-4">
+                <Hud label="Live now" value={String(live.length)} tone="emerald" />
+                <Hud label="Available" value={String(devices.filter((d) => d.status === "available").length)} tone="teal" />
+                <Hud label="Reserved" value={String(devices.filter((d) => d.status === "reserved").length)} tone="amber" />
+                <Hud label="Running ₹" value={inr(revenue)} tone="magenta" pulse />
+              </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tab}
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  {tab === "overview" && <DemoOverview live={live.length} revenue={revenue} />}
+
+                  {tab === "floor" && (
+                    <>
+                      <div className="flex flex-wrap gap-2 px-4 pb-3">
+                        {FILTERS.map((f) => (
+                          <button
+                            key={f} type="button" onClick={() => setFilter(f)}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition",
+                              filter === f ? "border-fuchsia-500/60 bg-fuchsia-500/15 text-fuchsia-300" : "border-white/12 text-white/50 hover:text-white",
+                            )}
+                          >
+                            {f}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 p-4 pt-0 sm:grid-cols-3">
+                        {shown.map((d, i) => (
+                          <Pod key={d.id} d={d} now={now} index={i} onClick={() => setOpenId(d.id)} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {tab === "bookings" && <DemoBookings />}
+                  {tab === "pos" && <DemoPos />}
+                  {tab === "customers" && <DemoCustomers />}
+                  {tab === "analytics" && <DemoAnalytics />}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
         </div>
+
 
         {/* conversion */}
         <div className="mt-12 text-center">
