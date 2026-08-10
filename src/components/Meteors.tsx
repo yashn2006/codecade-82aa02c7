@@ -8,18 +8,24 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export function Meteors({ count = 18, className = "" }: { count?: number; className?: string }) {
   const isMobile = useIsMobile();
   const effectiveCount = isMobile ? 0 : count;
+  // Deterministic pseudo-random so SSR and client markup match exactly.
+  const rand = (i: number, salt: number) => {
+    const x = Math.sin((i + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
   const meteors = useMemo(
     () =>
       Array.from({ length: effectiveCount }).map((_, i) => ({
         id: i,
-        top: Math.random() * 60 - 20, // %
-        left: Math.random() * 100, // %
-        delay: Math.random() * 8, // s
-        duration: 3 + Math.random() * 6, // s
-        size: 0.5 + Math.random() * 1.5, // px
+        top: +(rand(i, 1) * 60 - 20).toFixed(3), // %
+        left: +(rand(i, 2) * 100).toFixed(3), // %
+        delay: +(rand(i, 3) * 8).toFixed(3), // s
+        duration: +(3 + rand(i, 4) * 6).toFixed(3), // s
+        size: +(0.5 + rand(i, 5) * 1.5).toFixed(3), // px
       })),
     [effectiveCount],
   );
+
 
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`} aria-hidden>

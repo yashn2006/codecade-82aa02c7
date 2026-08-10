@@ -2,13 +2,25 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Monitor, Gamepad2, Headphones, RotateCcw, Zap, Wrench, CalendarClock,
-  Play, Square, ArrowRight, X, Check,
+  Play, Square, ArrowRight, X, Check, LayoutDashboard, Grid3X3, CalendarDays,
+  ShoppingCart, Users, BarChart3, Plus, Minus,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+const NAV = [
+  { key: "overview", label: "Overview", icon: LayoutDashboard },
+  { key: "floor", label: "Live Floor", icon: Grid3X3 },
+  { key: "bookings", label: "Bookings", icon: CalendarDays },
+  { key: "pos", label: "POS", icon: ShoppingCart },
+  { key: "customers", label: "Customers", icon: Users },
+  { key: "analytics", label: "Analytics", icon: BarChart3 },
+] as const;
+type NavKey = (typeof NAV)[number]["key"];
+
 
 type DemoStatus = "available" | "in_use" | "reserved" | "maintenance";
 type DemoDevice = {
@@ -40,6 +52,8 @@ export function DemoFloor() {
   const [devices, setDevices] = useState<DemoDevice[]>(() => INITIAL.map((d) => ({ ...d })));
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
   const [openId, setOpenId] = useState<number | null>(null);
+  const [tab, setTab] = useState<NavKey>("floor");
+
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -57,13 +71,15 @@ export function DemoFloor() {
 
   return (
     <section id="demo" className="relative px-4 py-20 sm:px-6">
-      <div className="mx-auto max-w-[1100px]">
+      <div className="mx-auto max-w-[1180px]">
         <div className="text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-primary">
             • Live demo
           </span>
-          <h2 className="mt-4 font-display text-4xl font-black sm:text-[52px]">Try it yourself.</h2>
-          <p className="mt-2 text-base text-muted-foreground">No signup. No credit card. Just click around.</p>
+          <h2 className="mt-4 font-display text-4xl font-black sm:text-[52px]">The real dashboard.</h2>
+          <p className="mt-2 text-base text-muted-foreground">
+            A working café owner console — click around, start sessions, take orders. Nothing is saved.
+          </p>
         </div>
 
         <div
@@ -75,53 +91,143 @@ export function DemoFloor() {
               "radial-gradient(ellipse at 20% 0%, rgba(120,0,255,0.20), transparent 50%), radial-gradient(ellipse at 80% 100%, rgba(255,0,150,0.15), transparent 50%), #04000e",
           }}
         >
-          {/* frame header */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-amber-300">
-                Demo mode
-              </span>
-              <span className="text-xs text-white/50">Click any station — changes are local, nothing is saved.</span>
+          {/* browser chrome */}
+          <div className="flex items-center gap-3 border-b border-white/10 bg-black/30 px-4 py-2.5">
+            <div className="flex gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
             </div>
-            <Button
-              size="sm" variant="outline"
-              className="border-white/20 bg-transparent text-white hover:bg-white/10"
-              onClick={() => { setDevices(INITIAL.map((d) => ({ ...d }))); setOpenId(null); toast.success("Demo reset"); }}
-            >
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset demo
-            </Button>
+            <div className="flex-1 truncate rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1 text-center font-mono text-[10px] text-white/45">
+              corecade.app/cafe/neon-arena/{tab}
+            </div>
+            <span className="hidden rounded-full border border-amber-400/40 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.2em] text-amber-300 sm:inline">
+              Demo mode
+            </span>
           </div>
 
-          {/* HUD */}
-          <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-4">
-            <Hud label="Live now" value={String(live.length)} tone="emerald" />
-            <Hud label="Available" value={String(devices.filter((d) => d.status === "available").length)} tone="teal" />
-            <Hud label="Reserved" value={String(devices.filter((d) => d.status === "reserved").length)} tone="amber" />
-            <Hud label="Running ₹" value={inr(revenue)} tone="magenta" pulse />
-          </div>
+          <div className="flex min-h-[560px]">
+            {/* sidebar */}
+            <aside className="hidden w-[196px] shrink-0 flex-col border-r border-white/10 bg-black/25 p-3 md:flex">
+              <div className="flex items-center gap-2 px-2 py-2">
+                <div className="grid h-8 w-8 place-items-center rounded-xl" style={{ background: "linear-gradient(135deg,#ff006e,#7b2fff)" }}>
+                  <Zap className="h-4 w-4 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-display text-sm font-bold text-white">Neon Arena</div>
+                  <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-emerald-400">● online</div>
+                </div>
+              </div>
+              <nav className="mt-3 space-y-1">
+                {NAV.map((n) => {
+                  const I = n.icon;
+                  const on = tab === n.key;
+                  return (
+                    <button
+                      key={n.key} type="button" onClick={() => setTab(n.key)}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] transition",
+                        on ? "bg-fuchsia-500/15 text-white shadow-[inset_0_0_0_1px_rgba(244,114,232,0.35)]" : "text-white/55 hover:bg-white/5 hover:text-white",
+                      )}
+                    >
+                      <I className="h-4 w-4" style={on ? { color: "#f472e8" } : undefined} />
+                      {n.label}
+                    </button>
+                  );
+                })}
+              </nav>
+              <div className="mt-auto rounded-xl border border-amber-400/25 bg-amber-500/10 p-3">
+                <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-amber-300">Trial</div>
+                <div className="mt-1 text-xs text-white/70">12 of 15 days left</div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-emerald-400" style={{ width: "80%" }} />
+                </div>
+              </div>
+            </aside>
 
-          {/* filters */}
-          <div className="flex flex-wrap gap-2 px-4 pb-3">
-            {FILTERS.map((f) => (
-              <button
-                key={f} type="button" onClick={() => setFilter(f)}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition",
-                  filter === f ? "border-fuchsia-500/60 bg-fuchsia-500/15 text-fuchsia-300" : "border-white/12 text-white/50 hover:text-white",
-                )}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+            {/* main */}
+            <div className="min-w-0 flex-1">
+              {/* topbar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">
+                  Neon Arena <span className="mx-1.5 text-fuchsia-400">/</span> {NAV.find((n) => n.key === tab)?.label}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm" variant="outline"
+                    className="h-8 border-white/20 bg-transparent text-xs text-white hover:bg-white/10"
+                    onClick={() => { setDevices(INITIAL.map((d) => ({ ...d }))); setOpenId(null); toast.success("Demo reset"); }}
+                  >
+                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset
+                  </Button>
+                  <div className="grid h-8 w-8 place-items-center rounded-full bg-fuchsia-500/20 font-display text-xs font-bold text-fuchsia-200">NA</div>
+                </div>
+              </div>
 
-          {/* pods */}
-          <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3">
-            {shown.map((d, i) => (
-              <Pod key={d.id} d={d} now={now} index={i} onClick={() => setOpenId(d.id)} />
-            ))}
+              {/* mobile nav */}
+              <div className="flex gap-2 overflow-x-auto border-b border-white/10 px-3 py-2 md:hidden">
+                {NAV.map((n) => (
+                  <button
+                    key={n.key} type="button" onClick={() => setTab(n.key)}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] transition",
+                      tab === n.key ? "border-fuchsia-500/60 bg-fuchsia-500/15 text-fuchsia-300" : "border-white/12 text-white/50",
+                    )}
+                  >
+                    {n.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* HUD */}
+              <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-4">
+                <Hud label="Live now" value={String(live.length)} tone="emerald" />
+                <Hud label="Available" value={String(devices.filter((d) => d.status === "available").length)} tone="teal" />
+                <Hud label="Reserved" value={String(devices.filter((d) => d.status === "reserved").length)} tone="amber" />
+                <Hud label="Running ₹" value={inr(revenue)} tone="magenta" pulse />
+              </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tab}
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  {tab === "overview" && <DemoOverview live={live.length} revenue={revenue} />}
+
+                  {tab === "floor" && (
+                    <>
+                      <div className="flex flex-wrap gap-2 px-4 pb-3">
+                        {FILTERS.map((f) => (
+                          <button
+                            key={f} type="button" onClick={() => setFilter(f)}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition",
+                              filter === f ? "border-fuchsia-500/60 bg-fuchsia-500/15 text-fuchsia-300" : "border-white/12 text-white/50 hover:text-white",
+                            )}
+                          >
+                            {f}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 p-4 pt-0 sm:grid-cols-3">
+                        {shown.map((d, i) => (
+                          <Pod key={d.id} d={d} now={now} index={i} onClick={() => setOpenId(d.id)} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {tab === "bookings" && <DemoBookings />}
+                  {tab === "pos" && <DemoPos />}
+                  {tab === "customers" && <DemoCustomers />}
+                  {tab === "analytics" && <DemoAnalytics />}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
         </div>
+
 
         {/* conversion */}
         <div className="mt-12 text-center">
@@ -355,5 +461,240 @@ function DemoModal({ d, now, onClose, patch }: {
         <p className="mt-5 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-white/30">Demo only · nothing is saved</p>
       </motion.div>
     </motion.div>
+  );
+}
+
+/* ---------------- demo tab views (local state only) ---------------- */
+
+const BOOKINGS = [
+  { id: "b1", name: "Aarav Kapoor", device: "PC-1", time: "18:00 – 20:00", amount: 200, status: "Confirmed", tone: "#00e58a" },
+  { id: "b2", name: "Rahul Mehta", device: "PC-3", time: "20:30 – 22:00", amount: 150, status: "Pending", tone: "#ffb020" },
+  { id: "b3", name: "Sana Iqbal", device: "CONSOLE-1", time: "21:00 – 23:00", amount: 240, status: "Confirmed", tone: "#00e58a" },
+  { id: "b4", name: "Dev Patel", device: "VR-1", time: "22:00 – 22:45", amount: 150, status: "Paid", tone: "#f472e8" },
+];
+
+const CUSTOMERS = [
+  { name: "Aarav Kapoor", phone: "+91 98••• 21", visits: 42, wallet: 640, tier: "Gold" },
+  { name: "Priya Sharma", phone: "+91 99••• 07", visits: 28, wallet: 180, tier: "Silver" },
+  { name: "Rahul Mehta", phone: "+91 90••• 55", visits: 15, wallet: 0, tier: "Member" },
+  { name: "Sana Iqbal", phone: "+91 88••• 12", visits: 9, wallet: 320, tier: "Member" },
+];
+
+const MENU = [
+  { id: "m1", name: "Cold Coffee", price: 90 },
+  { id: "m2", name: "Cheese Maggi", price: 70 },
+  { id: "m3", name: "Red Bull", price: 125 },
+  { id: "m4", name: "Chicken Wrap", price: 160 },
+];
+
+const WEEK = [
+  { d: "Mon", v: 42 }, { d: "Tue", v: 55 }, { d: "Wed", v: 38 }, { d: "Thu", v: 72 },
+  { d: "Fri", v: 88 }, { d: "Sat", v: 100 }, { d: "Sun", v: 76 },
+];
+
+function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("rounded-2xl border border-white/10 bg-white/[0.03] p-4", className)}>{children}</div>
+  );
+}
+
+function DemoOverview({ live, revenue }: { live: number; revenue: number }) {
+  return (
+    <div className="grid gap-3 p-4 pt-0 lg:grid-cols-2">
+      <Panel>
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">Today at a glance</div>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {[
+            { k: "Sessions run", v: "37" },
+            { k: "Live stations", v: String(live) },
+            { k: "Café revenue", v: inr(4820 + revenue) },
+            { k: "New customers", v: "6" },
+          ].map((s) => (
+            <div key={s.k} className="rounded-xl border border-white/8 bg-black/25 p-3">
+              <div className="text-[11px] text-white/45">{s.k}</div>
+              <div className="mt-0.5 font-display text-xl font-extrabold text-white">{s.v}</div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <Panel>
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">Activity feed</div>
+        <div className="mt-3 space-y-2.5">
+          {[
+            ["Session started", "PC-1 · Aarav K.", "#00e58a"],
+            ["Order placed", "Cold Coffee ×2 · ₹180", "#f472e8"],
+            ["Booking confirmed", "CONSOLE-1 · 21:00", "#ffb020"],
+            ["Wallet top-up", "Priya S. · ₹500", "#2dd4bf"],
+          ].map(([t, s, c]) => (
+            <div key={t as string} className="flex items-center gap-3">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: c as string }} />
+              <span className="text-sm text-white">{t}</span>
+              <span className="ml-auto truncate text-xs text-white/45">{s}</span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <Panel className="lg:col-span-2">
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">Setup checklist</div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {[["Add stations", true], ["Set hourly rates", true], ["Publish public page", true], ["Invite staff", false]].map(([t, done]) => (
+            <div key={t as string} className="flex items-center gap-2 rounded-xl border border-white/8 bg-black/25 px-3 py-2 text-sm">
+              <span className={cn("grid h-4 w-4 place-items-center rounded-full", done ? "bg-emerald-400 text-black" : "border border-white/20")}>
+                {done ? <Check className="h-3 w-3" /> : null}
+              </span>
+              <span className={done ? "text-white/60 line-through" : "text-white"}>{t as string}</span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function DemoBookings() {
+  const [rows, setRows] = useState(BOOKINGS);
+  return (
+    <div className="space-y-2 p-4 pt-0">
+      {rows.map((b) => (
+        <div key={b.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <span className="h-9 w-1 rounded-full" style={{ background: b.tone }} />
+          <div className="min-w-0">
+            <div className="truncate font-semibold text-white">{b.name}</div>
+            <div className="font-mono text-[11px] text-white/45">{b.device} · {b.time}</div>
+          </div>
+          <span className="ml-auto font-display text-lg font-bold text-white">{inr(b.amount)}</span>
+          <span className="rounded-full px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.18em]"
+            style={{ color: b.tone, background: `${b.tone}1a`, border: `1px solid ${b.tone}55` }}>
+            {b.status}
+          </span>
+          <Button size="sm" variant="outline" className="h-8 border-white/15 bg-transparent text-xs text-white hover:bg-white/10"
+            onClick={() => { setRows((r) => r.filter((x) => x.id !== b.id)); toast.success("Booking checked in"); }}>
+            Check in
+          </Button>
+        </div>
+      ))}
+      {rows.length === 0 && (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center text-sm text-white/50">
+          All bookings checked in 🎉
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DemoPos() {
+  const [cart, setCart] = useState<Record<string, number>>({ m1: 2 });
+  const total = MENU.reduce((s, m) => s + m.price * (cart[m.id] ?? 0), 0);
+  const bump = (id: string, n: number) =>
+    setCart((c) => ({ ...c, [id]: Math.max(0, (c[id] ?? 0) + n) }));
+  return (
+    <div className="grid gap-3 p-4 pt-0 lg:grid-cols-[1fr_260px]">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {MENU.map((m) => (
+          <div key={m.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="min-w-0">
+              <div className="truncate font-semibold text-white">{m.name}</div>
+              <div className="font-mono text-[11px] text-white/45">{inr(m.price)}</div>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <button type="button" onClick={() => bump(m.id, -1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/15 text-white/70 hover:bg-white/10">
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <span className="w-5 text-center font-mono text-sm text-white">{cart[m.id] ?? 0}</span>
+              <button type="button" onClick={() => bump(m.id, 1)} className="grid h-7 w-7 place-items-center rounded-lg text-white" style={{ background: "linear-gradient(135deg,#ff006e,#7b2fff)" }}>
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Panel className="h-fit">
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">Order</div>
+        <div className="mt-3 space-y-1.5 text-sm">
+          {MENU.filter((m) => cart[m.id]).map((m) => (
+            <div key={m.id} className="flex justify-between text-white/70">
+              <span>{m.name} ×{cart[m.id]}</span><span>{inr(m.price * (cart[m.id] ?? 0))}</span>
+            </div>
+          ))}
+          {total === 0 && <div className="text-white/40">Cart is empty</div>}
+        </div>
+        <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-3">
+          <span className="text-xs text-white/45">Total</span>
+          <span className="font-display text-2xl font-black text-fuchsia-400">{inr(total)}</span>
+        </div>
+        <Button className="mt-3 h-11 w-full border-0 text-white" style={{ background: "linear-gradient(135deg,#ff006e,#7b2fff)" }}
+          disabled={total === 0}
+          onClick={() => { setCart({}); toast.success(`Order billed — ${inr(total)}`); }}>
+          Charge
+        </Button>
+      </Panel>
+    </div>
+  );
+}
+
+function DemoCustomers() {
+  return (
+    <div className="space-y-2 p-4 pt-0">
+      {CUSTOMERS.map((c) => (
+        <div key={c.name} className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-fuchsia-500/20 font-display text-xs font-bold text-fuchsia-200">
+            {c.name.split(" ").map((w) => w[0]).join("")}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate font-semibold text-white">{c.name}</div>
+            <div className="font-mono text-[11px] text-white/45">{c.phone} · {c.visits} visits</div>
+          </div>
+          <span className="ml-auto rounded-full border border-white/12 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-white/60">{c.tier}</span>
+          <span className="font-display text-base font-bold text-emerald-400">{inr(c.wallet)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DemoAnalytics() {
+  return (
+    <div className="grid gap-3 p-4 pt-0 lg:grid-cols-2">
+      <Panel>
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">Revenue · last 7 days</div>
+        <div className="mt-5 flex h-40 items-end gap-2">
+          {WEEK.map((w, i) => (
+            <div key={w.d} className="flex flex-1 flex-col items-center gap-2">
+              <motion.div
+                initial={{ height: 0 }} whileInView={{ height: `${w.v}%` }} viewport={{ once: true }}
+                transition={{ delay: i * 0.06, type: "spring", stiffness: 120, damping: 18 }}
+                className="w-full rounded-t-lg"
+                style={{ background: "linear-gradient(180deg,#ff006e,#7b2fff)" }}
+              />
+              <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/40">{w.d}</span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <Panel>
+        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/45">Utilisation</div>
+        <div className="mt-4 space-y-3">
+          {[["PC stations", 82], ["Consoles", 64], ["VR rigs", 31]].map(([k, v]) => (
+            <div key={k as string}>
+              <div className="flex justify-between text-xs text-white/60"><span>{k as string}</span><span>{v as number}%</span></div>
+              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/10">
+                <motion.div initial={{ width: 0 }} whileInView={{ width: `${v as number}%` }} viewport={{ once: true }}
+                  transition={{ duration: 0.7 }} className="h-full rounded-full bg-emerald-400" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-white/8 bg-black/25 p-3">
+            <div className="text-[11px] text-white/45">Peak hour</div>
+            <div className="font-display text-lg font-bold text-white">20:00</div>
+          </div>
+          <div className="rounded-xl border border-white/8 bg-black/25 p-3">
+            <div className="text-[11px] text-white/45">Avg session</div>
+            <div className="font-display text-lg font-bold text-white">1h 42m</div>
+          </div>
+        </div>
+      </Panel>
+    </div>
   );
 }
