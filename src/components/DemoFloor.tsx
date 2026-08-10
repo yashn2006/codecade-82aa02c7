@@ -52,6 +52,8 @@ export function DemoFloor() {
   const [devices, setDevices] = useState<DemoDevice[]>(() => INITIAL.map((d) => ({ ...d })));
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
   const [openId, setOpenId] = useState<number | null>(null);
+  const [tab, setTab] = useState<NavKey>("floor");
+
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
