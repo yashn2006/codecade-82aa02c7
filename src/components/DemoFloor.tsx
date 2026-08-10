@@ -2,13 +2,25 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Monitor, Gamepad2, Headphones, RotateCcw, Zap, Wrench, CalendarClock,
-  Play, Square, ArrowRight, X, Check,
+  Play, Square, ArrowRight, X, Check, LayoutDashboard, Grid3X3, CalendarDays,
+  ShoppingCart, Users, BarChart3, Plus, Minus,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+const NAV = [
+  { key: "overview", label: "Overview", icon: LayoutDashboard },
+  { key: "floor", label: "Live Floor", icon: Grid3X3 },
+  { key: "bookings", label: "Bookings", icon: CalendarDays },
+  { key: "pos", label: "POS", icon: ShoppingCart },
+  { key: "customers", label: "Customers", icon: Users },
+  { key: "analytics", label: "Analytics", icon: BarChart3 },
+] as const;
+type NavKey = (typeof NAV)[number]["key"];
+
 
 type DemoStatus = "available" | "in_use" | "reserved" | "maintenance";
 type DemoDevice = {
