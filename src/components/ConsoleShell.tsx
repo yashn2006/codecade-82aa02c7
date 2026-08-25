@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Menu, X, type LucideIcon } from "lucide-react";
+import { KeyRound, LayoutGrid, LifeBuoy, LogOut, Menu, X, type LucideIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase/client";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup } from "@/components/Brand";
