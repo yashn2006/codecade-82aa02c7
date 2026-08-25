@@ -376,18 +376,17 @@
       #04000e;
   }
 
+  /* Smooth silk sheen instead of a wireframe grid */
   .console-atmos::after {
     content: "";
     position: fixed;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 20%, transparent 90%);
-    -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 20%, transparent 90%);
+    background:
+      radial-gradient(ellipse 110% 70% at 50% -10%, rgba(255,255,255,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 90% 55% at 85% 15%, rgba(255,0,150,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 90% 60% at 10% 90%, rgba(120,0,255,0.09) 0%, transparent 65%);
   }
 
   @keyframes orb-float-1 {
