@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { KeyRound, LayoutGrid, LifeBuoy, LogOut, Menu, X, type LucideIcon } from "lucide-react";
+import { KeyRound, LifeBuoy, LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -257,11 +257,6 @@ export function ConsoleShell({
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/owner">
-                      <LayoutGrid className="mr-2 h-4 w-4" /> Owner hub
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/owner/help">
                       <LifeBuoy className="mr-2 h-4 w-4" /> Help center
