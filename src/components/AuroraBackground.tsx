@@ -47,8 +47,15 @@ export function AuroraBackground({
         />
       )}
 
-      <div className="absolute inset-0 grid-arcade" />
-      <Meteors count={immersive ? 22 : hero ? 14 : 8} />
+      {/* Soft silk sheen — replaces the old wireframe grid for a smooth, minimal feel */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 120% 80% at 50% -10%, oklch(1 0 0 / 0.05), transparent 60%), radial-gradient(ellipse 100% 60% at 50% 110%, oklch(0.65 0.25 295 / 0.10), transparent 65%)",
+        }}
+      />
+      <Meteors count={immersive ? 10 : hero ? 8 : 5} />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
     </div>
   );
