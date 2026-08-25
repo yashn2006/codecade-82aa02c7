@@ -273,14 +273,6 @@ export function ConsoleShell({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <button
-                onClick={signOut}
-                title={email || "Sign out"}
-                aria-label="Sign out"
-                className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-[11px] font-bold text-primary-foreground transition active:scale-90"
-              >
-                {avatar}
-              </button>
             </div>
           </header>
 
