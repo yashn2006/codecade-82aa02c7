@@ -244,7 +244,10 @@ function AuthPage() {
                       const { error } = await supabase.auth.signInWithOAuth({
                         provider: "google",
                         options: {
-                          redirectTo: `${window.location.origin}/redirecting`,
+                          // Return to /auth: this page resolves the real
+                          // dashboard in one hop (no /redirecting bounce, which
+                          // raced with the root listener and double-navigated).
+                          redirectTo: `${window.location.origin}/auth`,
                           // Force the Google account chooser every time so
                           // users aren't silently logged in with whatever
                           // account the browser last used.

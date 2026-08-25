@@ -204,15 +204,14 @@ function RootComponent() {
 
     const routeByRoleIfNeeded = async () => {
       const path = window.location.pathname;
-      // Only auto-route from places where the user can't be (or shouldn't stay)
-      const shouldRoute =
-        path === "/" || path === "/auth" || path === "/login" || path === "/signup";
+      // /auth owns its own post-login routing — never double-navigate from here
+      // (that was the "glitchy Google login bounces through /redirecting" bug).
+      const shouldRoute = path === "/" || path === "/login" || path === "/signup";
       if (!shouldRoute) return;
       const user = await getSupabaseUserReady(1200);
       if (!user) return;
-      // Send through the sexy interstitial; it resolves the correct dashboard.
-      router.navigate({ to: "/redirecting", replace: true });
-      void getDashboardPathForUser;
+      const dest = await getDashboardPathForUser(user);
+      router.navigate({ to: dest, replace: true });
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
