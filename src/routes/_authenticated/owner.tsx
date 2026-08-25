@@ -78,26 +78,44 @@ function OwnerHub() {
       <div className="orb-a" aria-hidden />
       <div className="orb-b" aria-hidden />
       {/* HERO */}
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-
-        <div className="min-w-0">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-            <span className="text-gradient-hot">Your Cafés</span>
-          </h1>
-          <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            {cafes.length} café{cafes.length === 1 ? "" : "s"} · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}
-          </p>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 p-5 backdrop-blur-xl sm:p-7"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 40%, rgba(120,0,255,0.10) 100%)",
+        }}
+      >
+        <div
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-[90px]"
+          style={{ background: "radial-gradient(circle, rgba(255,0,150,0.30), transparent 70%)" }}
+          aria-hidden
+        />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-primary">
+              Owner hub
+            </span>
+            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
+              <span className="text-gradient-hot">Your Cafés</span>
+            </h1>
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              {cafes.length} café{cafes.length === 1 ? "" : "s"} · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/owner/help"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/50"
+            >
+              <LifeBuoy className="h-4 w-4 text-primary" /> Help
+            </Link>
+            <CreateCafeButton />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/owner/help"
-            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-sm font-semibold backdrop-blur hover:border-primary/50"
-          >
-            <LifeBuoy className="h-4 w-4 text-primary" /> Help
-          </Link>
-          <CreateCafeButton />
-        </div>
-      </div>
+      </motion.div>
 
       {/* KPI CARDS */}
       <div className="mb-6 -mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
