@@ -64,15 +64,16 @@ function OwnerHelp() {
       title="Help Center"
       subtitle="Quick answers, a direct line to support, and your ticket history — all in one place."
       nav={[
-        { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true },
-        { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true },
+        { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true, group: "Workspace" },
+        { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true, group: "Support" },
       ]}
     >
+      <div className="hub-atmos">
       {/* Hero */}
       <motion.section
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative mb-8 overflow-hidden rounded-3xl border border-border/60 bg-card/40 p-8 backdrop-blur"
+        className="hub-card relative mb-8 overflow-hidden rounded-3xl p-8"
       >
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-[90px]"
@@ -109,7 +110,7 @@ function OwnerHelp() {
           <BookOpen className="h-4 w-4 text-primary" />
           <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Frequently asked</div>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur">
+        <div className="hub-card overflow-hidden rounded-2xl">
           {FAQS.map((f, i) => <FaqRow key={i} q={f.q} a={f.a} />)}
         </div>
       </section>
@@ -121,7 +122,7 @@ function OwnerHelp() {
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur"
+        className="hub-card mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5"
       >
         <div>
           <div className="font-display text-lg font-bold">Still stuck?</div>
@@ -143,6 +144,7 @@ function OwnerHelp() {
           </Link>
         </div>
       </motion.section>
+      </div>
     </ConsoleShell>
   );
 }
@@ -154,7 +156,7 @@ function Pillar({ icon: Icon, title, body, accent }: {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 280, damping: 20 }}
-      className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur"
+      className="hub-card group relative overflow-hidden rounded-2xl p-5"
     >
       <span
         className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-40 blur-2xl transition group-hover:opacity-70"

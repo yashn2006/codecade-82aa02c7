@@ -138,7 +138,7 @@ function OwnerHub() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.04 }}
-              className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur sm:p-6"
+              className="hub-card relative overflow-hidden rounded-3xl p-5 sm:p-6"
             >
               <div className="relative mb-4"><OnboardingChecklist cafe={cafe} /></div>
 
@@ -222,7 +222,7 @@ function KpiCard({ icon: Icon, tone, label, value }: {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/8 bg-background/40 p-3">
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3">
       <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
       <div className="mt-1 font-display text-lg font-bold tabular-nums">{value}</div>
     </div>
