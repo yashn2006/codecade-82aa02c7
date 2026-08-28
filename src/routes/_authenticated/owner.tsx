@@ -202,21 +202,22 @@ function KpiCard({ icon: Icon, tone, label, value }: {
   icon: typeof Wallet; tone: string; label: string; value: string;
 }) {
   return (
-    <div
-      className="group relative min-w-[68vw] shrink-0 snap-start overflow-hidden rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] sm:min-w-0"
-      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, boxShadow: `0 0 0 rgba(0,0,0,0)` }}
-    >
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-[2px] opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${tone}, transparent)` }} aria-hidden />
-
-      <div className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${tone}22`, color: tone }}>
-        <Icon className="h-[18px] w-[18px]" />
+    <div className="hub-card group relative min-w-[68vw] shrink-0 snap-start overflow-hidden rounded-2xl p-5 sm:min-w-0">
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-60"
+        style={{ background: `linear-gradient(90deg, transparent, ${tone}, transparent)` }}
+        aria-hidden
+      />
+      <div className="flex items-center gap-2.5">
+        <div className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${tone}1f`, color: tone }}>
+          <Icon className="h-[18px] w-[18px]" />
+        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
       </div>
-      <div className="mt-3 font-display text-[32px] font-extrabold leading-none tabular-nums">{value}</div>
-      <div className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-      <div className="mt-3 h-6 w-full rounded-md opacity-40"
-           style={{ background: `linear-gradient(90deg, transparent, ${tone}44, transparent)` }} aria-hidden />
+      <div className="mt-4 font-display text-[30px] font-extrabold leading-none tabular-nums">{value}</div>
     </div>
   );
+
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
