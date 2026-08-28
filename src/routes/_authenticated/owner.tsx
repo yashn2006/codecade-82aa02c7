@@ -70,36 +70,30 @@ function OwnerHub() {
       title="Your Cafés"
       subtitle="Owner hub"
       nav={[
-        { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true },
-        { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true },
+        { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true, group: "Workspace" },
+        { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true, group: "Support" },
       ]}
     >
-      <div className="console-atmos">
-      <div className="orb-a" aria-hidden />
-      <div className="orb-b" aria-hidden />
+      <div className="hub-atmos">
       {/* HERO */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 p-5 backdrop-blur-xl sm:p-7"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 40%, rgba(120,0,255,0.10) 100%)",
-        }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="hub-card relative mb-6 overflow-hidden rounded-3xl p-5 sm:p-7"
       >
         <div
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-[90px]"
-          style={{ background: "radial-gradient(circle, rgba(255,0,150,0.30), transparent 70%)" }}
+          className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full blur-[90px]"
+          style={{ background: "radial-gradient(circle, rgba(150,80,255,0.22), transparent 70%)" }}
           aria-hidden
         />
         <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-primary">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
               Owner hub
             </span>
-            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
-              <span className="text-gradient-hot">Your Cafés</span>
+            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-[2.4rem] sm:leading-[1.05]">
+              Your Cafés
             </h1>
             <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               {cafes.length} café{cafes.length === 1 ? "" : "s"} · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}
@@ -108,7 +102,7 @@ function OwnerHub() {
           <div className="flex items-center gap-2">
             <Link
               to="/owner/help"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/50"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-sm font-semibold backdrop-blur transition hover:border-white/25 hover:bg-white/[0.08]"
             >
               <LifeBuoy className="h-4 w-4 text-primary" /> Help
             </Link>
@@ -116,6 +110,7 @@ function OwnerHub() {
           </div>
         </div>
       </motion.div>
+
 
       {/* KPI CARDS */}
       <div className="mb-6 -mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
