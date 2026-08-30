@@ -203,23 +203,23 @@ function KpiCard({ icon: Icon, tone, label, value }: {
   icon: typeof Wallet; tone: string; label: string; value: string;
 }) {
   return (
-    <div className="hub-card group relative min-w-[68vw] shrink-0 snap-start overflow-hidden rounded-2xl p-5 sm:min-w-0">
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ type: "spring", stiffness: 280, damping: 20 }}
+      className="hub-card group relative overflow-hidden rounded-2xl p-5"
+    >
       <span
-        className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-60"
-        style={{ background: `linear-gradient(90deg, transparent, ${tone}, transparent)` }}
+        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-40 blur-2xl transition group-hover:opacity-70"
+        style={{ background: `radial-gradient(circle, ${tone}, transparent 70%)` }}
         aria-hidden
       />
-      <div className="flex items-center gap-2.5">
-        <div className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${tone}1f`, color: tone }}>
-          <Icon className="h-[18px] w-[18px]" />
-        </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-      </div>
-      <div className="mt-4 font-display text-[30px] font-extrabold leading-none tabular-nums">{value}</div>
-    </div>
+      <Icon className="relative h-6 w-6 text-foreground" />
+      <div className="relative mt-3 font-display text-3xl font-extrabold leading-none tabular-nums">{value}</div>
+      <div className="relative mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
+    </motion.div>
   );
-
 }
+
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
