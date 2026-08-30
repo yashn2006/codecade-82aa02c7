@@ -76,27 +76,28 @@ function OwnerHub() {
     >
       <div className="hub-atmos">
       {/* HERO */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="hub-card relative mb-6 overflow-hidden rounded-3xl p-5 sm:p-7"
+        className="hub-card relative mb-8 overflow-hidden rounded-3xl p-6 sm:p-8"
       >
         <div
-          className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full blur-[90px]"
-          style={{ background: "radial-gradient(circle, rgba(150,80,255,0.22), transparent 70%)" }}
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-[90px]"
+          style={{ background: "radial-gradient(circle, oklch(0.7 0.26 335 / 0.55), transparent 70%)" }}
+        />
+        <Building2
+          className="pointer-events-none absolute -right-6 bottom-[-30px] h-56 w-56 text-primary/10"
           aria-hidden
         />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
-              Owner hub
-            </span>
-            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-[2.4rem] sm:leading-[1.05]">
-              Your Cafés
+        <div className="relative flex flex-wrap items-end justify-between gap-5">
+          <div className="min-w-0 max-w-2xl">
+            <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Owner Hub</div>
+            <h1 className="mt-2 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
+              Your <span className="text-gradient-hot">Cafés</span>.
             </h1>
-            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              {cafes.length} café{cafes.length === 1 ? "" : "s"} · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}
+            <p className="mt-3 max-w-xl text-muted-foreground">
+              {cafes.length} café{cafes.length === 1 ? "" : "s"} · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}. Everything — floor, bookings, POS and revenue — from one console.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -109,18 +110,18 @@ function OwnerHub() {
             <CreateCafeButton />
           </div>
         </div>
-      </motion.div>
-
+      </motion.section>
 
       {/* KPI CARDS */}
-      <div className="mb-6 -mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
-        <KpiCard icon={IndianRupee}   tone="#22d3a8" label="Revenue today"   value={`₹${totals.revenueToday.toLocaleString("en-IN")}`} />
-        <KpiCard icon={TrendingUp}    tone="#ef4fb6" label="Revenue all-time" value={`₹${totals.revenue.toLocaleString("en-IN")}`} />
-        <KpiCard icon={CalendarRange} tone="#7dd3fc" label="Total bookings"   value={String(totals.bookings)} />
-        <KpiCard icon={Activity}      tone="#f5b042" label="Active sessions"  value={String(totals.activeSessions)} />
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard icon={IndianRupee}   tone="oklch(0.78 0.16 165)" label="Revenue today"    value={`₹${totals.revenueToday.toLocaleString("en-IN")}`} />
+        <KpiCard icon={TrendingUp}    tone="oklch(0.7 0.26 335)"  label="Revenue all-time" value={`₹${totals.revenue.toLocaleString("en-IN")}`} />
+        <KpiCard icon={CalendarRange} tone="oklch(0.78 0.18 200)" label="Total bookings"   value={String(totals.bookings)} />
+        <KpiCard icon={Activity}      tone="oklch(0.8 0.16 70)"   label="Active sessions"  value={String(totals.activeSessions)} />
       </div>
 
-      <div className="mb-6"><ReferralCard /></div>
+      <div className="mb-8"><ReferralCard /></div>
+
 
       {isLoading ? (
         <div className="h-48 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
@@ -202,23 +203,23 @@ function KpiCard({ icon: Icon, tone, label, value }: {
   icon: typeof Wallet; tone: string; label: string; value: string;
 }) {
   return (
-    <div className="hub-card group relative min-w-[68vw] shrink-0 snap-start overflow-hidden rounded-2xl p-5 sm:min-w-0">
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ type: "spring", stiffness: 280, damping: 20 }}
+      className="hub-card group relative overflow-hidden rounded-2xl p-5"
+    >
       <span
-        className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-60"
-        style={{ background: `linear-gradient(90deg, transparent, ${tone}, transparent)` }}
+        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-40 blur-2xl transition group-hover:opacity-70"
+        style={{ background: `radial-gradient(circle, ${tone}, transparent 70%)` }}
         aria-hidden
       />
-      <div className="flex items-center gap-2.5">
-        <div className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${tone}1f`, color: tone }}>
-          <Icon className="h-[18px] w-[18px]" />
-        </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-      </div>
-      <div className="mt-4 font-display text-[30px] font-extrabold leading-none tabular-nums">{value}</div>
-    </div>
+      <Icon className="relative h-6 w-6 text-foreground" />
+      <div className="relative mt-3 font-display text-3xl font-extrabold leading-none tabular-nums">{value}</div>
+      <div className="relative mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
+    </motion.div>
   );
-
 }
+
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (

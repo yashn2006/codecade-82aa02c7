@@ -134,7 +134,7 @@ export function ConsoleShell({
       <div className="flex min-h-screen">
         {/* ============ Desktop sidebar (220px) ============ */}
         <aside
-          className="hidden lg:flex lg:w-[220px] lg:flex-shrink-0 lg:flex-col"
+          className="relative z-30 hidden lg:flex lg:w-[220px] lg:flex-shrink-0 lg:flex-col"
           style={{
             background: "rgba(0,0,0,0.4)",
             backdropFilter: "blur(12px)",
