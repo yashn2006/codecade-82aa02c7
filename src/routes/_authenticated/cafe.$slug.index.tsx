@@ -335,6 +335,7 @@ function LiveFloor() {
   const qc = useQueryClient();
   const start = useServerFn(startSession);
   const end = useServerFn(endSession);
+  const extendSess = useServerFn(extendSession);
   const setStatus = useServerFn(setDeviceStatus);
   const addCust = useServerFn(createCustomer);
 
