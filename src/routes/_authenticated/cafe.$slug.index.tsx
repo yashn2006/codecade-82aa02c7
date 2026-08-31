@@ -4,13 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
-  Gamepad2, Play, Square, Zap, MonitorPlay, Headset, Car, Cpu, Pause, Wrench,
-  Check, Lock, IndianRupee, ArrowRight, Search, Printer, ArrowLeftRight,
-  Clock3,
+  Gamepad2, Zap, MonitorPlay, Headset, Car, Cpu, IndianRupee,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listDevices, setDeviceStatus, updateDevice, type DeviceStatus } from "@/lib/devices.functions";
-import { listSessions, startSession, endSession } from "@/lib/sessions.functions";
+import { listSessions, startSession, endSession, extendSession } from "@/lib/sessions.functions";
 import { listCustomers, createCustomer } from "@/lib/customers.functions";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
