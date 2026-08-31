@@ -515,17 +515,22 @@ function LiveFloor() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5"
         >
-          {filtered.map((d, i) => (
-            <Pod
-              key={d.id}
-              device={d}
-              session={activeByDevice.get(d.id)}
-              now={now}
-              index={i}
-              onOpen={() => setPanel(d.id)}
-              onStart={() => setPanel(d.id)}
-            />
-          ))}
+          {filtered.map((d, i) => {
+            const s = activeByDevice.get(d.id);
+            return (
+              <Pod
+                key={d.id}
+                device={d}
+                session={s}
+                now={now}
+                index={i}
+                onOpen={() => setPanel(d.id)}
+                onStart={() => setPanel(d.id)}
+                onExtend={s ? () => extendM.mutate({ data: { id: s.id, add_minutes: 30 } }) : undefined}
+                onEnd={s ? () => endM.mutate({ data: { id: s.id } }) : undefined}
+              />
+            );
+          })}
         </motion.div>
       )}
 
