@@ -651,3 +651,67 @@
   background-color: rgba(255,255,255,0.07);
 }
 .field-select option { background: #12001f; color: #fff; }
+
+/* ---------- Live floor pod chrome ---------- */
+.pod-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.10) 48%, transparent 62%);
+  transform: translateX(-120%);
+  transition: transform 700ms cubic-bezier(.4,0,.2,1);
+}
+.pod:hover .pod-sheen { transform: translateX(120%); }
+.pod-actions { transition: opacity 180ms ease, transform 180ms ease; transform: translateY(6px); }
+.pod:hover .pod-actions,
+.pod:focus-within .pod-actions { opacity: 1; transform: translateY(0); }
+@media (hover: none) {
+  .pod-actions { opacity: 1; transform: none; }
+  .pod-sheen { display: none; }
+}
+
+/* ---------- Platform-wide smoothness / mobile-native feel ---------- */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+}
+* { -webkit-tap-highlight-color: transparent; }
+button, a, [role="button"] { touch-action: manipulation; }
+input, textarea, select { font-size: 16px; } /* prevents iOS zoom-on-focus */
+@media (min-width: 640px) { input, textarea, select { font-size: 15px; } }
+
+/* momentum + hidden scrollbars on horizontal rails */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.overflow-x-auto::-webkit-scrollbar { display: none; }
+
+/* slim, quiet scrollbar on desktop */
+@media (hover: hover) and (pointer: fine) {
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.12);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); background-clip: content-box; }
+}
+
+/* safe-area padding for iOS home indicator / notch */
+.safe-b { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+.safe-t { padding-top: max(env(safe-area-inset-top), 0px); }
+
+/* crisp active feedback everywhere on touch */
+@media (hover: none) {
+  button:active, a:active, [role="button"]:active { transform: scale(0.985); }
+}
