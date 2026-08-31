@@ -363,6 +363,11 @@ function LiveFloor() {
     onSuccess: () => { toast.success("Station saved"); invalidate(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+  const extendM = useMutation({
+    mutationFn: extendSess,
+    onSuccess: () => { toast.success("+30 minutes added"); invalidate(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
 
 
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
