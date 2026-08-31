@@ -72,6 +72,8 @@ function avatarGradient(seed: string) {
 
 type SessionRow = {
   id: string; device_id: string; started_at: string; status: string;
+  planned_minutes?: number | null; package_name?: string | null;
+  amount_paid?: number | null; paused_ms?: number | null;
   customers?: { full_name?: string } | null;
 };
 type DeviceRow = {
@@ -84,7 +86,7 @@ type DeviceRow = {
 /* ------------------------------------------------------------------ */
 
 const Pod = memo(function Pod({
-  device, session, now, index = 0, onOpen, onStart,
+  device, session, now, index = 0, onOpen, onStart, onExtend, onEnd,
 }: {
   device: DeviceRow;
   session?: SessionRow;
@@ -92,6 +94,8 @@ const Pod = memo(function Pod({
   index?: number;
   onOpen: () => void;
   onStart: () => void;
+  onExtend?: () => void;
+  onEnd?: () => void;
 }) {
   const status = (device.status as DeviceStatus) ?? "available";
   const Icon = TYPE_ICON[device.type] ?? Cpu;
@@ -100,15 +104,27 @@ const Pod = memo(function Pod({
   const broken = status === "maintenance";
   const paused = status === "suspended";
 
-  const skin = live
-    ? { bg: "rgba(0,255,100,0.025)", border: "1px solid rgba(0,255,100,0.3)", bar: "linear-gradient(90deg,#00ff88,#00d4aa)" }
+  const tone = live
+    ? { hex: "#00ff88", rgb: "0,255,136", label: "Live" }
     : booked
-      ? { bg: "rgba(255,170,0,0.03)", border: "1px solid rgba(255,170,0,0.3)", bar: "linear-gradient(90deg,#ffaa00,#ff6a00)" }
+      ? { hex: "#ffaa00", rgb: "255,170,0", label: "Reserved" }
       : paused
-        ? { bg: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,50,50,0.2)", bar: "linear-gradient(90deg,#94a3b8,#64748b)" }
+        ? { hex: "#94a3b8", rgb: "148,163,184", label: "Suspended" }
         : broken
-          ? { bg: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,50,50,0.2)", bar: "linear-gradient(90deg,#ff3232,#b91c1c)" }
-          : { bg: "rgba(255,255,255,0.025)", border: "1px solid rgba(0,212,255,0.18)", bar: "linear-gradient(90deg,#00d4ff,#0080ff)" };
+          ? { hex: "#ff5470", rgb: "255,84,112", label: "Maintenance" }
+          : { hex: "#00d4ff", rgb: "0,212,255", label: "Available" };
+
+  // Live timing
+  const elapsedMs = live ? Math.max(0, now - new Date(session!.started_at).getTime() - Number(session!.paused_ms ?? 0)) : 0;
+  const plannedMin = live ? Number(session!.planned_minutes ?? 0) : 0;
+  const remainingMs = plannedMin > 0 ? plannedMin * 60000 - elapsedMs : null;
+  const critical = remainingMs !== null && remainingMs <= 5 * 60000;
+  const warning = remainingMs !== null && !critical && remainingMs <= 10 * 60000;
+  const progress = plannedMin > 0 ? Math.min(100, (elapsedMs / (plannedMin * 60000)) * 100) : null;
+  const clockColor = critical ? "#ff5470" : warning ? "#ffaa00" : tone.hex;
+  const clockText = remainingMs !== null ? fmtClock(Math.max(0, remainingMs)) : fmtClock(elapsedMs);
+
+  const name = session?.customers?.full_name ?? "Walk-in";
 
   return (
     <motion.div
@@ -116,51 +132,124 @@ const Pod = memo(function Pod({
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      initial={{ opacity: 0, y: 16, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: "spring", damping: 20, stiffness: 260, delay: Math.min(index, 12) * 0.05 }}
-      className={`pod group relative flex min-h-[220px] cursor-pointer flex-col overflow-hidden rounded-[20px] p-4 text-left active:scale-[0.99] ${live ? "pod-live" : status === "available" ? "pod-free" : ""}`}
-      style={{ background: skin.bg, border: skin.border, backdropFilter: "blur(12px)" }}
+      transition={{ type: "spring", damping: 22, stiffness: 280, delay: Math.min(index, 12) * 0.035 }}
+      className={`pod group relative flex min-h-[228px] cursor-pointer select-none flex-col overflow-hidden rounded-[22px] p-4 text-left ${live ? "pod-live" : status === "available" ? "pod-free" : ""}`}
+      style={{
+        background: `linear-gradient(160deg, rgba(${tone.rgb},0.10) 0%, rgba(255,255,255,0.022) 42%, rgba(0,0,0,0.18) 100%)`,
+        border: `1px solid rgba(${tone.rgb},0.28)`,
+        boxShadow: `0 0 0 1px rgba(255,255,255,0.02) inset, 0 18px 40px -24px rgba(${tone.rgb},0.9)`,
+        backdropFilter: "blur(14px)",
+      }}
       aria-label={`${device.name} — ${status}`}
     >
-      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: skin.bar }} aria-hidden />
+      {/* top accent + sheen */}
+      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: `linear-gradient(90deg, transparent, ${tone.hex}, transparent)` }} aria-hidden />
+      <span className="pod-sheen" aria-hidden />
 
+      {/* header row */}
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          {live ? (
+            <span
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[12px] font-black text-black/85"
+              style={{ background: avatarGradient(name) }}
+            >
+              {initials(name)}
+            </span>
+          ) : (
+            <span
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border"
+              style={{ borderColor: `rgba(${tone.rgb},0.35)`, background: `rgba(${tone.rgb},0.10)` }}
+            >
+              <Icon className="h-4 w-4" style={{ color: tone.hex }} />
+            </span>
+          )}
+          <div className="min-w-0">
+            <div className="truncate text-[14px] font-bold leading-tight">{device.name}</div>
+            <div className="truncate font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+              {device.type} · ₹{device.hourly_rate}/hr
+            </div>
+          </div>
+        </div>
+        <span
+          className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em]"
+          style={{ background: `rgba(${tone.rgb},0.14)`, color: tone.hex, border: `1px solid rgba(${tone.rgb},0.3)` }}
+        >
+          <span
+            className={`mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle ${live ? "animate-dot-pulse" : ""}`}
+            style={{ background: tone.hex }}
+          />
+          {tone.label}
+        </span>
+      </div>
 
+      {/* body */}
       {live ? (
-        <div className="relative flex flex-1 flex-col">
-          <div className="flex items-start justify-between gap-2">
-            <span className="min-w-0 truncate text-[14px] font-bold">{device.name}</span>
-            <span className="shrink-0 rounded-full bg-[rgba(0,255,100,0.15)] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald-300">
-              ● Live
+        <div className="relative mt-3 flex flex-1 flex-col">
+          <div className="truncate text-[15px] font-bold text-foreground">{name}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {session?.package_name && (
+              <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-foreground/75">
+                {session.package_name}
+              </span>
+            )}
+            <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 font-mono text-[9px] text-foreground/75">
+              paid ₹{Number(session?.amount_paid ?? 0).toLocaleString("en-IN")}
             </span>
           </div>
-          <div className="mt-1.5 truncate text-[18px] font-bold text-primary">
-            {session?.customers?.full_name ?? "Walk-in"}
-          </div>
-          <span className="mt-1 inline-flex w-fit rounded-full border border-white/12 bg-white/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/70">
-            {session?.customers?.full_name ? "Member" : "Walk-in"}
-          </span>
+
           <div className="mt-auto pt-3">
-            <div className="font-mono text-[28px] font-bold leading-none tabular-nums text-emerald-400">
-              {fmtClock(now - new Date(session!.started_at).getTime())}
+            <div
+              className={`font-mono text-[30px] font-black leading-none tabular-nums ${critical ? "animate-pulse-soft" : ""}`}
+              style={{ color: clockColor, textShadow: `0 0 18px rgba(${tone.rgb},0.35)` }}
+            >
+              {clockText}
             </div>
-            <div className="mt-1 text-[20px] font-bold tabular-nums">
-              ₹{billed(session!.started_at, device.hourly_rate, now)}
+            <div className="mt-1 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
+              <span>{remainingMs !== null ? "remaining" : "elapsed"}</span>
+              <span className="text-[13px] font-bold text-foreground tabular-nums">
+                ₹{billed(session!.started_at, device.hourly_rate, now)}
+              </span>
             </div>
-            <span className="mt-2.5 inline-flex w-full items-center justify-center gap-1 rounded-xl border border-emerald-400/40 bg-emerald-400/5 py-2 text-[12px] font-semibold text-emerald-300 transition group-hover:bg-emerald-400/12">
-              Details <ArrowRight className="h-3.5 w-3.5" />
-            </span>
+            {progress !== null && (
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+                <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${clockColor}, ${tone.hex})` }} />
+              </div>
+            )}
+          </div>
+
+          {/* hover quick actions */}
+          <div className="pod-actions pointer-events-none absolute inset-x-0 bottom-0 flex gap-1.5 rounded-b-[22px] bg-gradient-to-t from-black/75 to-transparent p-2 pt-6 opacity-0">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onExtend?.(); }}
+              className="pointer-events-auto flex-1 rounded-lg border border-emerald-400/40 bg-emerald-400/12 py-1.5 text-[11px] font-bold text-emerald-200 transition hover:bg-emerald-400/25"
+            >
+              +30m
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onOpen(); }}
+              className="pointer-events-auto flex-1 rounded-lg border border-amber-400/40 bg-amber-400/12 py-1.5 text-[11px] font-bold text-amber-200 transition hover:bg-amber-400/25"
+            >
+              Alert
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onEnd?.(); }}
+              className="pointer-events-auto flex-1 rounded-lg border border-rose-400/40 bg-rose-400/12 py-1.5 text-[11px] font-bold text-rose-200 transition hover:bg-rose-400/25"
+            >
+              End
+            </button>
           </div>
         </div>
       ) : booked ? (
-        <div className="relative flex flex-1 flex-col">
-          <div className="truncate text-[14px] font-bold">{device.name}</div>
-          <div className="mt-3 grid flex-1 place-items-center text-center">
+        <div className="relative mt-3 flex flex-1 flex-col">
+          <div className="grid flex-1 place-items-center text-center">
             <div>
-              <div className="rounded-full border border-amber-400/40 bg-amber-400/12 px-3 py-1 font-mono text-[12px] font-bold uppercase tracking-[0.16em] text-amber-300">
-                ✦ Reserved
-              </div>
-              <div className="mt-2 truncate text-[13px] font-semibold text-foreground/90">
+              <div className="truncate text-[14px] font-semibold text-foreground/90">
                 {session?.customers?.full_name ?? "Held station"}
               </div>
               <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">₹{device.hourly_rate}/hr</div>
@@ -175,20 +264,14 @@ const Pod = memo(function Pod({
           </button>
         </div>
       ) : paused || broken ? (
-        <div className="relative flex flex-1 flex-col">
-          <div className="truncate text-[14px] font-bold">{device.name}</div>
+        <div className="relative mt-3 flex flex-1 flex-col">
           <div className="grid flex-1 place-items-center text-center">
-            <div>
-              <div className={`font-mono text-[13px] font-bold uppercase tracking-[0.16em] ${paused ? "text-slate-300" : "text-rose-300"}`}>
-                {paused ? "⏸ Suspended" : "✖ Maintenance"}
-              </div>
-              <div className="mt-1.5 text-[11px] text-muted-foreground">
-                {paused
-                  ? device.suspend_until
-                    ? `Back at ${new Date(device.suspend_until).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
-                    : "Temporarily out of rotation"
-                  : "Under repair — not bookable"}
-              </div>
+            <div className="text-[11px] text-muted-foreground">
+              {paused
+                ? device.suspend_until
+                  ? `Back at ${new Date(device.suspend_until).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
+                  : "Temporarily out of rotation"
+                : "Under repair — not bookable"}
             </div>
           </div>
           <span className="inline-flex w-full items-center justify-center rounded-xl border border-white/12 py-2 text-[12px] font-semibold text-foreground/70">
@@ -196,21 +279,12 @@ const Pod = memo(function Pod({
           </span>
         </div>
       ) : (
-        <div className="relative flex flex-1 flex-col">
-          <div className="flex items-start justify-between gap-2">
-            <span className="min-w-0 truncate text-[28px] font-bold leading-none">{device.name}</span>
-          </div>
-          <div className="grid flex-1 place-items-center py-3">
-            <div className="text-center">
-              <Icon
-                className="mx-auto h-12 w-12 text-[#22d3a8] transition-all duration-150 group-hover:scale-105"
-                style={{ filter: "drop-shadow(0 0 10px rgba(0,212,255,0.45))" }}
-              />
-              <div className="mt-2 font-mono text-[12px] text-muted-foreground">₹{device.hourly_rate}/hr</div>
-              <span className="mt-2 inline-flex rounded-full border border-[rgba(0,212,255,0.35)] bg-[rgba(0,212,255,0.1)] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-[#5ee9ff]">
-                Available
-              </span>
-            </div>
+        <div className="relative mt-3 flex flex-1 flex-col">
+          <div className="grid flex-1 place-items-center py-2">
+            <Icon
+              className="h-11 w-11 transition-transform duration-200 group-hover:scale-110"
+              style={{ color: tone.hex, filter: `drop-shadow(0 0 14px rgba(${tone.rgb},0.5))` }}
+            />
           </div>
           <div className="space-y-1.5">
             <button
@@ -219,7 +293,7 @@ const Pod = memo(function Pod({
               className="inline-flex h-9 w-full items-center justify-center rounded-xl text-[12px] font-bold text-primary-foreground transition hover:brightness-110"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
-              Start
+              Start session
             </button>
             <span className="inline-flex h-8 w-full items-center justify-center rounded-xl border border-white/15 text-[12px] font-semibold text-foreground/80">
               Book
@@ -228,9 +302,9 @@ const Pod = memo(function Pod({
         </div>
       )}
     </motion.div>
-
   );
 });
+
 
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
