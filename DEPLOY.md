@@ -1,6 +1,7 @@
 # 🚀 CoreCade — Cloudflare Deployment Guide
 
 This SaaS is built on **TanStack Start + Nitro** with the **Cloudflare Workers
+HHHHHHHHHHHH
 runtime** as the default target. That means it's already Cloudflare-native —
 no code changes needed. Slug routes like `/c/saaad` and `/cafe/saaad/pos`
 work out of the box because they're file-based dynamic routes.
