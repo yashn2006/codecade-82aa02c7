@@ -127,7 +127,7 @@ export function ConsoleShell({
   const avatar = (email[0] ?? "?").toUpperCase();
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
       <AuroraBackground intensity={intensity} />
       <CommandPalette />
 
