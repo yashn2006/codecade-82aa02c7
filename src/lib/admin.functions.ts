@@ -164,6 +164,8 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       role: z.enum(["super_admin", "cafe_owner", "cafe_staff", "customer"]).optional(),
       cafe_id: z.string().uuid().optional().nullable(),
       send_invite: z.boolean().optional(),
+      plan_type: z.enum(["trial", "monthly"]).optional(),
+      plan_days: z.number().int().min(1).max(3650).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
