@@ -5,6 +5,7 @@ HHHHHHHHHHHH
 runtime** as the default target. That means it's already Cloudflare-native —
 no code changes needed. Slug routes like `/c/saaad` and `/cafe/saaad/pos`
 work out of the box because they're file-based dynamic routes.
+hioi how wre uy 
 
 > **Will it crash?** No. The whole stack (SSR, server functions, Supabase
 > client, Razorpay flows) runs identically on Cloudflare's edge as it does
