@@ -216,11 +216,27 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     }
     if (!userId) throw new Error("Could not create user");
 
+    const planType = data.plan_type ?? "trial";
+    const planDays = data.plan_days ?? (planType === "monthly" ? 30 : 15);
+
     // Ensure a profile row exists (in case the signup trigger didn't fire)
     await supabaseAdmin.from("profiles").upsert(
-      { id: userId, email: data.email, full_name: data.full_name ?? null },
+      {
+        id: userId,
+        email: data.email,
+        full_name: data.full_name ?? null,
+        plan_type: planType,
+        plan_days: planDays,
+      },
       { onConflict: "id" },
     );
+
+    // If the user already owns cafés, apply the granted window right away
+    const endsAt = new Date(Date.now() + planDays * 86_400_000).toISOString();
+    await supabaseAdmin
+      .from("cafes")
+      .update({ trial_ends_at: endsAt, subscription_status: planType === "monthly" ? "active" : "trialing" })
+      .eq("owner_id", userId);
 
     if (data.role) {
       const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({
@@ -230,7 +246,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
         throw new Error(roleErr.message);
       }
     }
-    return { ok: true, user_id: userId };
+    return { ok: true, user_id: userId, plan_type: planType, plan_days: planDays };
   });
 
 // ───────────────────────────────────────────────────────────────────
