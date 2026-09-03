@@ -61,12 +61,9 @@ function AuthPage() {
   const [agreed, setAgreed] = useState(false);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  // Stronger on signup: 10+ chars with letters + digits. Sign-in keeps the
-  // legacy 8+ rule so people whose current password predates the change
-  // can still get in.
-  const pwValid = mode === "signup"
-    ? password.length >= 10 && /[A-Za-z]/.test(password) && /\d/.test(password)
-    : password.length >= 8;
+  // Keep it simple: 8+ characters for both sign-in and sign-up. The strength
+  // meter nudges toward stronger passwords without blocking the submit.
+  const pwValid = password.length >= 8;
   const nameValid = mode !== "signup" || fullName.trim().length >= 2;
   const formValid =
     mode === "forgot"
