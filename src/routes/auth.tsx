@@ -422,7 +422,7 @@ function AuthPage() {
                 disabled={loading || success}
                 valid={formValid}
                 success={success}
-                onInvalid={() => { triggerShake(); toast.error("Fill the required fields correctly."); }}
+                onInvalid={() => { triggerShake(); }}
                 label={
                   success ? "Entering…"
                     : loading ? "Please wait…"
