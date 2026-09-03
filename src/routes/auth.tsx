@@ -88,8 +88,8 @@ function AuthPage() {
             ? "Enter a valid email."
             : !nameValid
               ? "Tell us your name."
-              : mode === "signup" && !pwValid
-                ? "Password needs 10+ characters with letters and numbers."
+              : !pwValid
+                ? "Password must be at least 8 characters."
                 : mode === "signup" && !agreed
                   ? "Please accept the Terms and Privacy Policy."
                   : "Password must be 8+ characters.";
