@@ -160,8 +160,21 @@ function AuthPage() {
            style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,0.6) 2px 3px)" }} />
 
       {/* Top nav */}
-      <div className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-        <BrandLockup size={32} />
+      <div className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-5 sm:px-8">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
+              else window.location.assign("/");
+            }}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/70 bg-background/60 px-3 text-xs font-medium text-muted-foreground backdrop-blur transition hover:text-foreground"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </button>
+          <BrandLockup size={32} />
+        </div>
         <Link
           to="/"
           className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground"
@@ -169,6 +182,7 @@ function AuthPage() {
           ← corecade.com
         </Link>
       </div>
+
 
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-8 px-5 pb-16 sm:px-8 lg:grid-cols-[1.05fr_1fr]">
         {/* LEFT — cinematic hero */}
