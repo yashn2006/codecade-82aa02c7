@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, ShieldCheck, Zap, Sparkles, Phone, Loader2 } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, ArrowLeft, Eye, EyeOff, ShieldCheck, Zap, Sparkles, Phone, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,12 +61,9 @@ function AuthPage() {
   const [agreed, setAgreed] = useState(false);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  // Stronger on signup: 10+ chars with letters + digits. Sign-in keeps the
-  // legacy 8+ rule so people whose current password predates the change
-  // can still get in.
-  const pwValid = mode === "signup"
-    ? password.length >= 10 && /[A-Za-z]/.test(password) && /\d/.test(password)
-    : password.length >= 8;
+  // Keep it simple: 8+ characters for both sign-in and sign-up. The strength
+  // meter nudges toward stronger passwords without blocking the submit.
+  const pwValid = password.length >= 8;
   const nameValid = mode !== "signup" || fullName.trim().length >= 2;
   const formValid =
     mode === "forgot"
@@ -91,8 +88,8 @@ function AuthPage() {
             ? "Enter a valid email."
             : !nameValid
               ? "Tell us your name."
-              : mode === "signup" && !pwValid
-                ? "Password needs 10+ characters with letters and numbers."
+              : !pwValid
+                ? "Password must be at least 8 characters."
                 : mode === "signup" && !agreed
                   ? "Please accept the Terms and Privacy Policy."
                   : "Password must be 8+ characters.";
@@ -163,8 +160,21 @@ function AuthPage() {
            style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,0.6) 2px 3px)" }} />
 
       {/* Top nav */}
-      <div className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-        <BrandLockup size={32} />
+      <div className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-5 sm:px-8">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
+              else window.location.assign("/");
+            }}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/70 bg-background/60 px-3 text-xs font-medium text-muted-foreground backdrop-blur transition hover:text-foreground"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </button>
+          <BrandLockup size={32} />
+        </div>
         <Link
           to="/"
           className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground"
@@ -172,6 +182,7 @@ function AuthPage() {
           ← corecade.com
         </Link>
       </div>
+
 
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-8 px-5 pb-16 sm:px-8 lg:grid-cols-[1.05fr_1fr]">
         {/* LEFT — cinematic hero */}
@@ -425,7 +436,7 @@ function AuthPage() {
                 disabled={loading || success}
                 valid={formValid}
                 success={success}
-                onInvalid={() => { triggerShake(); toast.error("Fill the required fields correctly."); }}
+                onInvalid={() => { triggerShake(); }}
                 label={
                   success ? "Entering…"
                     : loading ? "Please wait…"
@@ -681,8 +692,8 @@ function SubmitButton({
   return (
     <div className="relative pt-1">
       <button
-        type={valid ? "submit" : "button"}
-        onClick={(e) => { if (!valid) { e.preventDefault(); onInvalid(); } }}
+        type="submit"
+        onClick={() => { if (!valid) onInvalid(); }}
         disabled={disabled}
         aria-disabled={!valid}
         className={`group relative h-12 w-full overflow-hidden rounded-xl text-base font-semibold text-primary-foreground transition ${valid ? "" : "opacity-80"}`}
