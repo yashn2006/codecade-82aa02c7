@@ -678,8 +678,8 @@ function SubmitButton({
   return (
     <div className="relative pt-1">
       <button
-        type={valid ? "submit" : "button"}
-        onClick={(e) => { if (!valid) { e.preventDefault(); onInvalid(); } }}
+        type="submit"
+        onClick={() => { if (!valid) onInvalid(); }}
         disabled={disabled}
         aria-disabled={!valid}
         className={`group relative h-12 w-full overflow-hidden rounded-xl text-base font-semibold text-primary-foreground transition ${valid ? "" : "opacity-80"}`}
