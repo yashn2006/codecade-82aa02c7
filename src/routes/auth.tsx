@@ -34,6 +34,7 @@ function AuthPage() {
   const [shake, setShake] = useState(false);
   const redirectingRef = useRef(false);
   const navigate = useNavigate();
+  const startOtp = useServerFn(startSignupOtp);
 
 
   const routeOnce = async () => {
