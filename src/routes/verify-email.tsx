@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabase/client";
+import { verifySignupOtp, resendSignupOtp } from "@/lib/otp.functions";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup } from "@/components/Brand";
 import { toast } from "sonner";
@@ -21,13 +23,19 @@ export const Route = createFileRoute("/verify-email")({
   component: VerifyEmail,
 });
 
+const MAX_RESENDS = 3;
+
 function VerifyEmail() {
   const navigate = useNavigate();
+  const verifyFn = useServerFn(verifySignupOtp);
+  const resendFn = useServerFn(resendSignupOtp);
+
   const [email, setEmail] = useState("");
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
   const [cooldown, setCooldown] = useState(60);
+  const [resendsUsed, setResendsUsed] = useState(0);
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -56,7 +64,6 @@ function VerifyEmail() {
     const v = raw.replace(/\D/g, "");
     if (!v) return setAt(i, "");
     if (v.length > 1) {
-      // paste support
       const chars = v.slice(0, 6 - i).split("");
       setDigits((d) => {
         const next = [...d];
@@ -85,11 +92,25 @@ function VerifyEmail() {
     if (!email) return fail("Missing email — sign up again.");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "signup" });
-      if (error) throw error;
+      await verifyFn({ data: { email, code } });
       toast.success("Email verified.");
-      navigate({ to: "/redirecting" });
+
+      // Sign the fresh account in when we still hold the password from the
+      // sign-up step in this tab; otherwise send them to the sign-in screen.
+      const pw = window.sessionStorage.getItem("cc_pending_pw");
+      window.sessionStorage.removeItem("cc_pending_pw");
+      window.sessionStorage.removeItem("cc_pending_email");
+      if (pw) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
+        if (!error) {
+          navigate({ to: "/redirecting" });
+          return;
+        }
+      }
+      navigate({ to: "/auth" });
     } catch (err) {
+      setDigits(Array(6).fill(""));
+      inputs.current[0]?.focus();
       fail(err instanceof Error ? err.message : "Invalid or expired code.");
     } finally {
       setLoading(false);
@@ -97,16 +118,18 @@ function VerifyEmail() {
   };
 
   const resend = async () => {
-    if (!email || cooldown > 0) return;
+    if (!email || cooldown > 0 || resendsUsed >= MAX_RESENDS) return;
     try {
-      const { error } = await supabase.auth.resend({ type: "signup", email });
-      if (error) throw error;
+      await resendFn({ data: { email } });
+      setResendsUsed((n) => n + 1);
       setCooldown(60);
       toast.success("New code sent.");
     } catch (err) {
       fail(err instanceof Error ? err.message : "Could not resend the code.");
     }
   };
+
+  const resendsLeft = MAX_RESENDS - resendsUsed;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -130,7 +153,7 @@ function VerifyEmail() {
             Verify your <span className="text-gradient-hot">email</span>
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            We sent a 6-digit code to <span className="text-foreground">{email || "your email"}</span>
+            We sent a 6-digit code to <span className="text-foreground">{email || "your email"}</span>. It expires in 5 minutes.
           </p>
 
           <div className="mt-6 flex justify-between gap-2">
@@ -165,10 +188,14 @@ function VerifyEmail() {
           <button
             type="button"
             onClick={() => void resend()}
-            disabled={cooldown > 0}
+            disabled={cooldown > 0 || resendsLeft <= 0}
             className="mt-4 w-full text-center text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
           >
-            {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+            {resendsLeft <= 0
+              ? "Resend limit reached — start sign-up again"
+              : cooldown > 0
+                ? `Resend code in ${cooldown}s`
+                : `Resend code (${resendsLeft} left)`}
           </button>
         </motion.div>
       </div>

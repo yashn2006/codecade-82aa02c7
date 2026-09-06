@@ -9,6 +9,8 @@ import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandMark } from "@/components/Brand";
 import { toast } from "sonner";
 import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
+import { useServerFn } from "@tanstack/react-start";
+import { startSignupOtp } from "@/lib/otp.functions";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -32,6 +34,7 @@ function AuthPage() {
   const [shake, setShake] = useState(false);
   const redirectingRef = useRef(false);
   const navigate = useNavigate();
+  const startOtp = useServerFn(startSignupOtp);
 
 
   const routeOnce = async () => {
@@ -101,33 +104,16 @@ function AuthPage() {
       if (mode === "signup") {
         const digits = phone.replace(/\D/g, "").slice(-10);
         const e164 = digits.length === 10 ? `+91${digits}` : undefined;
-        const { data: signUpData, error } = await supabase.auth.signUp({
-          email, password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/portal`,
-            data: { full_name: fullName, phone: e164 ?? null },
-          },
+        // Account is created server-side as unverified; a 6-digit code goes
+        // out by email and /verify-email finishes the job.
+        await startOtp({
+          data: { email: email.trim().toLowerCase(), password, full_name: fullName.trim(), phone: e164 ?? null },
         });
-        if (error) throw error;
-        if (signUpData.session && e164) {
-          await supabase
-            .from("profiles")
-            .update({ phone: e164 })
-            .eq("id", signUpData.session.user.id);
-        }
-        // If Supabase returns a user with no session, email confirmation is
-        // required — do NOT lock into the "Entering…" state; drop back to
-        // sign-in so the user can retry once they've confirmed.
-        if (!signUpData.session) {
-          window.sessionStorage.setItem("cc_pending_email", email);
-          toast.success("Check your email for the verification code.");
-          navigate({ to: "/verify-email", search: { email } as never });
-          return;
-        }
-        toast.success("Account created.");
-        setSuccess(true);
-        await new Promise((r) => setTimeout(r, 500));
-        await routeOnce();
+        window.sessionStorage.setItem("cc_pending_email", email.trim().toLowerCase());
+        window.sessionStorage.setItem("cc_pending_pw", password);
+        toast.success("We emailed you a 6-digit code.");
+        navigate({ to: "/verify-email", search: { email: email.trim().toLowerCase() } as never });
+        return;
       } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
