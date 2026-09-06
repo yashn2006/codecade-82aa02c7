@@ -9,6 +9,8 @@ import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandMark } from "@/components/Brand";
 import { toast } from "sonner";
 import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
+import { useServerFn } from "@tanstack/react-start";
+import { startSignupOtp } from "@/lib/otp.functions";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
