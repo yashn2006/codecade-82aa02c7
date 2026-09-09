@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SetupRouteImport } from './routes/setup'
@@ -67,11 +66,6 @@ import { Route as AuthenticatedCafeSlugAuditRouteImport } from './routes/_authen
 import { Route as AuthenticatedCafeSlugAnalyticsRouteImport } from './routes/_authenticated/cafe.$slug.analytics'
 import { Route as AuthenticatedCafeSlugTournamentsIdRouteImport } from './routes/_authenticated/cafe.$slug.tournaments.$id'
 
-const VerifyEmailRoute = VerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -395,7 +389,6 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
@@ -453,7 +446,6 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
@@ -511,7 +503,6 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/owner': typeof AuthenticatedOwnerRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
@@ -571,7 +562,6 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
-    | '/verify-email'
     | '/admin'
     | '/owner'
     | '/portal'
@@ -629,7 +619,6 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
-    | '/verify-email'
     | '/owner'
     | '/portal'
     | '/api/sitemap.xml'
@@ -686,7 +675,6 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
-    | '/verify-email'
     | '/_authenticated/admin'
     | '/_authenticated/owner'
     | '/_authenticated/portal'
@@ -746,7 +734,6 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
-  VerifyEmailRoute: typeof VerifyEmailRoute
   ApiSitemapDotxmlRoute: typeof ApiSitemapDotxmlRoute
   CSlugRoute: typeof CSlugRouteWithChildren
   ApiPublicCronTrialEmailsRoute: typeof ApiPublicCronTrialEmailsRoute
@@ -754,13 +741,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/verify-email': {
-      id: '/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -1300,7 +1280,6 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
-  VerifyEmailRoute: VerifyEmailRoute,
   ApiSitemapDotxmlRoute: ApiSitemapDotxmlRoute,
   CSlugRoute: CSlugRouteWithChildren,
   ApiPublicCronTrialEmailsRoute: ApiPublicCronTrialEmailsRoute,
