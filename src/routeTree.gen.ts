@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SetupRouteImport } from './routes/setup'
@@ -42,6 +41,7 @@ import { Route as AuthenticatedAdminLeadsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
 import { Route as AuthenticatedAdminConfigRouteImport } from './routes/_authenticated/admin.config'
 import { Route as AuthenticatedAdminCafesRouteImport } from './routes/_authenticated/admin.cafes'
+import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated/admin.billing'
 import { Route as AuthenticatedAdminBackupsRouteImport } from './routes/_authenticated/admin.backups'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin.api-keys'
@@ -67,11 +67,6 @@ import { Route as AuthenticatedCafeSlugAuditRouteImport } from './routes/_authen
 import { Route as AuthenticatedCafeSlugAnalyticsRouteImport } from './routes/_authenticated/cafe.$slug.analytics'
 import { Route as AuthenticatedCafeSlugTournamentsIdRouteImport } from './routes/_authenticated/cafe.$slug.tournaments.$id'
 
-const VerifyEmailRoute = VerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -238,6 +233,12 @@ const AuthenticatedAdminCafesRoute = AuthenticatedAdminCafesRouteImport.update({
   path: '/cafes',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminBillingRoute =
+  AuthenticatedAdminBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminBackupsRoute =
   AuthenticatedAdminBackupsRouteImport.update({
     id: '/backups',
@@ -395,7 +396,6 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
@@ -405,6 +405,7 @@ export interface FileRoutesByFullPath {
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/backups': typeof AuthenticatedAdminBackupsRoute
+  '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
   '/admin/config': typeof AuthenticatedAdminConfigRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
@@ -453,7 +454,6 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/owner': typeof AuthenticatedOwnerRoute
   '/portal': typeof AuthenticatedPortalRoute
   '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
@@ -462,6 +462,7 @@ export interface FileRoutesByTo {
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/backups': typeof AuthenticatedAdminBackupsRoute
+  '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/cafes': typeof AuthenticatedAdminCafesRoute
   '/admin/config': typeof AuthenticatedAdminConfigRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
@@ -511,7 +512,6 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/owner': typeof AuthenticatedOwnerRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
@@ -521,6 +521,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/backups': typeof AuthenticatedAdminBackupsRoute
+  '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/_authenticated/admin/cafes': typeof AuthenticatedAdminCafesRoute
   '/_authenticated/admin/config': typeof AuthenticatedAdminConfigRoute
   '/_authenticated/admin/health': typeof AuthenticatedAdminHealthRoute
@@ -571,7 +572,6 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
-    | '/verify-email'
     | '/admin'
     | '/owner'
     | '/portal'
@@ -581,6 +581,7 @@ export interface FileRouteTypes {
     | '/admin/api-keys'
     | '/admin/audit'
     | '/admin/backups'
+    | '/admin/billing'
     | '/admin/cafes'
     | '/admin/config'
     | '/admin/health'
@@ -629,7 +630,6 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
-    | '/verify-email'
     | '/owner'
     | '/portal'
     | '/api/sitemap.xml'
@@ -638,6 +638,7 @@ export interface FileRouteTypes {
     | '/admin/api-keys'
     | '/admin/audit'
     | '/admin/backups'
+    | '/admin/billing'
     | '/admin/cafes'
     | '/admin/config'
     | '/admin/health'
@@ -686,7 +687,6 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/terms'
-    | '/verify-email'
     | '/_authenticated/admin'
     | '/_authenticated/owner'
     | '/_authenticated/portal'
@@ -696,6 +696,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/api-keys'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/backups'
+    | '/_authenticated/admin/billing'
     | '/_authenticated/admin/cafes'
     | '/_authenticated/admin/config'
     | '/_authenticated/admin/health'
@@ -746,7 +747,6 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
-  VerifyEmailRoute: typeof VerifyEmailRoute
   ApiSitemapDotxmlRoute: typeof ApiSitemapDotxmlRoute
   CSlugRoute: typeof CSlugRouteWithChildren
   ApiPublicCronTrialEmailsRoute: typeof ApiPublicCronTrialEmailsRoute
@@ -754,13 +754,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/verify-email': {
-      id: '/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -985,6 +978,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCafesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/billing': {
+      id: '/_authenticated/admin/billing'
+      path: '/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AuthenticatedAdminBillingRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/backups': {
       id: '/_authenticated/admin/backups'
       path: '/backups'
@@ -1161,6 +1161,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminBackupsRoute: typeof AuthenticatedAdminBackupsRoute
+  AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
   AuthenticatedAdminCafesRoute: typeof AuthenticatedAdminCafesRoute
   AuthenticatedAdminConfigRoute: typeof AuthenticatedAdminConfigRoute
   AuthenticatedAdminHealthRoute: typeof AuthenticatedAdminHealthRoute
@@ -1179,6 +1180,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminBackupsRoute: AuthenticatedAdminBackupsRoute,
+  AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
   AuthenticatedAdminCafesRoute: AuthenticatedAdminCafesRoute,
   AuthenticatedAdminConfigRoute: AuthenticatedAdminConfigRoute,
   AuthenticatedAdminHealthRoute: AuthenticatedAdminHealthRoute,
@@ -1300,7 +1302,6 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
-  VerifyEmailRoute: VerifyEmailRoute,
   ApiSitemapDotxmlRoute: ApiSitemapDotxmlRoute,
   CSlugRoute: CSlugRouteWithChildren,
   ApiPublicCronTrialEmailsRoute: ApiPublicCronTrialEmailsRoute,

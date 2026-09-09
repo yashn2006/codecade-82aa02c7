@@ -120,7 +120,10 @@ function OwnerHub() {
         <KpiCard icon={Activity}      tone="oklch(0.8 0.16 70)"   label="Active sessions"  value={String(totals.activeSessions)} />
       </div>
 
+      <div className="mb-8"><OwnerBilling /></div>
+
       <div className="mb-8"><ReferralCard /></div>
+
 
 
       {isLoading ? (
