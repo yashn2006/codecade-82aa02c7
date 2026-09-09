@@ -32,7 +32,7 @@ function AuthPage() {
   const [shake, setShake] = useState(false);
   const redirectingRef = useRef(false);
   const navigate = useNavigate();
-  const startOtp = useServerFn(startSignupOtp);
+  
 
 
   const routeOnce = async () => {
@@ -102,16 +102,25 @@ function AuthPage() {
       if (mode === "signup") {
         const digits = phone.replace(/\D/g, "").slice(-10);
         const e164 = digits.length === 10 ? `+91${digits}` : undefined;
-        // Account is created server-side as unverified; a 6-digit code goes
-        // out by email and /verify-email finishes the job.
-        await startOtp({
-          data: { email: email.trim().toLowerCase(), password, full_name: fullName.trim(), phone: e164 ?? null },
+        const cleanEmail = email.trim().toLowerCase();
+        const { error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: { data: { full_name: fullName.trim(), phone: e164 ?? null } },
         });
-        window.sessionStorage.setItem("cc_pending_email", email.trim().toLowerCase());
-        window.sessionStorage.setItem("cc_pending_pw", password);
-        toast.success("We emailed you a 6-digit code.");
-        navigate({ to: "/verify-email", search: { email: email.trim().toLowerCase() } as never });
+        if (error) throw error;
+        // Sign straight in — no email verification step.
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+        if (signInError) throw signInError;
+        toast.success("Account created.");
+        setSuccess(true);
+        await new Promise((r) => setTimeout(r, 400));
+        await routeOnce();
         return;
+
       } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
