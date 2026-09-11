@@ -44,7 +44,7 @@ function SubscriptionsPanel() {
 
   const extend = useMutation({
     mutationFn: extendFn,
-    onMutate: async (vars: { data: { cafe_id: string; add_days: number } }) => {
+    onMutate: async (vars: { data: { cafe_id: string; add_days: number; reason?: string | null } }) => {
       await qc.cancelQueries({ queryKey: ["admin-subscriptions"] });
       const prev = qc.getQueryData<SubscriptionRow[]>(["admin-subscriptions"]);
       qc.setQueryData<SubscriptionRow[]>(["admin-subscriptions"], (old) =>
