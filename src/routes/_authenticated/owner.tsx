@@ -12,6 +12,7 @@ import { ConsoleShell } from "@/components/ConsoleShell";
 import { EmptyState } from "@/components/EmptyState";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { ReferralCard } from "@/components/ReferralCard";
+import { OwnerBilling } from "@/components/OwnerBilling";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
