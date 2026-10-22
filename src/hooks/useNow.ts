@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react";
  * useNow() re-render each tick — cards stay put, their clocks update.
  */
 const listeners = new Set<() => void>();
-let current = 0;
+let current = Date.now();
 let timer: ReturnType<typeof setInterval> | undefined;
 
 function subscribe(cb: () => void) {
@@ -26,7 +26,7 @@ function subscribe(cb: () => void) {
   };
 }
 
-const getSnapshot = () => current || Date.now();
+const getSnapshot = () => current;
 const getServerSnapshot = () => 0;
 
 /** Current epoch ms, ticking once per second. Returns 0 during SSR. */
