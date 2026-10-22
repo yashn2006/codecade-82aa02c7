@@ -41,6 +41,23 @@
   --color-rose: var(--rose);
   --color-rose-foreground: var(--rose-foreground);
   --color-ink: var(--ink);
+  /* Live Floor 2.0 palette */
+  --color-lf-bg: var(--lf-bg);
+  --color-lf-panel: var(--lf-panel);
+  --color-lf-elevated: var(--lf-elevated);
+  --color-lf-line: var(--lf-line);
+  --color-lf-text: var(--lf-text);
+  --color-lf-dim: var(--lf-dim);
+  --color-lf-purple: var(--lf-purple);
+  --color-lf-violet: var(--lf-violet);
+  --color-lf-magenta: var(--lf-magenta);
+  --color-lf-cyan: var(--lf-cyan);
+  --color-lf-run: var(--lf-run);
+  --color-lf-free: var(--lf-free);
+  --color-lf-booked: var(--lf-booked);
+  --color-lf-maint: var(--lf-maint);
+  --color-lf-paused: var(--lf-paused);
+  --color-lf-danger: var(--lf-danger);
   --font-display: var(--font-display);
   --font-heading: var(--font-heading);
   --font-sans: var(--font-sans);
@@ -49,6 +66,26 @@
 
 :root {
   --radius: 0.875rem;
+
+  /* === Live Floor 2.0 — cyberpunk command center === */
+  --lf-bg: oklch(0.12 0.015 290);        /* #05040B */
+  --lf-sidebar: oklch(0.14 0.022 290);   /* #080612 */
+  --lf-panel: oklch(0.165 0.03 290);     /* #0C0A19 */
+  --lf-elevated: oklch(0.195 0.045 290); /* #110D23 */
+  --lf-line: oklch(0.85 0.08 300 / 0.11);
+  --lf-text: oklch(0.965 0.015 300);     /* #F5F2FF */
+  --lf-dim: oklch(0.72 0.04 295);        /* #A7A0BE */
+  --lf-purple: oklch(0.58 0.27 295);     /* #8B35FF */
+  --lf-violet: oklch(0.63 0.25 304);     /* #A855F7 */
+  --lf-magenta: oklch(0.66 0.29 335);    /* #F12BCE */
+  --lf-cyan: oklch(0.82 0.15 215);       /* #00D9FF */
+  --lf-run: oklch(0.83 0.18 162);        /* #00E5A0 */
+  --lf-free: oklch(0.82 0.15 215);       /* cyan */
+  --lf-booked: oklch(0.71 0.16 245);     /* #29A8FF */
+  --lf-maint: oklch(0.77 0.16 55);       /* #FF9B45 */
+  --lf-paused: oklch(0.7 0.03 280);
+  --lf-danger: oklch(0.66 0.2 20);
+  --lf-gradient-cta: linear-gradient(135deg, var(--lf-magenta) 0%, var(--lf-violet) 100%);
 
   /* === Obsidian Nocturne — soft-dark glassmorphic, magenta/rose accents === */
   /* Base is a desaturated near-black with a faint violet undertone — never pitch black, so eyes stay calm. */
