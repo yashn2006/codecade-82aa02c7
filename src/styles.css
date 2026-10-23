@@ -973,3 +973,169 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
   .lf-card:hover, .lf-stat:hover { transform: none; }
   .lf-dot[data-live="true"], .lf-skeleton, .lf-drawer, .lf-backdrop { animation: none; }
 }
+
+/* ================= Live Floor 2.0 — immersive floor ================= */
+.lf-title-ico {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 50px; height: 50px; border-radius: 14px;
+  color: var(--lf-magenta);
+  border: 1px solid color-mix(in oklab, var(--lf-magenta) 55%, transparent);
+  background: radial-gradient(circle at 50% 30%, color-mix(in oklab, var(--lf-magenta) 28%, transparent), color-mix(in oklab, var(--lf-purple) 12%, var(--lf-bg)));
+  box-shadow: 0 0 24px -6px color-mix(in oklab, var(--lf-magenta) 70%, transparent);
+}
+.lf-stat-ico {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: 12px;
+  color: var(--tone);
+  border: 1px solid color-mix(in oklab, var(--tone) 45%, transparent);
+  background: color-mix(in oklab, var(--tone) 14%, var(--lf-bg));
+  box-shadow: 0 0 18px -6px color-mix(in oklab, var(--tone) 70%, transparent);
+}
+.lf-chip-pill[data-on="true"] {
+  border-color: var(--tone);
+  background: color-mix(in oklab, var(--tone) 24%, var(--lf-panel));
+  box-shadow: 0 0 18px -4px color-mix(in oklab, var(--tone) 65%, transparent);
+}
+
+.lf-scene {
+  position: relative; overflow: hidden; isolation: isolate;
+  min-height: 560px; border-radius: 20px;
+  border: 1px solid color-mix(in oklab, var(--lf-violet) 26%, var(--lf-line));
+  background: var(--lf-bg);
+  box-shadow: 0 30px 60px -40px color-mix(in oklab, var(--lf-purple) 80%, transparent), inset 0 0 0 1px color-mix(in oklab, var(--lf-text) 3%, transparent);
+}
+.lf-scene-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; pointer-events: none; user-select: none; }
+.lf-scene-shade {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(80% 70% at 50% 55%, color-mix(in oklab, var(--lf-bg) 30%, transparent) 0%, color-mix(in oklab, var(--lf-bg) 62%, transparent) 100%),
+    linear-gradient(180deg, color-mix(in oklab, var(--lf-bg) 35%, transparent) 0%, transparent 25%, color-mix(in oklab, var(--lf-bg) 55%, transparent) 100%);
+}
+.lf-scene-grid {
+  position: relative;
+  display: grid; gap: 10px 14px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  padding: clamp(48px, 7vw, 96px) clamp(14px, 4%, 48px) 28px;
+}
+@media (max-width: 640px) {
+  .lf-scene { min-height: 420px; }
+  .lf-scene-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 6px 10px; padding-top: 40px; }
+}
+
+@keyframes lf-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes lf-glow-breathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.95; } }
+
+.lf-station {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  background: none; border: 0; padding: 0; cursor: pointer; color: inherit;
+  outline: none; border-radius: 14px;
+  animation: lf-rise 480ms cubic-bezier(.2,.7,.2,1) both;
+}
+.lf-station:focus-visible { box-shadow: 0 0 0 2px color-mix(in oklab, var(--tone) 70%, transparent); }
+.lf-tag {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column;
+  width: 100%; max-width: 150px; margin-bottom: -18px;
+  padding: 6px 9px 7px; border-radius: 10px; text-align: left;
+  background: color-mix(in oklab, var(--lf-bg) 74%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid color-mix(in oklab, var(--tone) 60%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tone) 10%, transparent), 0 0 18px -4px color-mix(in oklab, var(--tone) 65%, transparent);
+  transition: transform 200ms cubic-bezier(.2,.7,.2,1), box-shadow 200ms ease, border-color 200ms ease;
+}
+.lf-tag::after {
+  content: ""; position: absolute; left: 50%; bottom: -9px; width: 1px; height: 9px;
+  background: linear-gradient(var(--tone), transparent);
+}
+.lf-tag-ico {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 15px; height: 15px; border-radius: 999px;
+  background: var(--tone); color: var(--lf-bg);
+}
+.lf-desk-wrap { position: relative; width: 100%; aspect-ratio: 896 / 752; pointer-events: none; }
+.lf-desk {
+  position: relative; width: 100%; height: 100%; object-fit: contain;
+  mix-blend-mode: screen; user-select: none;
+  filter: brightness(0.9);
+  transition: transform 260ms cubic-bezier(.2,.7,.2,1), filter 260ms ease;
+}
+.lf-desk-glow {
+  position: absolute; left: 14%; right: 14%; bottom: 6%; height: 34%;
+  border-radius: 50%; filter: blur(20px); opacity: 0.55;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--tone) 75%, transparent), transparent);
+  transition: opacity 260ms ease;
+}
+.lf-station[data-status="in_use"] .lf-desk { filter: brightness(1.05) saturate(1.1); }
+.lf-station[data-status="in_use"] .lf-desk-glow { animation: lf-glow-breathe 3.2s ease-in-out infinite; }
+.lf-station[data-status="available"] .lf-desk { filter: brightness(0.82); }
+.lf-station[data-status="reserved"] .lf-desk { filter: brightness(0.9) hue-rotate(-20deg); }
+.lf-station[data-status="suspended"] .lf-desk { filter: grayscale(0.7) brightness(0.55); }
+.lf-station[data-status="maintenance"] .lf-desk { filter: grayscale(0.6) sepia(0.5) hue-rotate(-30deg) brightness(0.55); }
+.lf-station:hover .lf-tag { transform: translateY(-3px); border-color: var(--tone); }
+.lf-station:hover .lf-desk { transform: scale(1.04); }
+.lf-station:hover .lf-desk-glow { opacity: 0.9; }
+.lf-station[data-selected="true"] .lf-tag {
+  border-color: var(--tone);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--tone) 45%, transparent), 0 0 30px -2px color-mix(in oklab, var(--tone) 75%, transparent);
+}
+.lf-station[data-selected="true"] .lf-desk-glow { opacity: 1; }
+.lf-station[data-selected="true"] .lf-desk { transform: scale(1.05); }
+
+/* ---- side panel ---- */
+.lf-side {
+  border-radius: 20px;
+  border: 1px solid color-mix(in oklab, var(--lf-violet) 24%, var(--lf-line));
+  background: linear-gradient(180deg, var(--lf-elevated) 0%, var(--lf-panel) 40%, var(--lf-bg) 100%);
+  box-shadow: 0 30px 60px -40px color-mix(in oklab, var(--lf-purple) 80%, transparent);
+  color: var(--lf-text);
+}
+.lf-side-ico {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 42px; height: 42px; border-radius: 12px; color: var(--tone);
+  border: 1px solid color-mix(in oklab, var(--tone) 45%, transparent);
+  background: color-mix(in oklab, var(--tone) 12%, var(--lf-bg));
+}
+.lf-side-hero {
+  position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: 14px;
+  border: 1px solid color-mix(in oklab, var(--tone) 40%, transparent);
+  box-shadow: 0 0 26px -10px color-mix(in oklab, var(--tone) 70%, transparent);
+}
+.lf-side-hero img { width: 100%; height: 100%; object-fit: cover; }
+.lf-side-hero-shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, color-mix(in oklab, var(--lf-bg) 92%, transparent) 100%); }
+.lf-panel-action {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-height: 58px; padding: 6px 4px; border-radius: 12px; text-align: center;
+  font-size: 11px; font-weight: 700; line-height: 1.15; color: var(--tone);
+  border: 1px solid color-mix(in oklab, var(--tone) 45%, transparent);
+  background: color-mix(in oklab, var(--tone) 11%, var(--lf-bg));
+  transition: background-color 150ms ease, box-shadow 150ms ease, transform 120ms ease;
+}
+.lf-panel-action:hover { background: color-mix(in oklab, var(--tone) 20%, var(--lf-bg)); box-shadow: 0 0 20px -6px color-mix(in oklab, var(--tone) 70%, transparent); }
+.lf-panel-action:active { transform: scale(0.97); }
+.lf-panel-action:disabled { opacity: 0.4; pointer-events: none; }
+.lf-panel-action:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+.lf-avatar {
+  position: relative; display: grid; place-items: center; flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: 999px;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; font-weight: 800; color: var(--lf-text);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--tone) 70%, var(--lf-bg)), color-mix(in oklab, var(--lf-purple) 60%, var(--lf-bg)));
+  border: 1px solid color-mix(in oklab, var(--tone) 55%, transparent);
+}
+.lf-avatar-sm { width: 30px; height: 30px; font-size: 10px; }
+.lf-presence { position: absolute; right: -1px; bottom: -1px; width: 9px; height: 9px; border-radius: 999px; background: var(--lf-run); border: 2px solid var(--lf-panel); }
+.lf-presence[data-busy="true"] { background: var(--lf-maint); }
+.lf-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 11px; border: 1px solid var(--lf-line); background: var(--lf-bg); }
+.lf-tabs button { height: 30px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--lf-dim); border: 1px solid transparent; transition: color 150ms, background-color 150ms, border-color 150ms; }
+.lf-tabs button[data-on="true"] { color: var(--lf-text); background: color-mix(in oklab, var(--lf-violet) 22%, transparent); border-color: color-mix(in oklab, var(--lf-violet) 50%, transparent); }
+.lf-user-row { display: flex; width: 100%; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; border: 1px solid transparent; transition: background-color 150ms, border-color 150ms; }
+.lf-user-row:hover { background: color-mix(in oklab, var(--lf-text) 4%, transparent); }
+.lf-user-row[data-on="true"] { border-color: color-mix(in oklab, var(--lf-magenta) 50%, transparent); background: color-mix(in oklab, var(--lf-magenta) 10%, transparent); }
+.lf-radio { width: 16px; height: 16px; flex-shrink: 0; border-radius: 999px; border: 1.5px solid var(--lf-dim); transition: background-color 150ms, border-color 150ms; }
+.lf-user-row[data-on="true"] .lf-radio { border-color: var(--lf-magenta); background: var(--lf-magenta); box-shadow: inset 0 0 0 3px var(--lf-panel); }
+.lf-save { box-shadow: 0 12px 30px -12px color-mix(in oklab, var(--lf-magenta) 80%, transparent); }
+.lf-sheet { background: transparent; border: 0; padding: 0; box-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-station, .lf-station[data-status="in_use"] .lf-desk-glow { animation: none; }
+  .lf-station:hover .lf-tag, .lf-station:hover .lf-desk, .lf-station[data-selected="true"] .lf-desk { transform: none; }
+}
