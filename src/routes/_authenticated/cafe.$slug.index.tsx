@@ -1,631 +1,513 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { memo, useEffect, useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { motion } from "framer-motion";
-import {
-  Gamepad2, Zap, MonitorPlay, Headset, Car, Cpu, IndianRupee,
-} from "lucide-react";
-import { getCafeBySlug } from "@/lib/cafes.functions";
-import { listDevices, setDeviceStatus, updateDevice, type DeviceStatus } from "@/lib/devices.functions";
-import { listSessions, startSession, endSession, extendSession } from "@/lib/sessions.functions";
-import { listCustomers, createCustomer } from "@/lib/customers.functions";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/EmptyState";
-import { StationModal } from "@/components/StationModal";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogIcon } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
+import { Gamepad2, MousePointerClick, SearchX } from "lucide-react";
 import { toast } from "sonner";
+import { getCafeBySlug } from "@/lib/cafes.functions";
+import { listDevices, setDeviceStatus } from "@/lib/devices.functions";
+import {
+  listSessions, startSession, endSession, extendSession, suspendSession, resumeSession, assignSessionCustomer,
+} from "@/lib/sessions.functions";
+import { listBookings, createBookingForCustomer, updateBookingStatus } from "@/lib/bookings.functions";
+import { listCustomers, createCustomer } from "@/lib/customers.functions";
+import { supabase } from "@/lib/supabase/client";
+import { EmptyState } from "@/components/EmptyState";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { FloorStats, StationToolbar, type FloorView } from "@/components/livefloor/FloorHeader";
+import { FloorScene } from "@/components/livefloor/FloorScene";
+import { FloorFooter } from "@/components/livefloor/FloorFooter";
+import { StationPanel } from "@/components/livefloor/StationPanel";
+import { StationCard, StationRow, type StationAction } from "@/components/livefloor/StationCard";
+import { BookingDialog, type BookingSubmit } from "@/components/livefloor/BookingDialog";
+import { MaintenanceDialog } from "@/components/livefloor/MaintenanceDialog";
+import type { CustomerDraft, FloorCustomer } from "@/components/livefloor/CustomerSelector";
+import {
+  MAINT_PREFIX, countByStatus, filterStations, sortStations, stationCodes, normalizeStatus,
+  type FloorBooking, type FloorDevice, type FloorSession, type SortKey, type StatusFilter,
+} from "@/lib/live-floor";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/")({
   head: () => ({
     meta: [
       { title: "Live Floor — CoreCade" },
-      { name: "description", content: "Mission-control view of every station, live session and rupee on your café floor." },
+      { name: "description", content: "Immersive real-time map of every station, player and running bill on your café floor." },
       { property: "og:title", content: "Live Floor — CoreCade" },
-      { property: "og:description", content: "Mission-control view of every station, live session and rupee on your café floor." },
+      { property: "og:description", content: "Immersive real-time map of every station, player and running bill on your café floor." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: LiveFloor,
 });
 
-/* ------------------------------------------------------------------ */
-/* helpers                                                             */
-/* ------------------------------------------------------------------ */
-
-const TYPE_ICON: Record<string, typeof Cpu> = {
-  pc: MonitorPlay, console: Gamepad2, vr: Headset, racing: Car, other: Cpu,
-};
-
-const FILTERS: { id: "all" | DeviceStatus; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "in_use", label: "Live" },
-  { id: "available", label: "Free" },
-  { id: "reserved", label: "Booked" },
-  { id: "suspended", label: "Suspended" },
-  { id: "maintenance", label: "Maintenance" },
-];
-
-function fmtClock(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const r = s % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
-}
-function billed(startedAt: string, rate: number, now: number) {
-  const minutes = Math.max(1, Math.ceil((now - new Date(startedAt).getTime()) / 60000));
-  return Math.ceil((rate * minutes) / 60);
-}
-function initials(text: string) {
-  return text.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
-}
-function avatarGradient(seed: string) {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
-  return `linear-gradient(135deg, hsl(${h} 85% 58%), hsl(${(h + 60) % 360} 85% 52%))`;
+function useWide() {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia("(min-width: 1280px)");
+    const f = () => setWide(m.matches);
+    f();
+    m.addEventListener("change", f);
+    return () => m.removeEventListener("change", f);
+  }, []);
+  return wide;
 }
 
-type SessionRow = {
-  id: string; device_id: string; started_at: string; status: string;
-  planned_minutes?: number | null; package_name?: string | null;
-  amount_paid?: number | null; paused_ms?: number | null;
-  customers?: { full_name?: string } | null;
-};
-type DeviceRow = {
-  id: string; name: string; type: string; hourly_rate: number; status: string;
-  zone?: string | null; zone_color?: string | null; suspend_until?: string | null;
-};
-
-/* ------------------------------------------------------------------ */
-/* Station pod (memoised)                                              */
-/* ------------------------------------------------------------------ */
-
-const Pod = memo(function Pod({
-  device, session, now, index = 0, onOpen, onStart, onExtend, onEnd,
-}: {
-  device: DeviceRow;
-  session?: SessionRow;
-  now: number;
-  index?: number;
-  onOpen: () => void;
-  onStart: () => void;
-  onExtend?: () => void;
-  onEnd?: () => void;
-}) {
-  const status = (device.status as DeviceStatus) ?? "available";
-  const Icon = TYPE_ICON[device.type] ?? Cpu;
-  const live = status === "in_use" && !!session;
-  const booked = status === "reserved";
-  const broken = status === "maintenance";
-  const paused = status === "suspended";
-
-  const tone = live
-    ? { hex: "#00ff88", rgb: "0,255,136", label: "Live" }
-    : booked
-      ? { hex: "#ffaa00", rgb: "255,170,0", label: "Reserved" }
-      : paused
-        ? { hex: "#94a3b8", rgb: "148,163,184", label: "Suspended" }
-        : broken
-          ? { hex: "#ff5470", rgb: "255,84,112", label: "Maintenance" }
-          : { hex: "#00d4ff", rgb: "0,212,255", label: "Available" };
-
-  // Live timing
-  const elapsedMs = live ? Math.max(0, now - new Date(session!.started_at).getTime() - Number(session!.paused_ms ?? 0)) : 0;
-  const plannedMin = live ? Number(session!.planned_minutes ?? 0) : 0;
-  const remainingMs = plannedMin > 0 ? plannedMin * 60000 - elapsedMs : null;
-  const critical = remainingMs !== null && remainingMs <= 5 * 60000;
-  const warning = remainingMs !== null && !critical && remainingMs <= 10 * 60000;
-  const progress = plannedMin > 0 ? Math.min(100, (elapsedMs / (plannedMin * 60000)) * 100) : null;
-  const clockColor = critical ? "#ff5470" : warning ? "#ffaa00" : tone.hex;
-  const clockText = remainingMs !== null ? fmtClock(Math.max(0, remainingMs)) : fmtClock(elapsedMs);
-
-  const name = session?.customers?.full_name ?? "Walk-in";
-
-  return (
-    <motion.div
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
-      initial={{ opacity: 0, y: 16, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: "spring", damping: 22, stiffness: 280, delay: Math.min(index, 12) * 0.035 }}
-      className={`pod group relative flex min-h-[228px] cursor-pointer select-none flex-col overflow-hidden rounded-[22px] p-4 text-left ${live ? "pod-live" : status === "available" ? "pod-free" : ""}`}
-      style={{
-        background: `linear-gradient(160deg, rgba(${tone.rgb},0.10) 0%, rgba(255,255,255,0.022) 42%, rgba(0,0,0,0.18) 100%)`,
-        border: `1px solid rgba(${tone.rgb},0.28)`,
-        boxShadow: `0 0 0 1px rgba(255,255,255,0.02) inset, 0 18px 40px -24px rgba(${tone.rgb},0.9)`,
-        backdropFilter: "blur(14px)",
-      }}
-      aria-label={`${device.name} — ${status}`}
-    >
-      {/* top accent + sheen */}
-      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: `linear-gradient(90deg, transparent, ${tone.hex}, transparent)` }} aria-hidden />
-      <span className="pod-sheen" aria-hidden />
-
-      {/* header row */}
-      <div className="relative flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          {live ? (
-            <span
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[12px] font-black text-black/85"
-              style={{ background: avatarGradient(name) }}
-            >
-              {initials(name)}
-            </span>
-          ) : (
-            <span
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border"
-              style={{ borderColor: `rgba(${tone.rgb},0.35)`, background: `rgba(${tone.rgb},0.10)` }}
-            >
-              <Icon className="h-4 w-4" style={{ color: tone.hex }} />
-            </span>
-          )}
-          <div className="min-w-0">
-            <div className="truncate text-[14px] font-bold leading-tight">{device.name}</div>
-            <div className="truncate font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-              {device.type} · ₹{device.hourly_rate}/hr
-            </div>
-          </div>
-        </div>
-        <span
-          className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em]"
-          style={{ background: `rgba(${tone.rgb},0.14)`, color: tone.hex, border: `1px solid rgba(${tone.rgb},0.3)` }}
-        >
-          <span
-            className={`mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle ${live ? "animate-dot-pulse" : ""}`}
-            style={{ background: tone.hex }}
-          />
-          {tone.label}
-        </span>
-      </div>
-
-      {/* body */}
-      {live ? (
-        <div className="relative mt-3 flex flex-1 flex-col">
-          <div className="truncate text-[15px] font-bold text-foreground">{name}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            {session?.package_name && (
-              <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-foreground/75">
-                {session.package_name}
-              </span>
-            )}
-            <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 font-mono text-[9px] text-foreground/75">
-              paid ₹{Number(session?.amount_paid ?? 0).toLocaleString("en-IN")}
-            </span>
-          </div>
-
-          <div className="mt-auto pt-3">
-            <div
-              className={`font-mono text-[30px] font-black leading-none tabular-nums ${critical ? "animate-pulse-soft" : ""}`}
-              style={{ color: clockColor, textShadow: `0 0 18px rgba(${tone.rgb},0.35)` }}
-            >
-              {clockText}
-            </div>
-            <div className="mt-1 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
-              <span>{remainingMs !== null ? "remaining" : "elapsed"}</span>
-              <span className="text-[13px] font-bold text-foreground tabular-nums">
-                ₹{billed(session!.started_at, device.hourly_rate, now)}
-              </span>
-            </div>
-            {progress !== null && (
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/8">
-                <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${clockColor}, ${tone.hex})` }} />
-              </div>
-            )}
-          </div>
-
-          {/* hover quick actions */}
-          <div className="pod-actions pointer-events-none absolute inset-x-0 bottom-0 flex gap-1.5 rounded-b-[22px] bg-gradient-to-t from-black/75 to-transparent p-2 pt-6 opacity-0">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onExtend?.(); }}
-              className="pointer-events-auto flex-1 rounded-lg border border-emerald-400/40 bg-emerald-400/12 py-1.5 text-[11px] font-bold text-emerald-200 transition hover:bg-emerald-400/25"
-            >
-              +30m
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onOpen(); }}
-              className="pointer-events-auto flex-1 rounded-lg border border-amber-400/40 bg-amber-400/12 py-1.5 text-[11px] font-bold text-amber-200 transition hover:bg-amber-400/25"
-            >
-              Alert
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onEnd?.(); }}
-              className="pointer-events-auto flex-1 rounded-lg border border-rose-400/40 bg-rose-400/12 py-1.5 text-[11px] font-bold text-rose-200 transition hover:bg-rose-400/25"
-            >
-              End
-            </button>
-          </div>
-        </div>
-      ) : booked ? (
-        <div className="relative mt-3 flex flex-1 flex-col">
-          <div className="grid flex-1 place-items-center text-center">
-            <div>
-              <div className="truncate text-[14px] font-semibold text-foreground/90">
-                {session?.customers?.full_name ?? "Held station"}
-              </div>
-              <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">₹{device.hourly_rate}/hr</div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onStart(); }}
-            className="mt-2 inline-flex w-full items-center justify-center gap-1 rounded-xl border border-amber-400/50 bg-amber-400/15 py-2 text-[12px] font-bold text-amber-200 transition hover:bg-amber-400/25"
-          >
-            Check in
-          </button>
-        </div>
-      ) : paused || broken ? (
-        <div className="relative mt-3 flex flex-1 flex-col">
-          <div className="grid flex-1 place-items-center text-center">
-            <div className="text-[11px] text-muted-foreground">
-              {paused
-                ? device.suspend_until
-                  ? `Back at ${new Date(device.suspend_until).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
-                  : "Temporarily out of rotation"
-                : "Under repair — not bookable"}
-            </div>
-          </div>
-          <span className="inline-flex w-full items-center justify-center rounded-xl border border-white/12 py-2 text-[12px] font-semibold text-foreground/70">
-            Manage
-          </span>
-        </div>
-      ) : (
-        <div className="relative mt-3 flex flex-1 flex-col">
-          <div className="grid flex-1 place-items-center py-2">
-            <Icon
-              className="h-11 w-11 transition-transform duration-200 group-hover:scale-110"
-              style={{ color: tone.hex, filter: `drop-shadow(0 0 14px rgba(${tone.rgb},0.5))` }}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onStart(); }}
-              className="inline-flex h-9 w-full items-center justify-center rounded-xl text-[12px] font-bold text-primary-foreground transition hover:brightness-110"
-              style={{ background: "var(--gradient-brand-hot)" }}
-            >
-              Start session
-            </button>
-            <span className="inline-flex h-8 w-full items-center justify-center rounded-xl border border-white/15 text-[12px] font-semibold text-foreground/80">
-              Book
-            </span>
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-});
-
-
-/* ------------------------------------------------------------------ */
-/* Page                                                                */
-/* ------------------------------------------------------------------ */
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 function LiveFloor() {
   const { slug } = Route.useParams();
-  const updateDev = useServerFn(updateDevice);
+  const qc = useQueryClient();
+  const wide = useWide();
+
   const getCafe = useServerFn(getCafeBySlug);
   const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
-  const cafeId = cafe?.id;
+  const cafeId = cafe?.id as string | undefined;
 
   const lDev = useServerFn(listDevices);
   const lSes = useServerFn(listSessions);
+  const lBk = useServerFn(listBookings);
   const lCus = useServerFn(listCustomers);
 
   const devicesQ = useQuery({
     queryKey: ["devices", cafeId], queryFn: () => lDev({ data: { cafe_id: cafeId! } }),
-    enabled: !!cafeId, refetchInterval: 8000,
+    enabled: !!cafeId, refetchInterval: 10000,
   });
   const sessionsQ = useQuery({
     queryKey: ["sessions", cafeId], queryFn: () => lSes({ data: { cafe_id: cafeId! } }),
-    enabled: !!cafeId, refetchInterval: 8000,
+    enabled: !!cafeId, refetchInterval: 10000,
+  });
+  const bookingsQ = useQuery({
+    queryKey: ["bookings", cafeId], queryFn: () => lBk({ data: { cafe_id: cafeId! } }),
+    enabled: !!cafeId, refetchInterval: 30000,
   });
   const customersQ = useQuery({
     queryKey: ["customers", cafeId], queryFn: () => lCus({ data: { cafe_id: cafeId! } }),
     enabled: !!cafeId,
   });
 
-  const qc = useQueryClient();
-  const start = useServerFn(startSession);
-  const end = useServerFn(endSession);
-  const extendSess = useServerFn(extendSession);
-  const setStatus = useServerFn(setDeviceStatus);
-  const addCust = useServerFn(createCustomer);
-
-  const invalidate = () => {
+  const invalidate = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["devices", cafeId] });
     qc.invalidateQueries({ queryKey: ["sessions", cafeId] });
-  };
+    qc.invalidateQueries({ queryKey: ["bookings", cafeId] });
+  }, [qc, cafeId]);
 
-  const startM = useMutation({
-    mutationFn: start,
-    onSuccess: () => { toast.success("Session started"); invalidate(); setPanel(null); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-  const endM = useMutation({
-    mutationFn: end,
-    onSuccess: (r) => { toast.success(`Session ended · ${r.minutes}m · ₹${r.amount}`); invalidate(); setPanel(null); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-  const statusM = useMutation({
-    mutationFn: setStatus,
-    onSuccess: () => { toast.success("Station updated"); invalidate(); setPanel(null); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-  const updateM = useMutation({
-    mutationFn: updateDev,
-    onSuccess: () => { toast.success("Station saved"); invalidate(); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-  const extendM = useMutation({
-    mutationFn: extendSess,
-    onSuccess: () => { toast.success("+30 minutes added"); invalidate(); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-
-
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
-  const [panel, setPanel] = useState<string | null>(null);       // device id
-  const [walkInOpen, setWalkInOpen] = useState(false);
-  const [search, setSearch] = useState("");
-
-  // Single ticker for the whole floor.
-  const [now, setNow] = useState(() => Date.now());
+  // Instant refresh when anything on the floor changes (falls back to polling if realtime is off).
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const devices = (devicesQ.data ?? []) as unknown as DeviceRow[];
-  const sessions = (sessionsQ.data ?? []) as unknown as SessionRow[];
-  const customers = customersQ.data ?? [];
-
-  const activeByDevice = useMemo(
-    () => new Map(sessions.filter((s) => s.status === "active").map((s) => [s.device_id, s])),
-    [sessions],
-  );
-
-  const counts = useMemo(() => {
-    const c: Record<DeviceStatus, number> = { available: 0, in_use: 0, reserved: 0, suspended: 0, maintenance: 0 };
-    for (const d of devices) {
-      const s = (d.status as DeviceStatus) ?? "available";
-      if (c[s] !== undefined) c[s] += 1;
+    if (!cafeId) return;
+    const ch = supabase.channel(`lf:${cafeId}:${Math.random().toString(36).slice(2, 8)}`);
+    for (const table of ["devices", "sessions", "bookings"]) {
+      ch.on("postgres_changes", { event: "*", schema: "public", table, filter: `cafe_id=eq.${cafeId}` }, () => invalidate());
     }
-    return c;
-  }, [devices]);
+    ch.subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [cafeId, invalidate]);
 
-  const runningTotal = useMemo(() => {
-    let sum = 0;
-    for (const d of devices) {
-      const s = activeByDevice.get(d.id);
-      if (s) sum += billed(s.started_at, d.hourly_rate, now);
+  const start = useServerFn(startSession);
+  const end = useServerFn(endSession);
+  const extend = useServerFn(extendSession);
+  const suspend = useServerFn(suspendSession);
+  const resume = useServerFn(resumeSession);
+  const assign = useServerFn(assignSessionCustomer);
+  const setStatus = useServerFn(setDeviceStatus);
+  const book = useServerFn(createBookingForCustomer);
+  const setBooking = useServerFn(updateBookingStatus);
+  const addCust = useServerFn(createCustomer);
+
+  const devices = (devicesQ.data ?? []) as unknown as FloorDevice[];
+  const sessions = (sessionsQ.data ?? []) as unknown as (FloorSession & { ended_at?: string | null; amount?: number | null })[];
+  const bookings = (bookingsQ.data ?? []) as unknown as FloorBooking[];
+  const customers = (customersQ.data ?? []) as unknown as FloorCustomer[];
+
+  const codes = useMemo(() => stationCodes(devices), [devices]);
+  const counts = useMemo(() => countByStatus(devices), [devices]);
+
+  const sessionsByDevice = useMemo(() => {
+    const m = new Map<string, FloorSession>();
+    for (const s of sessions) {
+      if ((s.status === "active" || s.status === "paused") && !s.ended_at && !m.has(s.device_id)) m.set(s.device_id, s);
     }
-    return sum;
-  }, [devices, activeByDevice, now]);
+    return m;
+  }, [sessions]);
+
+  const bookingsByDevice = useMemo(() => {
+    const now = Date.now();
+    const m = new Map<string, FloorBooking>();
+    const live = bookings
+      .filter((b) => (b.status === "pending" || b.status === "confirmed") &&
+        new Date(b.scheduled_at).getTime() + b.duration_minutes * 60000 > now)
+      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+    for (const b of live) if (!m.has(b.device_id)) m.set(b.device_id, b);
+    return m;
+  }, [bookings]);
+
+  const playingOn = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const [deviceId, s] of sessionsByDevice) {
+      if (s.customer_id) m.set(s.customer_id, codes.get(deviceId) ?? "");
+    }
+    return m;
+  }, [sessionsByDevice, codes]);
 
   const revenueToday = useMemo(() => {
     const today = new Date().toDateString();
-    return (sessionsQ.data ?? []).reduce(
-      (sum, s) => sum + ((s as { ended_at?: string | null; amount?: number | null }).ended_at &&
-        new Date((s as { ended_at: string }).ended_at).toDateString() === today
-        ? ((s as { amount?: number | null }).amount ?? 0) : 0),
-      0,
-    );
-  }, [sessionsQ.data]);
+    return sessions.reduce((sum, s) =>
+      sum + (s.ended_at && new Date(s.ended_at).toDateString() === today ? Number(s.amount ?? 0) : 0), 0);
+  }, [sessions]);
 
-  const filtered = filter === "all" ? devices : devices.filter((d) => d.status === filter);
-  const selected = devices.find((d) => d.id === panel) ?? null;
-  const selectedSession = selected ? activeByDevice.get(selected.id) : undefined;
+  // ---- filters / view ----
+  const [filter, setFilter] = useState<StatusFilter>("all");
+  const [type, setType] = useState("all");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("name");
+  const [view, setView] = useState<FloorView>("floor");
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
-  const filteredCustomers = customers.filter((c) =>
-    !search || (c.full_name ?? "").toLowerCase().includes(search.toLowerCase()) || (c.phone ?? "").includes(search),
+  useEffect(() => {
+    const v = window.localStorage.getItem("lf:view");
+    if (v === "floor" || v === "grid" || v === "list") setView(v);
+  }, []);
+  const changeView = useCallback((v: FloorView) => {
+    setView(v);
+    window.localStorage.setItem("lf:view", v);
+  }, []);
+
+  const types = useMemo(() => [...new Set(devices.map((d) => d.type))], [devices]);
+  const visible = useMemo(
+    () => sortStations(filterStations(devices, { status: filter, type, query, codes, sessionsByDevice }), sort, codes),
+    [devices, filter, type, query, codes, sessionsByDevice, sort],
   );
 
+  // ---- selection: undefined = auto-pick on wide screens, null = closed ----
+  const [selectedId, setSelectedId] = useState<string | null | undefined>(undefined);
+  const effectiveId = selectedId === undefined ? (wide ? visible[0]?.id ?? null : null) : selectedId;
+  const selected = devices.find((d) => d.id === effectiveId) ?? null;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      if (e.key === "/" && !typing) { e.preventDefault(); searchRef.current?.focus(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // ---- actions ----
+  const [busy, setBusy] = useState(false);
+  const [bookingFor, setBookingFor] = useState<string | null>(null);
+  const [maintFor, setMaintFor] = useState<string | null>(null);
+
+  const run = useCallback(async (fn: () => Promise<string | void>) => {
+    setBusy(true);
+    try {
+      const msg = await fn();
+      if (msg) toast.success(msg);
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+      invalidate();
+    }
+  }, [invalidate]);
+
+  const resolveCustomer = useCallback(async (draft: Exclude<CustomerDraft, null>): Promise<string> => {
+    if (draft.kind === "existing") return draft.customer.id;
+    const c = await addCust({ data: { cafe_id: cafeId!, full_name: draft.full_name.trim(), phone: draft.phone.trim() || null, email: null } });
+    qc.invalidateQueries({ queryKey: ["customers", cafeId] });
+    if (!c?.id) throw new Error("Could not add the customer");
+    return c.id as string;
+  }, [addCust, cafeId, qc]);
+
+  const codeOf = useCallback((id: string) => codes.get(id) ?? "Station", [codes]);
+
+  const ops = useMemo(() => ({
+    start: (deviceId: string, draft: Exclude<CustomerDraft, null> | null, minutes: number) => run(async () => {
+      const customerId = draft ? await resolveCustomer(draft) : undefined;
+      await start({ data: {
+        cafe_id: cafeId!, device_id: deviceId, customer_id: customerId ?? null,
+        planned_minutes: minutes > 0 ? minutes : null,
+        package_name: minutes > 0 ? `${minutes} min` : null,
+        payment_method: "counter",
+      } });
+      return `Session started on ${codeOf(deviceId)}`;
+    }),
+    assign: (deviceId: string, draft: Exclude<CustomerDraft, null>) => run(async () => {
+      const s = sessionsByDevice.get(deviceId);
+      if (!s) throw new Error("No session is running here");
+      const customerId = await resolveCustomer(draft);
+      await assign({ data: { id: s.id, customer_id: customerId } });
+      return "Player updated";
+    }),
+    extend: (deviceId: string) => run(async () => {
+      const s = sessionsByDevice.get(deviceId);
+      if (!s) throw new Error("No session is running here");
+      await extend({ data: { id: s.id, add_minutes: 30 } });
+      return "+30 minutes added";
+    }),
+    pause: (deviceId: string) => run(async () => {
+      const s = sessionsByDevice.get(deviceId);
+      if (s) { await suspend({ data: { id: s.id } }); return "Session paused"; }
+      await setStatus({ data: { id: deviceId, status: "suspended" } });
+      return `${codeOf(deviceId)} paused`;
+    }),
+    resume: (deviceId: string) => run(async () => {
+      const s = sessionsByDevice.get(deviceId);
+      if (!s) throw new Error("No paused session here");
+      await resume({ data: { id: s.id } });
+      return "Session resumed";
+    }),
+    end: (deviceId: string) => run(async () => {
+      const s = sessionsByDevice.get(deviceId);
+      if (!s) throw new Error("No session is running here");
+      const r = await end({ data: { id: s.id } });
+      return `Session ended · ${r.minutes} min · ₹${r.amount}${r.due > 0 ? ` (₹${r.due} due)` : ""}`;
+    }),
+    available: (deviceId: string) => run(async () => {
+      const d = devices.find((x) => x.id === deviceId);
+      await setStatus({ data: { id: deviceId, status: "available", ...((d?.notes ?? "").startsWith(MAINT_PREFIX) ? { notes: "" } : {}) } });
+      return `${codeOf(deviceId)} is available`;
+    }),
+    checkIn: (deviceId: string) => run(async () => {
+      const b = bookingsByDevice.get(deviceId);
+      await start({ data: {
+        cafe_id: cafeId!, device_id: deviceId, customer_id: b?.customer_id ?? null,
+        planned_minutes: b?.duration_minutes ?? null,
+        package_name: b ? `Booking · ${b.duration_minutes} min` : null,
+        payment_method: "counter",
+      } });
+      if (b) await setBooking({ data: { id: b.id, status: "completed" } });
+      return `Checked in on ${codeOf(deviceId)}`;
+    }),
+    cancelBooking: (deviceId: string) => run(async () => {
+      const b = bookingsByDevice.get(deviceId);
+      if (b) await setBooking({ data: { id: b.id, status: "cancelled" } });
+      await setStatus({ data: { id: deviceId, status: "available" } });
+      return b ? "Booking cancelled" : `${codeOf(deviceId)} released`;
+    }),
+  }), [run, resolveCustomer, start, assign, extend, suspend, resume, end, setStatus, setBooking,
+    cafeId, codeOf, sessionsByDevice, bookingsByDevice, devices]);
+
+  const opsRef = useRef(ops);
+  opsRef.current = ops;
+
+  const onSelect = useCallback((id: string) => setSelectedId(id), []);
+  const onCardAction = useCallback((id: string, a: StationAction) => {
+    const o = opsRef.current;
+    if (a === "start" || a === "details") setSelectedId(id);
+    else if (a === "book") setBookingFor(id);
+    else if (a === "extend") o.extend(id);
+    else if (a === "checkin") o.checkIn(id);
+    else if (a === "resolve") o.available(id);
+    else if (a === "resume") o.resume(id);
+    else if (a === "maintenance") setMaintFor(id);
+  }, []);
+
+  const quickStart = useCallback(() => {
+    const free = devices.find((d) => normalizeStatus(d.status) === "available");
+    if (free) { setSelectedId(free.id); setFilter("all"); }
+  }, [devices]);
+
+  const submitBooking = (v: BookingSubmit) => {
+    const deviceId = bookingFor;
+    if (!deviceId || !v.draft) return;
+    const draft = v.draft;
+    run(async () => {
+      const customerId = await resolveCustomer(draft);
+      await book({ data: { cafe_id: cafeId!, device_id: deviceId, customer_id: customerId, scheduled_at: v.scheduledAt, duration_minutes: v.minutes } });
+      const soon = new Date(v.scheduledAt).getTime() - Date.now() <= 30 * 60000;
+      const d = devices.find((x) => x.id === deviceId);
+      if (soon && normalizeStatus(d?.status) === "available") {
+        await setStatus({ data: { id: deviceId, status: "reserved" } });
+      }
+      setBookingFor(null);
+      return `${codeOf(deviceId)} booked`;
+    });
+  };
+
+  const confirmMaintenance = (v: { notes: string; endSession: boolean }) => {
+    const deviceId = maintFor;
+    if (!deviceId) return;
+    run(async () => {
+      const s = sessionsByDevice.get(deviceId);
+      if (v.endSession && s) await end({ data: { id: s.id } });
+      await setStatus({ data: { id: deviceId, status: "maintenance", notes: v.notes } });
+      setMaintFor(null);
+      return `${codeOf(deviceId)} sent to maintenance`;
+    });
+  };
+
+  // ---- render ----
   if (!cafeId || devicesQ.isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-[52px] animate-pulse rounded-2xl border border-white/8 bg-white/[0.03]" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="skeleton h-[200px] rounded-2xl border border-white/8" />
-          ))}
+      <div className="lf-root space-y-3">
+        <div className="lf-panel h-[86px] animate-pulse" />
+        <div className="lf-panel h-[52px] animate-pulse" />
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="lf-scene animate-pulse" />
+          <div className="lf-side hidden h-[560px] animate-pulse xl:block" />
         </div>
       </div>
     );
   }
 
+  const panel = selected ? (
+    <StationPanel
+      key={selected.id}
+      slug={slug}
+      device={selected}
+      code={codeOf(selected.id)}
+      session={sessionsByDevice.get(selected.id)}
+      booking={bookingsByDevice.get(selected.id)}
+      customers={customers}
+      playingOn={playingOn}
+      busy={busy}
+      handlers={{
+        onClose: () => setSelectedId(null),
+        onStart: (draft, minutes) => ops.start(selected.id, draft, minutes),
+        onAssign: (draft) => ops.assign(selected.id, draft),
+        onExtend: () => ops.extend(selected.id),
+        onPause: () => ops.pause(selected.id),
+        onResume: () => ops.resume(selected.id),
+        onEnd: () => ops.end(selected.id),
+        onBook: () => setBookingFor(selected.id),
+        onMaintenance: () => setMaintFor(selected.id),
+        onAvailable: () => ops.available(selected.id),
+        onCheckIn: () => ops.checkIn(selected.id),
+        onCancelBooking: () => ops.cancelBooking(selected.id),
+      }}
+    />
+  ) : null;
+
+  const bookingDevice = devices.find((d) => d.id === bookingFor) ?? null;
+  const maintDevice = devices.find((d) => d.id === maintFor) ?? null;
+  const healthy = !devicesQ.isError && !sessionsQ.isError;
+
   return (
-    <div className="console-atmos space-y-4">
-      <div className="orb-a" aria-hidden />
-      <div className="orb-b" aria-hidden />
-      {/* ===== HUD BAR ===== */}
-      <div
-        className="sticky top-[52px] z-20 -mx-3 flex h-[56px] items-center gap-2.5 overflow-x-auto px-3 sm:mx-0 sm:rounded-2xl"
-        style={{
-          background: "rgba(10,0,20,0.9)",
-          backdropFilter: "blur(20px)",
-          border: "1px solid rgba(255,255,255,0.07)",
-        }}
-      >
-        <div className="flex shrink-0 items-center gap-2 font-mono text-[11px] tabular-nums">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-emerald-300">
-            <span className={`h-1.5 w-1.5 rounded-full bg-emerald-400 ${counts.in_use > 0 ? "animate-pulse" : ""}`} />
-            {counts.in_use} LIVE
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/25 bg-sky-400/10 px-2.5 py-1 text-sky-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-            {counts.available} FREE
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 text-amber-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-            {counts.reserved} BOOKED
-          </span>
-        </div>
-        <span className="h-6 w-px shrink-0 bg-white/10" />
-        <div className="flex shrink-0 items-center gap-3 font-mono text-[12px] tabular-nums text-muted-foreground">
-          <span className={`font-bold text-foreground ${counts.in_use > 0 ? "animate-pulse-soft ticker-glow" : ""}`}>
-            ⚡ ₹{runningTotal.toLocaleString("en-IN")} running
-          </span>
-          <span>₹{revenueToday.toLocaleString("en-IN")} today</span>
-        </div>
-        <Button
-          onClick={() => setWalkInOpen(true)}
-          disabled={counts.available === 0}
-          className="btn-glow-magenta ml-auto h-9 shrink-0 gap-1.5 text-primary-foreground"
-          style={{ background: "var(--gradient-brand-hot)" }}
-        >
-          <Zap className="h-4 w-4" /> Session
-        </Button>
-      </div>
+    <div className="lf-root space-y-3">
+      <FloorStats
+        counts={counts}
+        devices={devices}
+        sessionsByDevice={sessionsByDevice}
+        revenueToday={revenueToday}
+        onQuickStart={quickStart}
+      />
+      <StationToolbar
+        counts={counts}
+        filter={filter}
+        onFilter={setFilter}
+        onQuery={setQuery}
+        sort={sort}
+        onSort={setSort}
+        view={view}
+        onView={changeView}
+        type={type}
+        onType={setType}
+        types={types}
+        searchRef={searchRef}
+      />
 
-      {/* ===== FILTER PILLS ===== */}
-      <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">
-        {FILTERS.map((f) => {
-          const n = f.id === "all" ? devices.length : counts[f.id as DeviceStatus];
-          const active = filter === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] ${active ? "pill-on" : "pill-off"}`}
-            >
-              {f.label}
-              <span className={`ml-1.5 rounded-full px-1.5 ${active ? "bg-black/30" : "bg-white/10"}`}>{n}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ===== STATION GRID ===== */}
-      {devices.length === 0 ? (
-        <EmptyState
-          icon={Gamepad2}
-          title="No stations yet"
-          description="Head to Devices to add your first PC, console, or VR rig."
-        />
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5"
-        >
-          {filtered.map((d, i) => {
-            const s = activeByDevice.get(d.id);
-            return (
-              <Pod
-                key={d.id}
-                device={d}
-                session={s}
-                now={now}
-                index={i}
-                onOpen={() => setPanel(d.id)}
-                onStart={() => setPanel(d.id)}
-                onExtend={s ? () => extendM.mutate({ data: { id: s.id, add_minutes: 30 } }) : undefined}
-                onEnd={s ? () => endM.mutate({ data: { id: s.id } }) : undefined}
-              />
-            );
-          })}
-        </motion.div>
-      )}
-
-
-      {/* ===== STATION CENTER MODAL ===== */}
-      {selected && (
-        <StationModal
-          device={selected}
-          session={selectedSession}
-          now={now}
-          customers={customers as never}
-          onClose={() => setPanel(null)}
-          starting={startM.isPending}
-          ending={endM.isPending}
-          saving={updateM.isPending}
-          onStart={(customerId) =>
-            startM.mutate({ data: { cafe_id: cafeId, device_id: selected.id, customer_id: customerId } })
-          }
-          onEnd={() => selectedSession && endM.mutate({ data: { id: selectedSession.id } })}
-          onSetStatus={(status, opts) =>
-            statusM.mutate({ data: { id: selected.id, status, ...(opts ?? {}) } })
-          }
-          onSaveEdit={(patch) => updateM.mutate({ data: { id: selected.id, patch } })}
-        />
-      )}
-
-
-      {/* ===== WALK-IN ===== */}
-      <Dialog open={walkInOpen} onOpenChange={setWalkInOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogIcon><Zap className="h-5 w-5" /></DialogIcon>
-            <DialogTitle>New session</DialogTitle>
-          </DialogHeader>
-          <form
-            className="space-y-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              const fullName = String(fd.get("full_name") || "").trim();
-              const phone = String(fd.get("phone") || "").trim();
-              const deviceId = String(fd.get("device_id") || "");
-              try {
-                let customerId: string | undefined;
-                if (fullName || phone) {
-                  const cust = await addCust({
-                    data: { cafe_id: cafeId, full_name: fullName || "Walk-in", phone: phone || null, email: null },
-                  });
-                  customerId = cust?.id;
-                  qc.invalidateQueries({ queryKey: ["customers", cafeId] });
-                }
-                startM.mutate({ data: { cafe_id: cafeId, device_id: deviceId, customer_id: customerId } });
-                setWalkInOpen(false);
-              } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Failed");
-              }
-            }}
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Name (optional)</Label>
-                <Input name="full_name" placeholder="Walk-in" autoFocus />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Phone (optional)</Label>
-                <Input name="phone" type="tel" inputMode="tel" placeholder="+91…" />
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0">
+          {devices.length === 0 ? (
+            <EmptyState icon={Gamepad2} title="No stations yet" description="Head to Devices to add your first PC, console, or VR rig." />
+          ) : visible.length === 0 ? (
+            <div className="lf-panel grid min-h-[320px] place-items-center p-8 text-center">
+              <div>
+                <SearchX className="mx-auto h-8 w-8 text-lf-dim" />
+                <div className="mt-2 text-[14px] font-semibold">No stations match</div>
+                <button type="button" className="lf-btn mt-3" onClick={() => { setFilter("all"); setType("all"); setQuery(""); }}>
+                  Clear filters
+                </button>
               </div>
             </div>
+          ) : view === "floor" ? (
+            <FloorScene
+              devices={visible}
+              codes={codes}
+              sessionsByDevice={sessionsByDevice}
+              bookingsByDevice={bookingsByDevice}
+              selectedId={effectiveId}
+              onSelect={onSelect}
+            />
+          ) : view === "grid" ? (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
+              {visible.map((d) => (
+                <StationCard
+                  key={d.id}
+                  device={d}
+                  code={codeOf(d.id)}
+                  session={sessionsByDevice.get(d.id)}
+                  booking={bookingsByDevice.get(d.id)}
+                  selected={effectiveId === d.id}
+                  onSelect={onSelect}
+                  onAction={onCardAction}
+                />
+              ))}
+            </div>
+          ) : (
             <div className="space-y-1.5">
-              <Label>Allot a station</Label>
-              <select
-                name="device_id"
-                required
-                defaultValue={devices.find((d) => d.status === "available")?.id ?? ""}
-                className="field-select"
-              >
-                <option value="" disabled>Choose…</option>
-                {devices.filter((d) => d.status === "available").map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} · {d.type.toUpperCase()} · ₹{d.hourly_rate}/hr
-                  </option>
-                ))}
-              </select>
+              {visible.map((d) => (
+                <StationRow
+                  key={d.id}
+                  device={d}
+                  code={codeOf(d.id)}
+                  session={sessionsByDevice.get(d.id)}
+                  booking={bookingsByDevice.get(d.id)}
+                  selected={effectiveId === d.id}
+                  onSelect={onSelect}
+                  onAction={onCardAction}
+                />
+              ))}
             </div>
-            <DialogFooter className="pt-1">
-              <Button type="submit" disabled={counts.available === 0 || startM.isPending}
-                className="h-12 w-full gap-1.5 rounded-xl text-[15px] font-bold text-primary-foreground"
-                style={{ background: "var(--gradient-brand-hot)" }}>
-                <IndianRupee className="h-4 w-4" /> {startM.isPending ? "Processing…" : "Seat & start"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          )}
+        </div>
+
+        {wide && (
+          <div className="sticky top-[68px] self-start">
+            {panel ?? (
+              <div className="lf-side grid min-h-[420px] place-items-center p-8 text-center">
+                <div>
+                  <MousePointerClick className="mx-auto h-8 w-8 text-lf-violet" />
+                  <div className="mt-2 text-[14px] font-semibold">Select a station</div>
+                  <p className="mt-1 text-[12px] text-lf-dim">Click any desk on the floor to see who's playing and take action.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <FloorFooter counts={counts} sessions={sessions} healthy={healthy} now={Date.now()} />
+
+      {!wide && (
+        <Sheet open={!!selected} onOpenChange={(o) => { if (!o) setSelectedId(null); }}>
+          <SheetContent side="bottom" className="lf-sheet lf-scroll max-h-[90vh] overflow-y-auto [&>button]:hidden">
+            <SheetTitle className="sr-only">{selected ? `${codeOf(selected.id)} details` : "Station details"}</SheetTitle>
+            {panel}
+          </SheetContent>
+        </Sheet>
+      )}
+
+      <BookingDialog
+        open={!!bookingDevice}
+        device={bookingDevice}
+        code={bookingDevice ? codeOf(bookingDevice.id) : ""}
+        customers={customers}
+        bookings={bookings}
+        busy={busy}
+        onClose={() => setBookingFor(null)}
+        onSubmit={submitBooking}
+      />
+      <MaintenanceDialog
+        open={!!maintDevice}
+        code={maintDevice ? codeOf(maintDevice.id) : ""}
+        name={maintDevice?.name ?? ""}
+        hasSession={!!(maintDevice && sessionsByDevice.get(maintDevice.id))}
+        busy={busy}
+        onClose={() => setMaintFor(null)}
+        onConfirm={confirmMaintenance}
+      />
     </div>
   );
 }
-

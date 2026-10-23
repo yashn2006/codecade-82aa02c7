@@ -117,6 +117,19 @@ export const resumeSession = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Attach (or swap) the customer on a running session — e.g. a walk-in who gave their name later. */
+export const assignSessionCustomer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), customer_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("sessions").update({ customer_id: data.customer_id }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /** Internal staff note on a session. */
 export const setSessionNotes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
