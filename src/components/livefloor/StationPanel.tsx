@@ -5,6 +5,7 @@ import {
   Save, Clock, IndianRupee,
 } from "lucide-react";
 import heroImg from "@/assets/livefloor/station-hero.jpg";
+import { STATION_ART_SIZE, stationArt } from "./station-art";
 import { LiveClock, SessionProgress, StatusBadge, TYPE_ICON, toneStyle } from "./StationCard";
 import { findExistingMatch, type CustomerDraft, type FloorCustomer } from "./CustomerSelector";
 import { useNow } from "@/hooks/useNow";
@@ -142,7 +143,19 @@ export function StationPanel({
       {/* hero */}
       <div className="px-4">
         <div className="lf-side-hero">
-          <img src={heroImg} alt={`${device.name} station`} width={1088} height={608} loading="lazy" />
+          {device.type === "pc" || device.type === "other" ? (
+            <img src={heroImg} alt={`${device.name} station`} width={1088} height={608} loading="lazy" />
+          ) : (
+            <div className="lf-side-hero-art">
+              <img
+                src={stationArt(device.type)}
+                alt={`${device.name} station`}
+                width={STATION_ART_SIZE.width}
+                height={STATION_ART_SIZE.height}
+                loading="lazy"
+              />
+            </div>
+          )}
           <div className="lf-side-hero-shade" />
           <div className="absolute inset-x-3 bottom-2.5 flex items-end justify-between gap-2">
             {hasSession ? (

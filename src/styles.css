@@ -1013,9 +1013,9 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
 }
 .lf-scene-grid {
   position: relative;
-  display: grid; gap: 10px 14px;
+  display: grid; gap: 22px 16px;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  padding: clamp(48px, 7vw, 96px) clamp(14px, 4%, 48px) 28px;
+  padding: clamp(40px, 6vw, 80px) clamp(14px, 4%, 48px) 32px;
 }
 @media (max-width: 640px) {
   .lf-scene { min-height: 420px; }
@@ -1035,7 +1035,7 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
 .lf-tag {
   position: relative; z-index: 2;
   display: flex; flex-direction: column;
-  width: 100%; max-width: 150px; margin-bottom: -18px;
+  width: 86%; max-width: 136px; margin-bottom: 6px;
   padding: 6px 9px 7px; border-radius: 10px; text-align: left;
   background: color-mix(in oklab, var(--lf-bg) 74%, transparent);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -1044,7 +1044,7 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
   transition: transform 200ms cubic-bezier(.2,.7,.2,1), box-shadow 200ms ease, border-color 200ms ease;
 }
 .lf-tag::after {
-  content: ""; position: absolute; left: 50%; bottom: -9px; width: 1px; height: 9px;
+  content: ""; position: absolute; left: 50%; bottom: -7px; width: 1px; height: 7px;
   background: linear-gradient(var(--tone), transparent);
 }
 .lf-tag-ico {
@@ -1052,25 +1052,42 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
   width: 15px; height: 15px; border-radius: 999px;
   background: var(--tone); color: var(--lf-bg);
 }
-.lf-desk-wrap { position: relative; width: 100%; aspect-ratio: 896 / 752; pointer-events: none; }
+.lf-desk-wrap { position: relative; width: 100%; aspect-ratio: 640 / 560; pointer-events: none; }
+/* neon floor pad the station stands on */
+.lf-desk-pad {
+  position: absolute; left: 6%; right: 6%; top: 22%; bottom: 1%;
+  border-radius: 14px; transform: perspective(600px) rotateX(38deg); transform-origin: 50% 100%;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--tone) 10%, transparent), color-mix(in oklab, var(--tone) 4%, transparent)),
+    color-mix(in oklab, var(--lf-bg) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--tone) 38%, transparent);
+  box-shadow: 0 0 22px -6px color-mix(in oklab, var(--tone) 70%, transparent), inset 0 0 26px -10px color-mix(in oklab, var(--tone) 60%, transparent);
+  transition: border-color 260ms ease, box-shadow 260ms ease;
+}
 .lf-desk {
   position: relative; width: 100%; height: 100%; object-fit: contain;
-  mix-blend-mode: screen; user-select: none;
-  filter: brightness(0.9);
+  user-select: none;
+  filter: drop-shadow(0 14px 14px color-mix(in oklab, var(--lf-bg) 85%, transparent)) brightness(0.95);
   transition: transform 260ms cubic-bezier(.2,.7,.2,1), filter 260ms ease;
 }
 .lf-desk-glow {
-  position: absolute; left: 14%; right: 14%; bottom: 6%; height: 34%;
-  border-radius: 50%; filter: blur(20px); opacity: 0.55;
-  background: radial-gradient(closest-side, color-mix(in oklab, var(--tone) 75%, transparent), transparent);
+  position: absolute; left: 12%; right: 12%; bottom: 2%; height: 30%;
+  border-radius: 50%; filter: blur(22px); opacity: 0.5;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--tone) 80%, transparent), transparent);
   transition: opacity 260ms ease;
 }
-.lf-station[data-status="in_use"] .lf-desk { filter: brightness(1.05) saturate(1.1); }
+.lf-station[data-status="in_use"] .lf-desk { filter: drop-shadow(0 14px 14px color-mix(in oklab, var(--lf-bg) 85%, transparent)) drop-shadow(0 0 10px color-mix(in oklab, var(--tone) 45%, transparent)) brightness(1.05) saturate(1.1); }
 .lf-station[data-status="in_use"] .lf-desk-glow { animation: lf-glow-breathe 3.2s ease-in-out infinite; }
-.lf-station[data-status="available"] .lf-desk { filter: brightness(0.82); }
-.lf-station[data-status="reserved"] .lf-desk { filter: brightness(0.9) hue-rotate(-20deg); }
-.lf-station[data-status="suspended"] .lf-desk { filter: grayscale(0.7) brightness(0.55); }
-.lf-station[data-status="maintenance"] .lf-desk { filter: grayscale(0.6) sepia(0.5) hue-rotate(-30deg) brightness(0.55); }
+.lf-station[data-status="available"] .lf-desk { filter: drop-shadow(0 14px 14px color-mix(in oklab, var(--lf-bg) 85%, transparent)) brightness(0.85); }
+.lf-station[data-status="reserved"] .lf-desk { filter: drop-shadow(0 14px 14px color-mix(in oklab, var(--lf-bg) 85%, transparent)) brightness(0.9) hue-rotate(-18deg); }
+.lf-station[data-status="suspended"] .lf-desk { filter: drop-shadow(0 14px 14px color-mix(in oklab, var(--lf-bg) 85%, transparent)) grayscale(0.7) brightness(0.55); }
+.lf-station[data-status="maintenance"] .lf-desk { filter: drop-shadow(0 14px 14px color-mix(in oklab, var(--lf-bg) 85%, transparent)) grayscale(0.6) sepia(0.5) hue-rotate(-30deg) brightness(0.55); }
+.lf-station:hover .lf-desk-pad, .lf-station[data-selected="true"] .lf-desk-pad { border-color: var(--tone); box-shadow: 0 0 30px -4px color-mix(in oklab, var(--tone) 80%, transparent), inset 0 0 30px -8px color-mix(in oklab, var(--tone) 70%, transparent); }
+.lf-side-hero-art {
+  width: 100%; height: 100%; display: grid; place-items: center;
+  background: radial-gradient(90% 80% at 50% 70%, color-mix(in oklab, var(--tone) 28%, var(--lf-bg)) 0%, var(--lf-bg) 75%);
+}
+.lf-side-hero .lf-side-hero-art img { width: auto; height: 92%; object-fit: contain; }
 .lf-station:hover .lf-tag { transform: translateY(-3px); border-color: var(--tone); }
 .lf-station:hover .lf-desk { transform: scale(1.04); }
 .lf-station:hover .lf-desk-glow { opacity: 0.9; }
