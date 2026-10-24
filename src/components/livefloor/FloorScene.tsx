@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { Cpu, Wrench, CalendarClock, PauseCircle, Play, CircleDot } from "lucide-react";
 import roomImg from "@/assets/livefloor/floor-room.jpg";
-import deskImg from "@/assets/livefloor/desk.jpg";
+import { STATION_ART_SIZE, stationArt } from "./station-art";
 import { LiveClock, TYPE_ICON, toneStyle } from "./StationCard";
 import {
   STATUS_META, normalizeStatus, fmtTime,
@@ -71,10 +71,19 @@ const FloorStation = memo(function FloorStation({
         </span>
       </span>
 
-      {/* desk */}
-      <span className="lf-desk-wrap" aria-hidden>
+      {/* station render — matches the device type */}
+      <span className="lf-desk-wrap" data-type={device.type} aria-hidden>
+        <span className="lf-desk-pad" />
         <span className="lf-desk-glow" />
-        <img src={deskImg} alt="" width={896} height={752} loading="lazy" className="lf-desk" draggable={false} />
+        <img
+          src={stationArt(device.type)}
+          alt=""
+          width={STATION_ART_SIZE.width}
+          height={STATION_ART_SIZE.height}
+          loading="lazy"
+          className="lf-desk"
+          draggable={false}
+        />
       </span>
     </button>
   );
