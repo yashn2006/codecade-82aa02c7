@@ -9,123 +9,71 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as SetupRouteImport } from './routes/setup'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
-import { Route as RedirectingRouteImport } from './routes/redirecting'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as LfPreviewTmpRouteImport } from './routes/lf-preview-tmp'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as FeaturesRouteImport } from './routes/features'
-import { Route as DiscoverRouteImport } from './routes/discover'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CSlugRouteImport } from './routes/c.$slug'
-import { Route as ApiSitemapDotxmlRouteImport } from './routes/api/sitemap[.]xml'
-import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
-import { Route as AuthenticatedOwnerRouteImport } from './routes/_authenticated/owner'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RedirectingRouteImport } from './routes/redirecting'
+import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedOwnerRouteImport } from './routes/_authenticated/owner'
+import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
+import { Route as ApiSitemapDotxmlRouteImport } from './routes/api/sitemap[.]xml'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
-import { Route as AuthenticatedOwnerHelpRouteImport } from './routes/_authenticated/owner_.help'
-import { Route as AuthenticatedCafeSlugRouteImport } from './routes/_authenticated/cafe.$slug'
-import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
-import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin.support'
-import { Route as AuthenticatedAdminSubscriptionsRouteImport } from './routes/_authenticated/admin.subscriptions'
-import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
-import { Route as AuthenticatedAdminRevenueRouteImport } from './routes/_authenticated/admin.revenue'
-import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
-import { Route as AuthenticatedAdminLeadsRouteImport } from './routes/_authenticated/admin.leads'
-import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
-import { Route as AuthenticatedAdminConfigRouteImport } from './routes/_authenticated/admin.config'
-import { Route as AuthenticatedAdminCafesRouteImport } from './routes/_authenticated/admin.cafes'
-import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated/admin.billing'
-import { Route as AuthenticatedAdminBackupsRouteImport } from './routes/_authenticated/admin.backups'
-import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
-import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin.api-keys'
 import { Route as AuthenticatedAdminAnnouncementsRouteImport } from './routes/_authenticated/admin.announcements'
+import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin.api-keys'
+import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedAdminBackupsRouteImport } from './routes/_authenticated/admin.backups'
+import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated/admin.billing'
+import { Route as AuthenticatedAdminCafesRouteImport } from './routes/_authenticated/admin.cafes'
+import { Route as AuthenticatedAdminConfigRouteImport } from './routes/_authenticated/admin.config'
+import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
+import { Route as AuthenticatedAdminLeadsRouteImport } from './routes/_authenticated/admin.leads'
+import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
+import { Route as AuthenticatedAdminRevenueRouteImport } from './routes/_authenticated/admin.revenue'
+import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
+import { Route as AuthenticatedAdminSubscriptionsRouteImport } from './routes/_authenticated/admin.subscriptions'
+import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin.support'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
+import { Route as AuthenticatedCafeSlugRouteImport } from './routes/_authenticated/cafe.$slug'
+import { Route as AuthenticatedOwnerHelpRouteImport } from './routes/_authenticated/owner_.help'
 import { Route as AuthenticatedCafeSlugIndexRouteImport } from './routes/_authenticated/cafe.$slug.index'
-import { Route as CSlugTournamentsIdRouteImport } from './routes/c.$slug.tournaments.$id'
-import { Route as ApiPublicCronTrialEmailsRouteImport } from './routes/api/public/cron/trial-emails'
-import { Route as AuthenticatedCafeSlugWalletRouteImport } from './routes/_authenticated/cafe.$slug.wallet'
-import { Route as AuthenticatedCafeSlugTournamentsRouteImport } from './routes/_authenticated/cafe.$slug.tournaments'
-import { Route as AuthenticatedCafeSlugSupportRouteImport } from './routes/_authenticated/cafe.$slug.support'
-import { Route as AuthenticatedCafeSlugStaffRouteImport } from './routes/_authenticated/cafe.$slug.staff'
-import { Route as AuthenticatedCafeSlugReportsRouteImport } from './routes/_authenticated/cafe.$slug.reports'
-import { Route as AuthenticatedCafeSlugPosRouteImport } from './routes/_authenticated/cafe.$slug.pos'
-import { Route as AuthenticatedCafeSlugPageRouteImport } from './routes/_authenticated/cafe.$slug.page'
-import { Route as AuthenticatedCafeSlugMenuRouteImport } from './routes/_authenticated/cafe.$slug.menu'
-import { Route as AuthenticatedCafeSlugMembershipsRouteImport } from './routes/_authenticated/cafe.$slug.memberships'
-import { Route as AuthenticatedCafeSlugLedgerRouteImport } from './routes/_authenticated/cafe.$slug.ledger'
-import { Route as AuthenticatedCafeSlugFloorRouteImport } from './routes/_authenticated/cafe.$slug.floor'
-import { Route as AuthenticatedCafeSlugDevicesRouteImport } from './routes/_authenticated/cafe.$slug.devices'
-import { Route as AuthenticatedCafeSlugCustomersRouteImport } from './routes/_authenticated/cafe.$slug.customers'
-import { Route as AuthenticatedCafeSlugBookingsRouteImport } from './routes/_authenticated/cafe.$slug.bookings'
-import { Route as AuthenticatedCafeSlugAuditRouteImport } from './routes/_authenticated/cafe.$slug.audit'
 import { Route as AuthenticatedCafeSlugAnalyticsRouteImport } from './routes/_authenticated/cafe.$slug.analytics'
+import { Route as AuthenticatedCafeSlugAuditRouteImport } from './routes/_authenticated/cafe.$slug.audit'
+import { Route as AuthenticatedCafeSlugBookingsRouteImport } from './routes/_authenticated/cafe.$slug.bookings'
+import { Route as AuthenticatedCafeSlugCustomersRouteImport } from './routes/_authenticated/cafe.$slug.customers'
+import { Route as AuthenticatedCafeSlugDevicesRouteImport } from './routes/_authenticated/cafe.$slug.devices'
+import { Route as AuthenticatedCafeSlugFloorRouteImport } from './routes/_authenticated/cafe.$slug.floor'
+import { Route as AuthenticatedCafeSlugLedgerRouteImport } from './routes/_authenticated/cafe.$slug.ledger'
+import { Route as AuthenticatedCafeSlugMembershipsRouteImport } from './routes/_authenticated/cafe.$slug.memberships'
+import { Route as AuthenticatedCafeSlugMenuRouteImport } from './routes/_authenticated/cafe.$slug.menu'
+import { Route as AuthenticatedCafeSlugPageRouteImport } from './routes/_authenticated/cafe.$slug.page'
+import { Route as AuthenticatedCafeSlugPosRouteImport } from './routes/_authenticated/cafe.$slug.pos'
+import { Route as AuthenticatedCafeSlugReportsRouteImport } from './routes/_authenticated/cafe.$slug.reports'
+import { Route as AuthenticatedCafeSlugStaffRouteImport } from './routes/_authenticated/cafe.$slug.staff'
+import { Route as AuthenticatedCafeSlugSupportRouteImport } from './routes/_authenticated/cafe.$slug.support'
+import { Route as AuthenticatedCafeSlugTournamentsRouteImport } from './routes/_authenticated/cafe.$slug.tournaments'
+import { Route as AuthenticatedCafeSlugWalletRouteImport } from './routes/_authenticated/cafe.$slug.wallet'
+import { Route as ApiPublicCronTrialEmailsRouteImport } from './routes/api/public/cron/trial-emails'
+import { Route as CSlugTournamentsIdRouteImport } from './routes/c.$slug.tournaments.$id'
 import { Route as AuthenticatedCafeSlugTournamentsIdRouteImport } from './routes/_authenticated/cafe.$slug.tournaments.$id'
 
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RefundPolicyRoute = RefundPolicyRouteImport.update({
-  id: '/refund-policy',
-  path: '/refund-policy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RedirectingRoute = RedirectingRouteImport.update({
-  id: '/redirecting',
-  path: '/redirecting',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LfPreviewTmpRoute = LfPreviewTmpRouteImport.update({
-  id: '/lf-preview-tmp',
-  path: '/lf-preview-tmp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FeaturesRoute = FeaturesRouteImport.update({
-  id: '/features',
-  path: '/features',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DiscoverRoute = DiscoverRouteImport.update({
-  id: '/discover',
-  path: '/discover',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -133,28 +81,64 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CSlugRoute = CSlugRouteImport.update({
-  id: '/c/$slug',
-  path: '/c/$slug',
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSitemapDotxmlRoute = ApiSitemapDotxmlRouteImport.update({
-  id: '/api/sitemap.xml',
-  path: '/api/sitemap.xml',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
-  id: '/portal',
-  path: '/portal',
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedirectingRoute = RedirectingRouteImport.update({
+  id: '/redirecting',
+  path: '/redirecting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundPolicyRoute = RefundPolicyRouteImport.update({
+  id: '/refund-policy',
+  path: '/refund-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOwnerRoute = AuthenticatedOwnerRouteImport.update({
@@ -162,47 +146,81 @@ const AuthenticatedOwnerRoute = AuthenticatedOwnerRouteImport.update({
   path: '/owner',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiSitemapDotxmlRoute = ApiSitemapDotxmlRouteImport.update({
+  id: '/api/sitemap.xml',
+  path: '/api/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const AuthenticatedOwnerHelpRoute = AuthenticatedOwnerHelpRouteImport.update({
-  id: '/owner_/help',
-  path: '/owner/help',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedCafeSlugRoute = AuthenticatedCafeSlugRouteImport.update({
-  id: '/cafe/$slug',
-  path: '/cafe/$slug',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
+const AuthenticatedAdminAnnouncementsRoute =
+  AuthenticatedAdminAnnouncementsRouteImport.update({
+    id: '/announcements',
+    path: '/announcements',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminApiKeysRoute =
+  AuthenticatedAdminApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const AuthenticatedAdminSupportRoute =
-  AuthenticatedAdminSupportRouteImport.update({
-    id: '/support',
-    path: '/support',
+const AuthenticatedAdminBackupsRoute =
+  AuthenticatedAdminBackupsRouteImport.update({
+    id: '/backups',
+    path: '/backups',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminSubscriptionsRoute =
-  AuthenticatedAdminSubscriptionsRouteImport.update({
-    id: '/subscriptions',
-    path: '/subscriptions',
+const AuthenticatedAdminBillingRoute =
+  AuthenticatedAdminBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminSettingsRoute =
-  AuthenticatedAdminSettingsRouteImport.update({
-    id: '/settings',
-    path: '/settings',
+const AuthenticatedAdminCafesRoute = AuthenticatedAdminCafesRouteImport.update({
+  id: '/cafes',
+  path: '/cafes',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminConfigRoute =
+  AuthenticatedAdminConfigRouteImport.update({
+    id: '/config',
+    path: '/config',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminHealthRoute =
+  AuthenticatedAdminHealthRouteImport.update({
+    id: '/health',
+    path: '/health',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminLeadsRoute = AuthenticatedAdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminReportsRoute =
+  AuthenticatedAdminReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminRevenueRoute =
@@ -211,168 +229,43 @@ const AuthenticatedAdminRevenueRoute =
     path: '/revenue',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminReportsRoute =
-  AuthenticatedAdminReportsRouteImport.update({
-    id: '/reports',
-    path: '/reports',
+const AuthenticatedAdminSettingsRoute =
+  AuthenticatedAdminSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminLeadsRoute = AuthenticatedAdminLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
+const AuthenticatedAdminSubscriptionsRoute =
+  AuthenticatedAdminSubscriptionsRouteImport.update({
+    id: '/subscriptions',
+    path: '/subscriptions',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminSupportRoute =
+  AuthenticatedAdminSupportRouteImport.update({
+    id: '/support',
+    path: '/support',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const AuthenticatedAdminHealthRoute =
-  AuthenticatedAdminHealthRouteImport.update({
-    id: '/health',
-    path: '/health',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminConfigRoute =
-  AuthenticatedAdminConfigRouteImport.update({
-    id: '/config',
-    path: '/config',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminCafesRoute = AuthenticatedAdminCafesRouteImport.update({
-  id: '/cafes',
-  path: '/cafes',
-  getParentRoute: () => AuthenticatedAdminRoute,
+const AuthenticatedCafeSlugRoute = AuthenticatedCafeSlugRouteImport.update({
+  id: '/cafe/$slug',
+  path: '/cafe/$slug',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminBillingRoute =
-  AuthenticatedAdminBillingRouteImport.update({
-    id: '/billing',
-    path: '/billing',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminBackupsRoute =
-  AuthenticatedAdminBackupsRouteImport.update({
-    id: '/backups',
-    path: '/backups',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
-  id: '/audit',
-  path: '/audit',
-  getParentRoute: () => AuthenticatedAdminRoute,
+const AuthenticatedOwnerHelpRoute = AuthenticatedOwnerHelpRouteImport.update({
+  id: '/owner_/help',
+  path: '/owner/help',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminApiKeysRoute =
-  AuthenticatedAdminApiKeysRouteImport.update({
-    id: '/api-keys',
-    path: '/api-keys',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminAnnouncementsRoute =
-  AuthenticatedAdminAnnouncementsRouteImport.update({
-    id: '/announcements',
-    path: '/announcements',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
 const AuthenticatedCafeSlugIndexRoute =
   AuthenticatedCafeSlugIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const CSlugTournamentsIdRoute = CSlugTournamentsIdRouteImport.update({
-  id: '/tournaments/$id',
-  path: '/tournaments/$id',
-  getParentRoute: () => CSlugRoute,
-} as any)
-const ApiPublicCronTrialEmailsRoute =
-  ApiPublicCronTrialEmailsRouteImport.update({
-    id: '/api/public/cron/trial-emails',
-    path: '/api/public/cron/trial-emails',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedCafeSlugWalletRoute =
-  AuthenticatedCafeSlugWalletRouteImport.update({
-    id: '/wallet',
-    path: '/wallet',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugTournamentsRoute =
-  AuthenticatedCafeSlugTournamentsRouteImport.update({
-    id: '/tournaments',
-    path: '/tournaments',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugSupportRoute =
-  AuthenticatedCafeSlugSupportRouteImport.update({
-    id: '/support',
-    path: '/support',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugStaffRoute =
-  AuthenticatedCafeSlugStaffRouteImport.update({
-    id: '/staff',
-    path: '/staff',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugReportsRoute =
-  AuthenticatedCafeSlugReportsRouteImport.update({
-    id: '/reports',
-    path: '/reports',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugPosRoute =
-  AuthenticatedCafeSlugPosRouteImport.update({
-    id: '/pos',
-    path: '/pos',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugPageRoute =
-  AuthenticatedCafeSlugPageRouteImport.update({
-    id: '/page',
-    path: '/page',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugMenuRoute =
-  AuthenticatedCafeSlugMenuRouteImport.update({
-    id: '/menu',
-    path: '/menu',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugMembershipsRoute =
-  AuthenticatedCafeSlugMembershipsRouteImport.update({
-    id: '/memberships',
-    path: '/memberships',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugLedgerRoute =
-  AuthenticatedCafeSlugLedgerRouteImport.update({
-    id: '/ledger',
-    path: '/ledger',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugFloorRoute =
-  AuthenticatedCafeSlugFloorRouteImport.update({
-    id: '/floor',
-    path: '/floor',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugDevicesRoute =
-  AuthenticatedCafeSlugDevicesRouteImport.update({
-    id: '/devices',
-    path: '/devices',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugCustomersRoute =
-  AuthenticatedCafeSlugCustomersRouteImport.update({
-    id: '/customers',
-    path: '/customers',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugBookingsRoute =
-  AuthenticatedCafeSlugBookingsRouteImport.update({
-    id: '/bookings',
-    path: '/bookings',
-    getParentRoute: () => AuthenticatedCafeSlugRoute,
-  } as any)
-const AuthenticatedCafeSlugAuditRoute =
-  AuthenticatedCafeSlugAuditRouteImport.update({
-    id: '/audit',
-    path: '/audit',
     getParentRoute: () => AuthenticatedCafeSlugRoute,
   } as any)
 const AuthenticatedCafeSlugAnalyticsRoute =
@@ -381,6 +274,107 @@ const AuthenticatedCafeSlugAnalyticsRoute =
     path: '/analytics',
     getParentRoute: () => AuthenticatedCafeSlugRoute,
   } as any)
+const AuthenticatedCafeSlugAuditRoute =
+  AuthenticatedCafeSlugAuditRouteImport.update({
+    id: '/audit',
+    path: '/audit',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugBookingsRoute =
+  AuthenticatedCafeSlugBookingsRouteImport.update({
+    id: '/bookings',
+    path: '/bookings',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugCustomersRoute =
+  AuthenticatedCafeSlugCustomersRouteImport.update({
+    id: '/customers',
+    path: '/customers',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugDevicesRoute =
+  AuthenticatedCafeSlugDevicesRouteImport.update({
+    id: '/devices',
+    path: '/devices',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugFloorRoute =
+  AuthenticatedCafeSlugFloorRouteImport.update({
+    id: '/floor',
+    path: '/floor',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugLedgerRoute =
+  AuthenticatedCafeSlugLedgerRouteImport.update({
+    id: '/ledger',
+    path: '/ledger',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugMembershipsRoute =
+  AuthenticatedCafeSlugMembershipsRouteImport.update({
+    id: '/memberships',
+    path: '/memberships',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugMenuRoute =
+  AuthenticatedCafeSlugMenuRouteImport.update({
+    id: '/menu',
+    path: '/menu',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugPageRoute =
+  AuthenticatedCafeSlugPageRouteImport.update({
+    id: '/page',
+    path: '/page',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugPosRoute =
+  AuthenticatedCafeSlugPosRouteImport.update({
+    id: '/pos',
+    path: '/pos',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugReportsRoute =
+  AuthenticatedCafeSlugReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugStaffRoute =
+  AuthenticatedCafeSlugStaffRouteImport.update({
+    id: '/staff',
+    path: '/staff',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugSupportRoute =
+  AuthenticatedCafeSlugSupportRouteImport.update({
+    id: '/support',
+    path: '/support',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugTournamentsRoute =
+  AuthenticatedCafeSlugTournamentsRouteImport.update({
+    id: '/tournaments',
+    path: '/tournaments',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const AuthenticatedCafeSlugWalletRoute =
+  AuthenticatedCafeSlugWalletRouteImport.update({
+    id: '/wallet',
+    path: '/wallet',
+    getParentRoute: () => AuthenticatedCafeSlugRoute,
+  } as any)
+const ApiPublicCronTrialEmailsRoute =
+  ApiPublicCronTrialEmailsRouteImport.update({
+    id: '/api/public/cron/trial-emails',
+    path: '/api/public/cron/trial-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CSlugTournamentsIdRoute = CSlugTournamentsIdRouteImport.update({
+  id: '/tournaments/$id',
+  path: '/tournaments/$id',
+  getParentRoute: () => CSlugRoute,
+} as any)
 const AuthenticatedCafeSlugTournamentsIdRoute =
   AuthenticatedCafeSlugTournamentsIdRouteImport.update({
     id: '/$id',
@@ -394,7 +388,6 @@ export interface FileRoutesByFullPath {
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/lf-preview-tmp': typeof LfPreviewTmpRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -453,7 +446,6 @@ export interface FileRoutesByTo {
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/lf-preview-tmp': typeof LfPreviewTmpRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -512,7 +504,6 @@ export interface FileRoutesById {
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/lf-preview-tmp': typeof LfPreviewTmpRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -573,7 +564,6 @@ export interface FileRouteTypes {
     | '/discover'
     | '/features'
     | '/forgot-password'
-    | '/lf-preview-tmp'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -632,7 +622,6 @@ export interface FileRouteTypes {
     | '/discover'
     | '/features'
     | '/forgot-password'
-    | '/lf-preview-tmp'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -690,7 +679,6 @@ export interface FileRouteTypes {
     | '/discover'
     | '/features'
     | '/forgot-password'
-    | '/lf-preview-tmp'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -751,7 +739,6 @@ export interface RootRouteChildren {
   DiscoverRoute: typeof DiscoverRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
-  LfPreviewTmpRoute: typeof LfPreviewTmpRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   RedirectingRoute: typeof RedirectingRoute
@@ -767,95 +754,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/refund-policy': {
-      id: '/refund-policy'
-      path: '/refund-policy'
-      fullPath: '/refund-policy'
-      preLoaderRoute: typeof RefundPolicyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/redirecting': {
-      id: '/redirecting'
-      path: '/redirecting'
-      fullPath: '/redirecting'
-      preLoaderRoute: typeof RedirectingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lf-preview-tmp': {
-      id: '/lf-preview-tmp'
-      path: '/lf-preview-tmp'
-      fullPath: '/lf-preview-tmp'
-      preLoaderRoute: typeof LfPreviewTmpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/features': {
-      id: '/features'
-      path: '/features'
-      fullPath: '/features'
-      preLoaderRoute: typeof FeaturesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/discover': {
-      id: '/discover'
-      path: '/discover'
-      fullPath: '/discover'
-      preLoaderRoute: typeof DiscoverRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -865,32 +768,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/c/$slug': {
-      id: '/c/$slug'
-      path: '/c/$slug'
-      fullPath: '/c/$slug'
-      preLoaderRoute: typeof CSlugRouteImport
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/sitemap.xml': {
-      id: '/api/sitemap.xml'
-      path: '/api/sitemap.xml'
-      fullPath: '/api/sitemap.xml'
-      preLoaderRoute: typeof ApiSitemapDotxmlRouteImport
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/portal': {
-      id: '/_authenticated/portal'
-      path: '/portal'
-      fullPath: '/portal'
-      preLoaderRoute: typeof AuthenticatedPortalRouteImport
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redirecting': {
+      id: '/redirecting'
+      path: '/redirecting'
+      fullPath: '/redirecting'
+      preLoaderRoute: typeof RedirectingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refund-policy': {
+      id: '/refund-policy'
+      path: '/refund-policy'
+      fullPath: '/refund-policy'
+      preLoaderRoute: typeof RefundPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/owner': {
@@ -900,130 +866,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOwnerRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+    '/_authenticated/portal': {
+      id: '/_authenticated/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof AuthenticatedPortalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/sitemap.xml': {
+      id: '/api/sitemap.xml'
+      path: '/api/sitemap.xml'
+      fullPath: '/api/sitemap.xml'
+      preLoaderRoute: typeof ApiSitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/owner_/help': {
-      id: '/_authenticated/owner_/help'
-      path: '/owner/help'
-      fullPath: '/owner/help'
-      preLoaderRoute: typeof AuthenticatedOwnerHelpRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/cafe/$slug': {
-      id: '/_authenticated/cafe/$slug'
-      path: '/cafe/$slug'
-      fullPath: '/cafe/$slug'
-      preLoaderRoute: typeof AuthenticatedCafeSlugRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/users': {
-      id: '/_authenticated/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/support': {
-      id: '/_authenticated/admin/support'
-      path: '/support'
-      fullPath: '/admin/support'
-      preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/subscriptions': {
-      id: '/_authenticated/admin/subscriptions'
-      path: '/subscriptions'
-      fullPath: '/admin/subscriptions'
-      preLoaderRoute: typeof AuthenticatedAdminSubscriptionsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/settings': {
-      id: '/_authenticated/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/revenue': {
-      id: '/_authenticated/admin/revenue'
-      path: '/revenue'
-      fullPath: '/admin/revenue'
-      preLoaderRoute: typeof AuthenticatedAdminRevenueRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/reports': {
-      id: '/_authenticated/admin/reports'
-      path: '/reports'
-      fullPath: '/admin/reports'
-      preLoaderRoute: typeof AuthenticatedAdminReportsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/leads': {
-      id: '/_authenticated/admin/leads'
-      path: '/leads'
-      fullPath: '/admin/leads'
-      preLoaderRoute: typeof AuthenticatedAdminLeadsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/health': {
-      id: '/_authenticated/admin/health'
-      path: '/health'
-      fullPath: '/admin/health'
-      preLoaderRoute: typeof AuthenticatedAdminHealthRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/config': {
-      id: '/_authenticated/admin/config'
-      path: '/config'
-      fullPath: '/admin/config'
-      preLoaderRoute: typeof AuthenticatedAdminConfigRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/cafes': {
-      id: '/_authenticated/admin/cafes'
-      path: '/cafes'
-      fullPath: '/admin/cafes'
-      preLoaderRoute: typeof AuthenticatedAdminCafesRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/billing': {
-      id: '/_authenticated/admin/billing'
-      path: '/billing'
-      fullPath: '/admin/billing'
-      preLoaderRoute: typeof AuthenticatedAdminBillingRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/backups': {
-      id: '/_authenticated/admin/backups'
-      path: '/backups'
-      fullPath: '/admin/backups'
-      preLoaderRoute: typeof AuthenticatedAdminBackupsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/audit': {
-      id: '/_authenticated/admin/audit'
-      path: '/audit'
-      fullPath: '/admin/audit'
-      preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/api-keys': {
-      id: '/_authenticated/admin/api-keys'
-      path: '/api-keys'
-      fullPath: '/admin/api-keys'
-      preLoaderRoute: typeof AuthenticatedAdminApiKeysRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/announcements': {
@@ -1033,6 +901,118 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAnnouncementsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/api-keys': {
+      id: '/_authenticated/admin/api-keys'
+      path: '/api-keys'
+      fullPath: '/admin/api-keys'
+      preLoaderRoute: typeof AuthenticatedAdminApiKeysRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/audit': {
+      id: '/_authenticated/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/backups': {
+      id: '/_authenticated/admin/backups'
+      path: '/backups'
+      fullPath: '/admin/backups'
+      preLoaderRoute: typeof AuthenticatedAdminBackupsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/billing': {
+      id: '/_authenticated/admin/billing'
+      path: '/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AuthenticatedAdminBillingRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/cafes': {
+      id: '/_authenticated/admin/cafes'
+      path: '/cafes'
+      fullPath: '/admin/cafes'
+      preLoaderRoute: typeof AuthenticatedAdminCafesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/config': {
+      id: '/_authenticated/admin/config'
+      path: '/config'
+      fullPath: '/admin/config'
+      preLoaderRoute: typeof AuthenticatedAdminConfigRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/health': {
+      id: '/_authenticated/admin/health'
+      path: '/health'
+      fullPath: '/admin/health'
+      preLoaderRoute: typeof AuthenticatedAdminHealthRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/leads': {
+      id: '/_authenticated/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AuthenticatedAdminLeadsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/reports': {
+      id: '/_authenticated/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AuthenticatedAdminReportsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/revenue': {
+      id: '/_authenticated/admin/revenue'
+      path: '/revenue'
+      fullPath: '/admin/revenue'
+      preLoaderRoute: typeof AuthenticatedAdminRevenueRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/settings': {
+      id: '/_authenticated/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/subscriptions': {
+      id: '/_authenticated/admin/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AuthenticatedAdminSubscriptionsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/support': {
+      id: '/_authenticated/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/cafe/$slug': {
+      id: '/_authenticated/cafe/$slug'
+      path: '/cafe/$slug'
+      fullPath: '/cafe/$slug'
+      preLoaderRoute: typeof AuthenticatedCafeSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/owner_/help': {
+      id: '/_authenticated/owner_/help'
+      path: '/owner/help'
+      fullPath: '/owner/help'
+      preLoaderRoute: typeof AuthenticatedOwnerHelpRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/cafe/$slug/': {
       id: '/_authenticated/cafe/$slug/'
       path: '/'
@@ -1040,116 +1020,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCafeSlugIndexRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
     }
-    '/c/$slug/tournaments/$id': {
-      id: '/c/$slug/tournaments/$id'
-      path: '/tournaments/$id'
-      fullPath: '/c/$slug/tournaments/$id'
-      preLoaderRoute: typeof CSlugTournamentsIdRouteImport
-      parentRoute: typeof CSlugRoute
-    }
-    '/api/public/cron/trial-emails': {
-      id: '/api/public/cron/trial-emails'
-      path: '/api/public/cron/trial-emails'
-      fullPath: '/api/public/cron/trial-emails'
-      preLoaderRoute: typeof ApiPublicCronTrialEmailsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/cafe/$slug/wallet': {
-      id: '/_authenticated/cafe/$slug/wallet'
-      path: '/wallet'
-      fullPath: '/cafe/$slug/wallet'
-      preLoaderRoute: typeof AuthenticatedCafeSlugWalletRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/tournaments': {
-      id: '/_authenticated/cafe/$slug/tournaments'
-      path: '/tournaments'
-      fullPath: '/cafe/$slug/tournaments'
-      preLoaderRoute: typeof AuthenticatedCafeSlugTournamentsRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/support': {
-      id: '/_authenticated/cafe/$slug/support'
-      path: '/support'
-      fullPath: '/cafe/$slug/support'
-      preLoaderRoute: typeof AuthenticatedCafeSlugSupportRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/staff': {
-      id: '/_authenticated/cafe/$slug/staff'
-      path: '/staff'
-      fullPath: '/cafe/$slug/staff'
-      preLoaderRoute: typeof AuthenticatedCafeSlugStaffRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/reports': {
-      id: '/_authenticated/cafe/$slug/reports'
-      path: '/reports'
-      fullPath: '/cafe/$slug/reports'
-      preLoaderRoute: typeof AuthenticatedCafeSlugReportsRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/pos': {
-      id: '/_authenticated/cafe/$slug/pos'
-      path: '/pos'
-      fullPath: '/cafe/$slug/pos'
-      preLoaderRoute: typeof AuthenticatedCafeSlugPosRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/page': {
-      id: '/_authenticated/cafe/$slug/page'
-      path: '/page'
-      fullPath: '/cafe/$slug/page'
-      preLoaderRoute: typeof AuthenticatedCafeSlugPageRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/menu': {
-      id: '/_authenticated/cafe/$slug/menu'
-      path: '/menu'
-      fullPath: '/cafe/$slug/menu'
-      preLoaderRoute: typeof AuthenticatedCafeSlugMenuRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/memberships': {
-      id: '/_authenticated/cafe/$slug/memberships'
-      path: '/memberships'
-      fullPath: '/cafe/$slug/memberships'
-      preLoaderRoute: typeof AuthenticatedCafeSlugMembershipsRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/ledger': {
-      id: '/_authenticated/cafe/$slug/ledger'
-      path: '/ledger'
-      fullPath: '/cafe/$slug/ledger'
-      preLoaderRoute: typeof AuthenticatedCafeSlugLedgerRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/floor': {
-      id: '/_authenticated/cafe/$slug/floor'
-      path: '/floor'
-      fullPath: '/cafe/$slug/floor'
-      preLoaderRoute: typeof AuthenticatedCafeSlugFloorRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/devices': {
-      id: '/_authenticated/cafe/$slug/devices'
-      path: '/devices'
-      fullPath: '/cafe/$slug/devices'
-      preLoaderRoute: typeof AuthenticatedCafeSlugDevicesRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/customers': {
-      id: '/_authenticated/cafe/$slug/customers'
-      path: '/customers'
-      fullPath: '/cafe/$slug/customers'
-      preLoaderRoute: typeof AuthenticatedCafeSlugCustomersRouteImport
-      parentRoute: typeof AuthenticatedCafeSlugRoute
-    }
-    '/_authenticated/cafe/$slug/bookings': {
-      id: '/_authenticated/cafe/$slug/bookings'
-      path: '/bookings'
-      fullPath: '/cafe/$slug/bookings'
-      preLoaderRoute: typeof AuthenticatedCafeSlugBookingsRouteImport
+    '/_authenticated/cafe/$slug/analytics': {
+      id: '/_authenticated/cafe/$slug/analytics'
+      path: '/analytics'
+      fullPath: '/cafe/$slug/analytics'
+      preLoaderRoute: typeof AuthenticatedCafeSlugAnalyticsRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
     }
     '/_authenticated/cafe/$slug/audit': {
@@ -1159,12 +1034,117 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCafeSlugAuditRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
     }
-    '/_authenticated/cafe/$slug/analytics': {
-      id: '/_authenticated/cafe/$slug/analytics'
-      path: '/analytics'
-      fullPath: '/cafe/$slug/analytics'
-      preLoaderRoute: typeof AuthenticatedCafeSlugAnalyticsRouteImport
+    '/_authenticated/cafe/$slug/bookings': {
+      id: '/_authenticated/cafe/$slug/bookings'
+      path: '/bookings'
+      fullPath: '/cafe/$slug/bookings'
+      preLoaderRoute: typeof AuthenticatedCafeSlugBookingsRouteImport
       parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/customers': {
+      id: '/_authenticated/cafe/$slug/customers'
+      path: '/customers'
+      fullPath: '/cafe/$slug/customers'
+      preLoaderRoute: typeof AuthenticatedCafeSlugCustomersRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/devices': {
+      id: '/_authenticated/cafe/$slug/devices'
+      path: '/devices'
+      fullPath: '/cafe/$slug/devices'
+      preLoaderRoute: typeof AuthenticatedCafeSlugDevicesRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/floor': {
+      id: '/_authenticated/cafe/$slug/floor'
+      path: '/floor'
+      fullPath: '/cafe/$slug/floor'
+      preLoaderRoute: typeof AuthenticatedCafeSlugFloorRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/ledger': {
+      id: '/_authenticated/cafe/$slug/ledger'
+      path: '/ledger'
+      fullPath: '/cafe/$slug/ledger'
+      preLoaderRoute: typeof AuthenticatedCafeSlugLedgerRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/memberships': {
+      id: '/_authenticated/cafe/$slug/memberships'
+      path: '/memberships'
+      fullPath: '/cafe/$slug/memberships'
+      preLoaderRoute: typeof AuthenticatedCafeSlugMembershipsRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/menu': {
+      id: '/_authenticated/cafe/$slug/menu'
+      path: '/menu'
+      fullPath: '/cafe/$slug/menu'
+      preLoaderRoute: typeof AuthenticatedCafeSlugMenuRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/page': {
+      id: '/_authenticated/cafe/$slug/page'
+      path: '/page'
+      fullPath: '/cafe/$slug/page'
+      preLoaderRoute: typeof AuthenticatedCafeSlugPageRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/pos': {
+      id: '/_authenticated/cafe/$slug/pos'
+      path: '/pos'
+      fullPath: '/cafe/$slug/pos'
+      preLoaderRoute: typeof AuthenticatedCafeSlugPosRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/reports': {
+      id: '/_authenticated/cafe/$slug/reports'
+      path: '/reports'
+      fullPath: '/cafe/$slug/reports'
+      preLoaderRoute: typeof AuthenticatedCafeSlugReportsRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/staff': {
+      id: '/_authenticated/cafe/$slug/staff'
+      path: '/staff'
+      fullPath: '/cafe/$slug/staff'
+      preLoaderRoute: typeof AuthenticatedCafeSlugStaffRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/support': {
+      id: '/_authenticated/cafe/$slug/support'
+      path: '/support'
+      fullPath: '/cafe/$slug/support'
+      preLoaderRoute: typeof AuthenticatedCafeSlugSupportRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/tournaments': {
+      id: '/_authenticated/cafe/$slug/tournaments'
+      path: '/tournaments'
+      fullPath: '/cafe/$slug/tournaments'
+      preLoaderRoute: typeof AuthenticatedCafeSlugTournamentsRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/_authenticated/cafe/$slug/wallet': {
+      id: '/_authenticated/cafe/$slug/wallet'
+      path: '/wallet'
+      fullPath: '/cafe/$slug/wallet'
+      preLoaderRoute: typeof AuthenticatedCafeSlugWalletRouteImport
+      parentRoute: typeof AuthenticatedCafeSlugRoute
+    }
+    '/api/public/cron/trial-emails': {
+      id: '/api/public/cron/trial-emails'
+      path: '/api/public/cron/trial-emails'
+      fullPath: '/api/public/cron/trial-emails'
+      preLoaderRoute: typeof ApiPublicCronTrialEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug/tournaments/$id': {
+      id: '/c/$slug/tournaments/$id'
+      path: '/tournaments/$id'
+      fullPath: '/c/$slug/tournaments/$id'
+      preLoaderRoute: typeof CSlugTournamentsIdRouteImport
+      parentRoute: typeof CSlugRoute
     }
     '/_authenticated/cafe/$slug/tournaments/$id': {
       id: '/_authenticated/cafe/$slug/tournaments/$id'
@@ -1314,7 +1294,6 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoverRoute: DiscoverRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
-  LfPreviewTmpRoute: LfPreviewTmpRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RedirectingRoute: RedirectingRoute,
