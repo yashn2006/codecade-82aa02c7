@@ -17,6 +17,7 @@ import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as RedirectingRouteImport } from './routes/redirecting'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LfPreviewTmpRouteImport } from './routes/lf-preview-tmp'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as DiscoverRouteImport } from './routes/discover'
@@ -105,6 +106,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LfPreviewTmpRoute = LfPreviewTmpRouteImport.update({
+  id: '/lf-preview-tmp',
+  path: '/lf-preview-tmp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/lf-preview-tmp': typeof LfPreviewTmpRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -446,6 +453,7 @@ export interface FileRoutesByTo {
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/lf-preview-tmp': typeof LfPreviewTmpRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -504,6 +512,7 @@ export interface FileRoutesById {
   '/discover': typeof DiscoverRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/lf-preview-tmp': typeof LfPreviewTmpRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/redirecting': typeof RedirectingRoute
@@ -564,6 +573,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/features'
     | '/forgot-password'
+    | '/lf-preview-tmp'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -622,6 +632,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/features'
     | '/forgot-password'
+    | '/lf-preview-tmp'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -679,6 +690,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/features'
     | '/forgot-password'
+    | '/lf-preview-tmp'
     | '/login'
     | '/privacy'
     | '/redirecting'
@@ -739,6 +751,7 @@ export interface RootRouteChildren {
   DiscoverRoute: typeof DiscoverRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LfPreviewTmpRoute: typeof LfPreviewTmpRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   RedirectingRoute: typeof RedirectingRoute
@@ -808,6 +821,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lf-preview-tmp': {
+      id: '/lf-preview-tmp'
+      path: '/lf-preview-tmp'
+      fullPath: '/lf-preview-tmp'
+      preLoaderRoute: typeof LfPreviewTmpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -1294,6 +1314,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoverRoute: DiscoverRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  LfPreviewTmpRoute: LfPreviewTmpRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RedirectingRoute: RedirectingRoute,
