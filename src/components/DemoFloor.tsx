@@ -28,11 +28,14 @@ type DemoDevice = {
   customer?: string; timer_start?: number; starts_in?: string; reason?: string;
 };
 
+/** Fixed clock for the first render so server and browser show identical numbers. */
+const DEMO_BASE = 1_700_000_000_000;
+
 const INITIAL: DemoDevice[] = [
-  { id: 1, name: "PC-1", type: "pc", status: "in_use", rate: 100, customer: "Aarav K.", timer_start: Date.now() - 5412000 },
+  { id: 1, name: "PC-1", type: "pc", status: "in_use", rate: 100, customer: "Aarav K.", timer_start: DEMO_BASE - 5412000 },
   { id: 2, name: "PC-2", type: "pc", status: "available", rate: 100 },
   { id: 3, name: "PC-3", type: "pc", status: "reserved", rate: 100, customer: "Rahul M.", starts_in: "00:23:00" },
-  { id: 4, name: "CONSOLE-1", type: "console", status: "in_use", rate: 120, customer: "Priya S.", timer_start: Date.now() - 1800000 },
+  { id: 4, name: "CONSOLE-1", type: "console", status: "in_use", rate: 120, customer: "Priya S.", timer_start: DEMO_BASE - 1800000 },
   { id: 5, name: "CONSOLE-2", type: "console", status: "available", rate: 120 },
   { id: 6, name: "VR-1", type: "vr", status: "maintenance", rate: 200, reason: "Headset calibration" },
 ];
@@ -54,9 +57,14 @@ export function DemoFloor() {
   const [openId, setOpenId] = useState<number | null>(null);
   const [tab, setTab] = useState<NavKey>("floor");
 
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(DEMO_BASE);
 
   useEffect(() => {
+    // After hydration, shift the demo timers onto the real clock.
+    const real = Date.now();
+    const shift = real - DEMO_BASE;
+    setDevices((ds) => ds.map((d) => (d.timer_start ? { ...d, timer_start: d.timer_start + shift } : d)));
+    setNow(real);
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
