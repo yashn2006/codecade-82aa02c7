@@ -16,6 +16,7 @@ import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup } from "@/components/Brand";
 import { NotificationBell } from "@/components/NotificationBell";
 import { CommandPalette } from "@/components/CommandPalette";
+import { PageTransition } from "@/components/PageTransition";
 
 export type NavItem = {
   label: string;
@@ -283,17 +284,7 @@ export function ConsoleShell({
 
           {/* Main content */}
           <main className="min-w-0 px-3 pb-28 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.div
-                key={path}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+            <PageTransition routeKey={path}>{children}</PageTransition>
           </main>
 
           {/* ============ Mobile bottom nav — 56px ============ */}

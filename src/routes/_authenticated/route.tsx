@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getSupabaseUserReady } from "@/lib/auth-routing";
+import { getCachedUser, getSupabaseUserReady } from "@/lib/auth-routing";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { BrandLockup } from "@/components/Brand";
 
@@ -49,10 +49,16 @@ export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   pendingMs: 0,
   pendingComponent: AuthPending,
-  beforeLoad: async () => {
-    const user = await getSupabaseUserReady();
-    if (!user) throw redirect({ to: "/auth" });
-    return { user };
+  beforeLoad: () => {
+    // Already signed in this tab → resolve synchronously so section clicks
+    // never flash the full-screen veil.
+    const cached = getCachedUser();
+    if (cached) return { user: cached };
+    return (async () => {
+      const user = await getSupabaseUserReady();
+      if (!user) throw redirect({ to: "/auth" });
+      return { user };
+    })();
   },
   component: AuthenticatedLayout,
 });

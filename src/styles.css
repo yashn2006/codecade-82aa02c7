@@ -1156,3 +1156,10 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
   .lf-station, .lf-station[data-status="in_use"] .lf-desk-glow { animation: none; }
   .lf-station:hover .lf-tag, .lf-station:hover .lf-desk, .lf-station[data-selected="true"] .lf-desk { transform: none; }
 }
+
+/* ===== Route progress bar (top of viewport) ===== */
+.route-progress-bar {
+  background: var(--gradient-brand-hot);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--primary) 70%, transparent), 0 0 2px color-mix(in oklab, var(--primary) 90%, transparent);
+  border-radius: 0 999px 999px 0;
+}

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -7,9 +7,8 @@ import {
 } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { SupportTickets } from "@/components/SupportTickets";
-import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { getSupabaseUserReady } from "@/lib/auth-routing";
+import { guardRoute } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/_authenticated/owner_/help")({
   ssr: false,
@@ -19,14 +18,8 @@ export const Route = createFileRoute("/_authenticated/owner_/help")({
       { name: "description", content: "Quick answers, support tickets and a direct line to the CoreCade team." },
     ],
   }),
-  beforeLoad: async () => {
-    const user = await getSupabaseUserReady();
-    if (!user) throw redirect({ to: "/auth" });
-    const { data: roles } = await supabase
-      .from("user_roles").select("role").eq("user_id", user.id)
-      .in("role", ["cafe_owner", "super_admin"]);
-    if (!roles || roles.length === 0) throw redirect({ to: "/portal" });
-  },
+  beforeLoad: () =>
+    guardRoute((_user, roles) => (roles.has("cafe_owner") || roles.has("super_admin") ? null : "/portal")),
   component: OwnerHelp,
 });
 
