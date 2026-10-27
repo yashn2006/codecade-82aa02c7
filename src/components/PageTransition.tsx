@@ -52,13 +52,10 @@ export function PageTransition({ routeKey, children }: { routeKey: string; child
       <motion.div
         className="[grid-area:1/1] min-w-0"
         initial={false}
-        animate={gated ? { opacity: 0, y: 10, filter: "blur(6px)" } : { opacity: 1, y: 0, filter: "blur(0px)" }}
+        animate={gated ? { opacity: 0, y: 10 } : { opacity: 1, y: 0 }}
         transition={gated ? { duration: 0 } : { duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
         style={{ pointerEvents: gated ? "none" : undefined }}
         aria-busy={gated || undefined}
-        onAnimationComplete={() => {
-          // Drop the filter so it doesn't create a stacking context for fixed overlays.
-        }}
       >
         {children}
       </motion.div>

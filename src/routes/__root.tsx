@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/lib/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { RouteProgress } from "@/components/RouteProgress";
 import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
 
 function NotFoundComponent() {
@@ -248,6 +249,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <RouteProgress />
       <Outlet />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
