@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { RoutePending } from "./components/RoutePending";
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
@@ -31,9 +32,11 @@ export const getRouter = () => {
     defaultPreloadDelay: 30,
     // Let TanStack Query own freshness
     defaultPreloadStaleTime: 0,
-    // Show the new route immediately instead of waiting on the old one
-    defaultPendingMs: 0,
-    defaultPendingMinMs: 0,
+    // Keep the current page up for quick loads; show a skeleton (held long
+    // enough not to flicker) only when the next page takes a moment.
+    defaultPendingMs: 180,
+    defaultPendingMinMs: 320,
+    defaultPendingComponent: RoutePending,
   });
 
   return router;
