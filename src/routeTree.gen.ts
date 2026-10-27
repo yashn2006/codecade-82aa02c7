@@ -28,6 +28,7 @@ import { Route as AuthenticatedOwnerRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
 import { Route as ApiSitemapDotxmlRouteImport } from './routes/api/sitemap[.]xml'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
+import { Route as TtTmpKRouteImport } from './routes/tt-tmp.$k'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminAnnouncementsRouteImport } from './routes/_authenticated/admin.announcements'
 import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin.api-keys'
@@ -159,6 +160,11 @@ const ApiSitemapDotxmlRoute = ApiSitemapDotxmlRouteImport.update({
 const CSlugRoute = CSlugRouteImport.update({
   id: '/c/$slug',
   path: '/c/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TtTmpKRoute = TtTmpKRouteImport.update({
+  id: '/tt-tmp/$k',
+  path: '/tt-tmp/$k',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
@@ -401,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/portal': typeof AuthenticatedPortalRoute
   '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
   '/c/$slug': typeof CSlugRouteWithChildren
+  '/tt-tmp/$k': typeof TtTmpKRoute
   '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -458,6 +465,7 @@ export interface FileRoutesByTo {
   '/portal': typeof AuthenticatedPortalRoute
   '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
   '/c/$slug': typeof CSlugRouteWithChildren
+  '/tt-tmp/$k': typeof TtTmpKRoute
   '/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -517,6 +525,7 @@ export interface FileRoutesById {
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
   '/api/sitemap.xml': typeof ApiSitemapDotxmlRoute
   '/c/$slug': typeof CSlugRouteWithChildren
+  '/tt-tmp/$k': typeof TtTmpKRoute
   '/_authenticated/admin/announcements': typeof AuthenticatedAdminAnnouncementsRoute
   '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -577,6 +586,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/api/sitemap.xml'
     | '/c/$slug'
+    | '/tt-tmp/$k'
     | '/admin/announcements'
     | '/admin/api-keys'
     | '/admin/audit'
@@ -634,6 +644,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/api/sitemap.xml'
     | '/c/$slug'
+    | '/tt-tmp/$k'
     | '/admin/announcements'
     | '/admin/api-keys'
     | '/admin/audit'
@@ -692,6 +703,7 @@ export interface FileRouteTypes {
     | '/_authenticated/portal'
     | '/api/sitemap.xml'
     | '/c/$slug'
+    | '/tt-tmp/$k'
     | '/_authenticated/admin/announcements'
     | '/_authenticated/admin/api-keys'
     | '/_authenticated/admin/audit'
@@ -749,6 +761,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiSitemapDotxmlRoute: typeof ApiSitemapDotxmlRoute
   CSlugRoute: typeof CSlugRouteWithChildren
+  TtTmpKRoute: typeof TtTmpKRoute
   ApiPublicCronTrialEmailsRoute: typeof ApiPublicCronTrialEmailsRoute
 }
 
@@ -885,6 +898,13 @@ declare module '@tanstack/react-router' {
       path: '/c/$slug'
       fullPath: '/c/$slug'
       preLoaderRoute: typeof CSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tt-tmp/$k': {
+      id: '/tt-tmp/$k'
+      path: '/tt-tmp/$k'
+      fullPath: '/tt-tmp/$k'
+      preLoaderRoute: typeof TtTmpKRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/': {
@@ -1304,6 +1324,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiSitemapDotxmlRoute: ApiSitemapDotxmlRoute,
   CSlugRoute: CSlugRouteWithChildren,
+  TtTmpKRoute: TtTmpKRoute,
   ApiPublicCronTrialEmailsRoute: ApiPublicCronTrialEmailsRoute,
 }
 export const routeTree = rootRouteImport
