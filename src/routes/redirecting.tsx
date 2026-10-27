@@ -69,7 +69,9 @@ function RedirectingPage() {
 
     (async () => {
       try {
-        const user = await runPhase(withTimeout(getSupabaseUserReady(3000), 6000));
+        // No stored session in this tab → don't make a signed-out visitor wait.
+        const hasStored = !!window.sessionStorage.getItem("cc-auth");
+        const user = await runPhase(withTimeout(getSupabaseUserReady(hasStored ? 3000 : 500), 6000));
         if (cancelled) return;
         if (!user) {
           navigate({ to: "/auth", replace: true });
