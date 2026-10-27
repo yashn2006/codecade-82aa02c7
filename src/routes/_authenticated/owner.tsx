@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -21,8 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { createCafe, getOwnerDashboard } from "@/lib/cafes.functions";
-import { supabase } from "@/lib/supabase/client";
-import { getSupabaseUserReady } from "@/lib/auth-routing";
+import { guardRoute } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/_authenticated/owner")({
   ssr: false,

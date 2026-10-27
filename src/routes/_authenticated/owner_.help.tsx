@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -7,9 +7,8 @@ import {
 } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { SupportTickets } from "@/components/SupportTickets";
-import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { getSupabaseUserReady } from "@/lib/auth-routing";
+import { guardRoute } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/_authenticated/owner_/help")({
   ssr: false,
