@@ -3,29 +3,13 @@ import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingU
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { supabase } from "@/lib/supabase/client";
-import { getSupabaseUserReady } from "@/lib/auth-routing";
+import { guardRoute, isSuperAdmin } from "@/lib/auth-routing";
 
-const SUPER_ADMIN_EMAILS = ["giganexa2026@gmail.com", "yashnandi77@gmail.com"];
 
 export const Route = createFileRoute("/_authenticated/admin")({
   ssr: false,
   head: () => ({ meta: [{ title: "Super Admin — CoreCade" }] }),
-  beforeLoad: async () => {
-    const user = await getSupabaseUserReady();
-    if (!user) throw redirect({ to: "/auth" });
-    if (!user.email || !SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase())) {
-      throw redirect({ to: "/portal" });
-    }
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "super_admin")
-      .limit(1);
-    if (!roles || roles.length === 0) {
-      throw redirect({ to: "/portal" });
-    }
-  },
+  beforeLoad: () => guardRoute((user, roles) => (isSuperAdmin(user, roles) ? null : "/portal")),
   component: AdminLayout,
 });
 

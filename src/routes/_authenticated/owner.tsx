@@ -32,14 +32,8 @@ export const Route = createFileRoute("/_authenticated/owner")({
       { name: "description", content: "All your CoreCade cafés, revenue and consoles in one command center." },
     ],
   }),
-  beforeLoad: async () => {
-    const user = await getSupabaseUserReady();
-    if (!user) throw redirect({ to: "/auth" });
-    const { data: roles } = await supabase
-      .from("user_roles").select("role").eq("user_id", user.id)
-      .in("role", ["cafe_owner", "super_admin"]);
-    if (!roles || roles.length === 0) throw redirect({ to: "/portal" });
-  },
+  beforeLoad: () =>
+    guardRoute((_user, roles) => (roles.has("cafe_owner") || roles.has("super_admin") ? null : "/portal")),
   component: OwnerHub,
 });
 

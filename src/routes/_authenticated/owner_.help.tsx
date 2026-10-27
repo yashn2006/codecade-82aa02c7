@@ -19,14 +19,8 @@ export const Route = createFileRoute("/_authenticated/owner_/help")({
       { name: "description", content: "Quick answers, support tickets and a direct line to the CoreCade team." },
     ],
   }),
-  beforeLoad: async () => {
-    const user = await getSupabaseUserReady();
-    if (!user) throw redirect({ to: "/auth" });
-    const { data: roles } = await supabase
-      .from("user_roles").select("role").eq("user_id", user.id)
-      .in("role", ["cafe_owner", "super_admin"]);
-    if (!roles || roles.length === 0) throw redirect({ to: "/portal" });
-  },
+  beforeLoad: () =>
+    guardRoute((_user, roles) => (roles.has("cafe_owner") || roles.has("super_admin") ? null : "/portal")),
   component: OwnerHelp,
 });
 
