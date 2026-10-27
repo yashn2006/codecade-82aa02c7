@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandMark } from "@/components/Brand";
-import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
+import { getDashboardPathForUser, getSupabaseUserReady, type DashboardPath } from "@/lib/auth-routing";
 import { ShieldCheck, Cpu, Sparkles, Check } from "lucide-react";
 
 export const Route = createFileRoute("/redirecting")({
@@ -25,7 +25,7 @@ const STEPS = [
 ];
 
 type Phase = 0 | 1 | 2 | 3; // 3 = done
-const PHASE_TARGET = [34, 70, 100, 100];
+const PHASE_TARGET = [30, 66, 92, 100];
 const MIN_PHASE_MS = 420;
 
 const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
@@ -77,7 +77,7 @@ function RedirectingPage() {
         }
         setPhase(1);
         setTagline("Loading your workspace");
-        let path;
+        let path: DashboardPath;
         try {
           path = await runPhase(withTimeout(getDashboardPathForUser(user), 6000));
         } catch {
