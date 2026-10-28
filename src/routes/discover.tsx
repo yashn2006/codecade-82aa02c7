@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
-import corecadeLogo from "@/assets/corecade-logo.png.asset.json";
+import { BrandLockup } from "@/components/Brand";
 
 
 export const Route = createFileRoute("/discover")({
@@ -202,10 +202,7 @@ function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }
   return (
     <nav className={`fixed top-0 inset-x-0 z-40 transition-all duration-300 ${scrolled ? "border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl" : ""}`}>
       <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8">
-        <Link to="/discover" className="flex items-center gap-2.5">
-          <img src={corecadeLogo.url} alt="CoreCade" className="h-8 w-auto" draggable={false} />
-          <span className="font-display text-base font-black tracking-[0.18em] text-white">CORECADE</span>
-        </Link>
+        <BrandLockup size={30} to="/discover" />
         <div className="flex items-center gap-2">
           {signedIn ? (
             <Link to="/portal"><Button size="sm" variant="ghost" className="text-white hover:bg-white/10">{email?.split("@")[0] ?? "Portal"}</Button></Link>
