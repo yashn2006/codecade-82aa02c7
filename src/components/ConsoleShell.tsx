@@ -382,58 +382,89 @@ export function ConsoleShell({
             <motion.aside
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 460, damping: 40, mass: 0.6 }}
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[28px] border-t border-white/10 bg-card/95 backdrop-blur-2xl lg:hidden"
+              drag="y"
+              dragControls={sheetDrag}
+              dragListener={false}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.7 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 90 || info.velocity.y > 500) setOpen(false);
+              }}
+              className="mobile-sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[30px] lg:hidden"
               style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)", willChange: "transform" }}
               aria-label="More navigation"
             >
-              <div className="flex justify-center pt-2.5">
-                <span className="h-1.5 w-12 rounded-full bg-white/20" />
-              </div>
-              <div className="flex items-center justify-between px-5 pb-3 pt-3">
-                <div>
-                  <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">{badge}</div>
-                  <div className="font-display text-lg font-extrabold">{title}</div>
+              {/* drag handle + header — swipe down to close */}
+              <div
+                className="touch-none select-none"
+                onPointerDown={(e) => sheetDrag.start(e)}
+              >
+                <div className="flex justify-center pt-3">
+                  <span className="h-1.5 w-11 rounded-full bg-muted-foreground/40" />
                 </div>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="rounded-full bg-secondary/60 p-2 text-muted-foreground transition active:scale-90"
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center justify-between gap-3 px-5 pb-4 pt-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <BrandMark size={38} />
+                    <div className="min-w-0">
+                      <div className="truncate font-display text-lg font-extrabold leading-tight">{title}</div>
+                      <div className="truncate font-mono text-[10px] uppercase tracking-[0.24em] text-primary/80">{badge}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setOpen(false)}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary/70 text-muted-foreground transition active:scale-90"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto px-4 pb-4">
-                {groups.map((g) => (
-                  <div key={g.label ?? "root"} className="mb-4">
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+                {groups.map((g, gi) => (
+                  <div key={g.label ?? "root"} className="mb-5">
                     {g.label && (
-                      <div className="px-1 pb-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70">
+                      <div className="flex items-center gap-2 px-1 pb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                        <span className="h-px w-3 bg-primary/60" />
                         {g.label}
                       </div>
                     )}
                     <div className="grid grid-cols-3 gap-2.5">
-                      {g.items.map((item) => {
+                      {g.items.map((item, ii) => {
                         const active = isActive(item);
                         return (
-                          <Link
+                          <motion.div
                             key={item.label}
-                            to={item.to}
-                            params={item.params}
-                            hash={item.hash}
-                            onClick={() => setOpen(false)}
-                            className={`flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition active:scale-95 ${
-                              active
-                                ? "border-primary/50 bg-primary/15 text-primary"
-                                : "border-white/10 bg-background/40 text-foreground"
-                            }`}
+                            initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ delay: 0.04 + Math.min(gi * 3 + ii, 14) * 0.022, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                           >
-                            <item.icon className="h-5 w-5" />
-                            <span className="line-clamp-2 text-[10px] font-medium leading-tight">{item.label}</span>
-                          </Link>
+                            <Link
+                              to={item.to}
+                              params={item.params}
+                              hash={item.hash}
+                              onClick={() => setOpen(false)}
+                              data-active={active || undefined}
+                              className="sheet-tile flex aspect-[1/0.92] flex-col items-center justify-center gap-2 rounded-[20px] p-2 text-center transition active:scale-95"
+                            >
+                              <span className="sheet-tile-icon grid h-10 w-10 place-items-center rounded-2xl">
+                                <item.icon className="h-[19px] w-[19px]" />
+                              </span>
+                              <span className="line-clamp-2 text-[11px] font-semibold leading-tight">{item.label}</span>
+                            </Link>
+                          </motion.div>
                         );
                       })}
                     </div>
                   </div>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); void signOut(); }}
+                  className="mt-1 flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 py-3 text-sm font-semibold text-destructive transition active:scale-[0.98]"
+                >
+                  <LogOut className="h-4 w-4" /> Log out
+                </button>
               </div>
             </motion.aside>
           </>
