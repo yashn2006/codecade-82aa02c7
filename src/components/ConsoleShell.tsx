@@ -302,45 +302,52 @@ export function ConsoleShell({
             </div>
           </header>
 
-          {banner ? <div className="sticky top-[52px] z-20">{banner}</div> : null}
+          {banner ? (
+            <div className="sticky z-20" style={{ top: "calc(52px + env(safe-area-inset-top))" }}>{banner}</div>
+          ) : null}
 
           {/* Main content */}
-          <main className="min-w-0 px-3 pb-28 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
+          <main className="min-w-0 px-3 pb-36 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
             <PageTransition routeKey={path}>{children}</PageTransition>
           </main>
 
-          {/* ============ Mobile bottom nav — 56px ============ */}
+          {/* soft fade so content melts under the floating dock */}
+          <div aria-hidden className="mobile-dock-fade pointer-events-none fixed inset-x-0 bottom-0 z-20 h-28 lg:hidden" />
+
+          {/* ============ Mobile floating dock ============ */}
           <nav
-            className="fixed inset-x-0 bottom-0 z-30 lg:hidden"
-            style={{
-              background: "rgba(10,0,20,0.95)",
-              backdropFilter: "blur(20px)",
-              borderTop: "1px solid rgba(255,100,200,0.15)",
-              paddingBottom: "env(safe-area-inset-bottom)",
-            }}
+            className="fixed inset-x-0 bottom-0 z-30 px-3 lg:hidden"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}
             aria-label="Primary"
           >
-            <div className="grid h-14" style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0,1fr))` }}>
+            <div
+              className="mobile-dock relative mx-auto grid h-[64px] max-w-md gap-1 rounded-[24px] p-1.5"
+              style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0,1fr))` }}
+            >
               {mobileTabs.map((t) => {
                 const active = t.more ? open || !anyTabActive : tabActive(t);
-                const cls = `relative flex h-14 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition active:scale-95 ${
-                  active ? "text-primary" : "text-muted-foreground"
+                const cls = `relative flex flex-col items-center justify-center gap-1 rounded-[18px] text-[10px] font-semibold tracking-wide transition-colors duration-200 active:scale-[0.94] ${
+                  active ? "text-foreground" : "text-muted-foreground"
                 }`;
                 const inner = (
                   <>
                     {active && (
-                      <span
-                        className="pointer-events-none absolute inset-x-3 top-0 h-[2px] rounded-full bg-primary"
-                        style={{ boxShadow: "0 0 10px var(--color-magenta, oklch(0.7 0.26 335))" }}
+                      <motion.span
+                        layoutId="dock-active"
+                        className="dock-active pointer-events-none absolute inset-0 rounded-[18px]"
+                        transition={{ type: "spring", stiffness: 520, damping: 40, mass: 0.7 }}
                       />
                     )}
-                    <t.icon className="h-[18px] w-[18px]" />
-                    <span className="truncate px-1">{t.label}</span>
+                    <t.icon
+                      className={`relative z-10 h-5 w-5 transition-all duration-300 ${active ? "-translate-y-px text-primary drop-shadow-[0_0_8px_var(--primary)]" : ""}`}
+                      strokeWidth={active ? 2.3 : 1.8}
+                    />
+                    <span className="relative z-10 max-w-full truncate px-1">{t.label}</span>
                   </>
                 );
                 if (t.more || !t.to) {
                   return (
-                    <button key={t.label} type="button" onPointerDown={() => setOpen(true)} className={cls} aria-label="More menu">
+                    <button key={t.label} type="button" onClick={() => setOpen(true)} className={cls} aria-label="More menu" aria-expanded={open}>
                       {inner}
                     </button>
                   );
