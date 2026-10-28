@@ -169,7 +169,7 @@ function DiscoverPage() {
           <MapView cafes={filtered} />
         )}
 
-        <StatsRow arenas={cafes.length} cities={cityList.length} live={liveCafes.length} />
+        <StatsRow arenas={cafes.length} cities={cityList.length} />
       </section>
 
       <FiltersSheet
@@ -611,14 +611,13 @@ function FiltersSheet({
 }
 
 /* ============ STATS ============ */
-function StatsRow({ arenas, cities, live }: { arenas: number; cities: number; live: number }) {
+function StatsRow({ arenas, cities }: { arenas: number; cities: number }) {
   const items: { v: number; suffix: string; l: string; format?: (n: number) => string }[] = [
     { v: arenas, suffix: "", l: arenas === 1 ? "Arena" : "Arenas" },
     { v: cities, suffix: "", l: cities === 1 ? "City" : "Cities" },
-    { v: live, suffix: "", l: "Live now" },
   ];
   return (
-    <div className="mt-20 grid grid-cols-3 gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-6 sm:p-8">
+    <div className="mx-auto mt-20 grid max-w-xl grid-cols-2 gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-6 sm:p-8">
       {items.map((it) => (
         <div key={it.l} className="text-center">
           <div className="font-display text-2xl font-black text-white sm:text-3xl">
