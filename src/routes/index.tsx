@@ -236,15 +236,13 @@ function Hero() {
             className="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-border/40 pt-6"
           >
             {[
-              { v: null, l: "sessions" },
-              { v: null, l: "processed" },
-              { v: 99.9, l: "uptime" },
+              { v: 15, l: "day free trial", pre: "", suf: "", fmt: (n: number) => Math.round(n).toString() },
+              { v: 999, l: "per month", pre: "₹", suf: "", fmt: (n: number) => Math.round(n).toString() },
+              { v: 99.9, l: "uptime", pre: "", suf: "%", fmt: (n: number) => n.toFixed(1) },
             ].map((k) => (
               <div key={k.l}>
-                <div className="font-display text-2xl font-extrabold text-gradient flex items-center justify-center min-h-[2rem]">
-                  {k.v === null
-                    ? <StatLoader size="sm" />
-                    : <AnimatedNumber value={k.v} duration={1500} suffix="%" format={(n) => n.toFixed(1)} />}
+                <div className="font-display text-2xl font-extrabold text-gradient flex items-center min-h-[2rem]">
+                  {k.pre}<AnimatedNumber value={k.v} duration={1500} suffix={k.suf} format={k.fmt} />
                 </div>
                 <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{k.l}</div>
               </div>

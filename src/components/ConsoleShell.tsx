@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { KeyRound, LifeBuoy, LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase/client";
 import { AuroraBackground } from "@/components/AuroraBackground";
-import { BrandLockup } from "@/components/Brand";
+import { BrandLockup, BrandMark } from "@/components/Brand";
 import { NotificationBell } from "@/components/NotificationBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { PageTransition } from "@/components/PageTransition";
@@ -124,6 +124,27 @@ export function ConsoleShell({
     });
   };
   const anyTabActive = mobileTabs.some(tabActive);
+  const sheetDrag = useDragControls();
+
+  // Mobile header shows the section you're on (most specific match wins).
+  const currentLabel = useMemo(() => {
+    let best: { label: string; len: number } | null = null;
+    for (const item of safeNav) {
+      if (!isActive(item)) continue;
+      const len = resolveTo(item.to, item.params).length;
+      if (!best || len > best.len) best = { label: item.label, len };
+    }
+    return best?.label ?? title;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safeNav, path, hash, title]);
+
+  // Lock page scroll while the "More" sheet is open.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
 
   const avatar = (email[0] ?? "?").toUpperCase();
 
@@ -212,20 +233,42 @@ export function ConsoleShell({
 
         {/* ============ Main column ============ */}
         <div className="relative flex min-w-0 flex-1 flex-col">
-          {/* Header bar — 52px, mobile + desktop */}
+          {/* Header bar — 52px (+ notch inset), mobile + desktop */}
           <header
-            className="sticky top-0 z-30 flex h-[52px] items-center justify-between gap-3 px-3 sm:px-4"
+            className="mobile-header sticky top-0 z-30 flex items-center justify-between gap-3 px-3 sm:px-4"
             style={{
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(20px)",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              height: "calc(52px + env(safe-area-inset-top))",
+              paddingTop: "env(safe-area-inset-top)",
             }}
           >
             <div className="flex min-w-0 items-center gap-2">
-              <span className="lg:hidden">
-                <BrandLockup size={20} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
-              </span>
-              <span className="hidden shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-primary sm:inline">
+              {/* Mobile: logo mark + the section you're on */}
+              <Link
+                to={(safeNav[0]?.to ?? "/") as never}
+                params={safeNav[0]?.params as never}
+                className="shrink-0 lg:hidden"
+                aria-label="Home"
+              >
+                <BrandMark size={30} />
+              </Link>
+              <div className="min-w-0 leading-tight lg:hidden">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={currentLabel}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    className="truncate font-display text-[15px] font-extrabold tracking-tight"
+                  >
+                    {currentLabel}
+                  </motion.div>
+                </AnimatePresence>
+                <div className="truncate font-mono text-[9px] uppercase tracking-[0.2em] text-primary/80">
+                  {title}
+                </div>
+              </div>
+              <span className="hidden shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-primary lg:inline">
                 {badge}
               </span>
             </div>
@@ -280,45 +323,52 @@ export function ConsoleShell({
             </div>
           </header>
 
-          {banner ? <div className="sticky top-[52px] z-20">{banner}</div> : null}
+          {banner ? (
+            <div className="sticky z-20" style={{ top: "calc(52px + env(safe-area-inset-top))" }}>{banner}</div>
+          ) : null}
 
           {/* Main content */}
-          <main className="min-w-0 px-3 pb-28 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
+          <main className="min-w-0 px-3 pb-36 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
             <PageTransition routeKey={path}>{children}</PageTransition>
           </main>
 
-          {/* ============ Mobile bottom nav — 56px ============ */}
+          {/* soft fade so content melts under the floating dock */}
+          <div aria-hidden className="mobile-dock-fade pointer-events-none fixed inset-x-0 bottom-0 z-20 h-28 lg:hidden" />
+
+          {/* ============ Mobile floating dock ============ */}
           <nav
-            className="fixed inset-x-0 bottom-0 z-30 lg:hidden"
-            style={{
-              background: "rgba(10,0,20,0.95)",
-              backdropFilter: "blur(20px)",
-              borderTop: "1px solid rgba(255,100,200,0.15)",
-              paddingBottom: "env(safe-area-inset-bottom)",
-            }}
+            className="fixed inset-x-0 bottom-0 z-30 px-3 lg:hidden"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 10px)" }}
             aria-label="Primary"
           >
-            <div className="grid h-14" style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0,1fr))` }}>
+            <div
+              className="mobile-dock relative mx-auto grid h-[64px] max-w-md gap-1 rounded-[24px] p-1.5"
+              style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0,1fr))` }}
+            >
               {mobileTabs.map((t) => {
                 const active = t.more ? open || !anyTabActive : tabActive(t);
-                const cls = `relative flex h-14 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition active:scale-95 ${
-                  active ? "text-primary" : "text-muted-foreground"
+                const cls = `relative flex flex-col items-center justify-center gap-1 rounded-[18px] text-[10px] font-semibold tracking-wide transition-colors duration-200 active:scale-[0.94] ${
+                  active ? "text-foreground" : "text-muted-foreground"
                 }`;
                 const inner = (
                   <>
                     {active && (
-                      <span
-                        className="pointer-events-none absolute inset-x-3 top-0 h-[2px] rounded-full bg-primary"
-                        style={{ boxShadow: "0 0 10px var(--color-magenta, oklch(0.7 0.26 335))" }}
+                      <motion.span
+                        layoutId="dock-active"
+                        className="dock-active pointer-events-none absolute inset-0 rounded-[18px]"
+                        transition={{ type: "spring", stiffness: 520, damping: 40, mass: 0.7 }}
                       />
                     )}
-                    <t.icon className="h-[18px] w-[18px]" />
-                    <span className="truncate px-1">{t.label}</span>
+                    <t.icon
+                      className={`relative z-10 h-5 w-5 transition-all duration-300 ${active ? "-translate-y-px text-primary drop-shadow-[0_0_8px_var(--primary)]" : ""}`}
+                      strokeWidth={active ? 2.3 : 1.8}
+                    />
+                    <span className="relative z-10 max-w-full truncate px-1">{t.label}</span>
                   </>
                 );
                 if (t.more || !t.to) {
                   return (
-                    <button key={t.label} type="button" onPointerDown={() => setOpen(true)} className={cls} aria-label="More menu">
+                    <button key={t.label} type="button" onClick={() => setOpen(true)} className={cls} aria-label="More menu" aria-expanded={open}>
                       {inner}
                     </button>
                   );
@@ -348,63 +398,94 @@ export function ConsoleShell({
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={() => setOpen(false)}
-              className="fixed inset-0 z-40 bg-ink/60 backdrop-blur-md lg:hidden"
+              className="fixed inset-0 z-40 bg-background/75 lg:hidden"
             />
             <motion.aside
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 460, damping: 40, mass: 0.6 }}
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[28px] border-t border-white/10 bg-card/95 backdrop-blur-2xl lg:hidden"
+              drag="y"
+              dragControls={sheetDrag}
+              dragListener={false}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.7 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 90 || info.velocity.y > 500) setOpen(false);
+              }}
+              className="mobile-sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[30px] lg:hidden"
               style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)", willChange: "transform" }}
               aria-label="More navigation"
             >
-              <div className="flex justify-center pt-2.5">
-                <span className="h-1.5 w-12 rounded-full bg-white/20" />
-              </div>
-              <div className="flex items-center justify-between px-5 pb-3 pt-3">
-                <div>
-                  <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">{badge}</div>
-                  <div className="font-display text-lg font-extrabold">{title}</div>
+              {/* drag handle + header — swipe down to close */}
+              <div
+                className="touch-none select-none"
+                onPointerDown={(e) => sheetDrag.start(e)}
+              >
+                <div className="flex justify-center pt-3">
+                  <span className="h-1.5 w-11 rounded-full bg-muted-foreground/40" />
                 </div>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="rounded-full bg-secondary/60 p-2 text-muted-foreground transition active:scale-90"
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center justify-between gap-3 px-5 pb-4 pt-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <BrandMark size={38} />
+                    <div className="min-w-0">
+                      <div className="truncate font-display text-lg font-extrabold leading-tight">{title}</div>
+                      <div className="truncate font-mono text-[10px] uppercase tracking-[0.24em] text-primary/80">{badge}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setOpen(false)}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary/70 text-muted-foreground transition active:scale-90"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto px-4 pb-4">
-                {groups.map((g) => (
-                  <div key={g.label ?? "root"} className="mb-4">
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+                {groups.map((g, gi) => (
+                  <div key={g.label ?? "root"} className="mb-5">
                     {g.label && (
-                      <div className="px-1 pb-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70">
+                      <div className="flex items-center gap-2 px-1 pb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                        <span className="h-px w-3 bg-primary/60" />
                         {g.label}
                       </div>
                     )}
                     <div className="grid grid-cols-3 gap-2.5">
-                      {g.items.map((item) => {
+                      {g.items.map((item, ii) => {
                         const active = isActive(item);
                         return (
-                          <Link
+                          <motion.div
                             key={item.label}
-                            to={item.to}
-                            params={item.params}
-                            hash={item.hash}
-                            onClick={() => setOpen(false)}
-                            className={`flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition active:scale-95 ${
-                              active
-                                ? "border-primary/50 bg-primary/15 text-primary"
-                                : "border-white/10 bg-background/40 text-foreground"
-                            }`}
+                            initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ delay: 0.04 + Math.min(gi * 3 + ii, 14) * 0.022, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                           >
-                            <item.icon className="h-5 w-5" />
-                            <span className="line-clamp-2 text-[10px] font-medium leading-tight">{item.label}</span>
-                          </Link>
+                            <Link
+                              to={item.to}
+                              params={item.params}
+                              hash={item.hash}
+                              onClick={() => setOpen(false)}
+                              data-active={active || undefined}
+                              className="sheet-tile flex aspect-[1/0.92] flex-col items-center justify-center gap-2 rounded-[20px] p-2 text-center transition active:scale-95"
+                            >
+                              <span className="sheet-tile-icon grid h-10 w-10 place-items-center rounded-2xl">
+                                <item.icon className="h-[19px] w-[19px]" />
+                              </span>
+                              <span className="line-clamp-2 text-[11px] font-semibold leading-tight">{item.label}</span>
+                            </Link>
+                          </motion.div>
                         );
                       })}
                     </div>
                   </div>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); void signOut(); }}
+                  className="mt-1 flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 py-3 text-sm font-semibold text-destructive transition active:scale-[0.98]"
+                >
+                  <LogOut className="h-4 w-4" /> Log out
+                </button>
               </div>
             </motion.aside>
           </>
