@@ -1201,7 +1201,7 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
     0 0 22px -6px color-mix(in oklab, var(--primary) 75%, transparent);
 }
 .dock-active::after {
-  content: ""; position: absolute; left: 50%; bottom: 5px; width: 14px; height: 3px;
+  content: ""; position: absolute; left: 50%; top: -1px; width: 22px; height: 2px;
   transform: translateX(-50%); border-radius: 999px;
   background: var(--gradient-brand-hot);
   box-shadow: 0 0 10px var(--primary);

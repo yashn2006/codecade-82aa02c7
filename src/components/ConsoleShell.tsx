@@ -398,7 +398,7 @@ export function ConsoleShell({
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={() => setOpen(false)}
-              className="fixed inset-0 z-40 bg-ink/60 backdrop-blur-md lg:hidden"
+              className="fixed inset-0 z-40 bg-background/75 lg:hidden"
             />
             <motion.aside
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
