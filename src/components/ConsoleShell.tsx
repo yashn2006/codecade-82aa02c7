@@ -212,20 +212,42 @@ export function ConsoleShell({
 
         {/* ============ Main column ============ */}
         <div className="relative flex min-w-0 flex-1 flex-col">
-          {/* Header bar — 52px, mobile + desktop */}
+          {/* Header bar — 52px (+ notch inset), mobile + desktop */}
           <header
-            className="sticky top-0 z-30 flex h-[52px] items-center justify-between gap-3 px-3 sm:px-4"
+            className="mobile-header sticky top-0 z-30 flex items-center justify-between gap-3 px-3 sm:px-4"
             style={{
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(20px)",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              height: "calc(52px + env(safe-area-inset-top))",
+              paddingTop: "env(safe-area-inset-top)",
             }}
           >
             <div className="flex min-w-0 items-center gap-2">
-              <span className="lg:hidden">
-                <BrandLockup size={20} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
-              </span>
-              <span className="hidden shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-primary sm:inline">
+              {/* Mobile: logo mark + the section you're on */}
+              <Link
+                to={(safeNav[0]?.to ?? "/") as never}
+                params={safeNav[0]?.params as never}
+                className="shrink-0 lg:hidden"
+                aria-label="Home"
+              >
+                <BrandMark size={30} />
+              </Link>
+              <div className="min-w-0 leading-tight lg:hidden">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={currentLabel}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    className="truncate font-display text-[15px] font-extrabold tracking-tight"
+                  >
+                    {currentLabel}
+                  </motion.div>
+                </AnimatePresence>
+                <div className="truncate font-mono text-[9px] uppercase tracking-[0.2em] text-primary/80">
+                  {title}
+                </div>
+              </div>
+              <span className="hidden shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-primary lg:inline">
                 {badge}
               </span>
             </div>
