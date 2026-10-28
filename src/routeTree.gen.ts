@@ -21,6 +21,7 @@ import { Route as RedirectingRouteImport } from './routes/redirecting'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as ShellPreviewTmpRouteImport } from './routes/shell-preview-tmp'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -124,6 +125,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShellPreviewTmpRoute = ShellPreviewTmpRouteImport.update({
+  id: '/shell-preview-tmp',
+  path: '/shell-preview-tmp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -394,6 +400,7 @@ export interface FileRoutesByFullPath {
   '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
+  '/shell-preview-tmp': typeof ShellPreviewTmpRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -452,6 +459,7 @@ export interface FileRoutesByTo {
   '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
+  '/shell-preview-tmp': typeof ShellPreviewTmpRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/owner': typeof AuthenticatedOwnerRoute
@@ -510,6 +518,7 @@ export interface FileRoutesById {
   '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
+  '/shell-preview-tmp': typeof ShellPreviewTmpRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -570,6 +579,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/reset-password'
     | '/setup'
+    | '/shell-preview-tmp'
     | '/signup'
     | '/terms'
     | '/admin'
@@ -628,6 +638,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/reset-password'
     | '/setup'
+    | '/shell-preview-tmp'
     | '/signup'
     | '/terms'
     | '/owner'
@@ -685,6 +696,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/reset-password'
     | '/setup'
+    | '/shell-preview-tmp'
     | '/signup'
     | '/terms'
     | '/_authenticated/admin'
@@ -745,6 +757,7 @@ export interface RootRouteChildren {
   RefundPolicyRoute: typeof RefundPolicyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SetupRoute: typeof SetupRoute
+  ShellPreviewTmpRoute: typeof ShellPreviewTmpRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   ApiSitemapDotxmlRoute: typeof ApiSitemapDotxmlRoute
@@ -836,6 +849,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shell-preview-tmp': {
+      id: '/shell-preview-tmp'
+      path: '/shell-preview-tmp'
+      fullPath: '/shell-preview-tmp'
+      preLoaderRoute: typeof ShellPreviewTmpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -1300,6 +1320,7 @@ const rootRouteChildren: RootRouteChildren = {
   RefundPolicyRoute: RefundPolicyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SetupRoute: SetupRoute,
+  ShellPreviewTmpRoute: ShellPreviewTmpRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   ApiSitemapDotxmlRoute: ApiSitemapDotxmlRoute,
