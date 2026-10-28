@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { KeyRound, LifeBuoy, LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase/client";
 import { AuroraBackground } from "@/components/AuroraBackground";
-import { BrandLockup } from "@/components/Brand";
+import { BrandLockup, BrandMark } from "@/components/Brand";
 import { NotificationBell } from "@/components/NotificationBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { PageTransition } from "@/components/PageTransition";
@@ -124,6 +124,27 @@ export function ConsoleShell({
     });
   };
   const anyTabActive = mobileTabs.some(tabActive);
+  const sheetDrag = useDragControls();
+
+  // Mobile header shows the section you're on (most specific match wins).
+  const currentLabel = useMemo(() => {
+    let best: { label: string; len: number } | null = null;
+    for (const item of safeNav) {
+      if (!isActive(item)) continue;
+      const len = resolveTo(item.to, item.params).length;
+      if (!best || len > best.len) best = { label: item.label, len };
+    }
+    return best?.label ?? title;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safeNav, path, hash, title]);
+
+  // Lock page scroll while the "More" sheet is open.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
 
   const avatar = (email[0] ?? "?").toUpperCase();
 
