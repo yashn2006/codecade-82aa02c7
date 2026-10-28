@@ -170,7 +170,7 @@ function AuthPage() {
         </div>
         <Link
           to="/"
-          className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground"
+          className="hidden font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground sm:inline"
         >
           ← corecade.com
         </Link>

@@ -122,12 +122,12 @@ function DiscoverPage() {
         )}
 
 
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
             <h2 className="font-display text-2xl font-bold sm:text-3xl">Featured Arenas</h2>
             <p className="mt-1 text-sm text-white/50">{filtered.length} {filtered.length === 1 ? "arena" : "arenas"} available</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
             <button
               onClick={() => setFiltersOpen(true)}
               className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium backdrop-blur transition hover:border-white/25 hover:bg-white/10"
@@ -169,7 +169,7 @@ function DiscoverPage() {
           <MapView cafes={filtered} />
         )}
 
-        <StatsRow />
+        <StatsRow arenas={cafes.length} cities={cityList.length} live={liveCafes.length} />
       </section>
 
       <FiltersSheet
@@ -614,15 +614,14 @@ function FiltersSheet({
 }
 
 /* ============ STATS ============ */
-function StatsRow() {
-  const items = [
-    { v: 120, suffix: "+", l: "Arenas" },
-    { v: 50000, suffix: "+", l: "Sessions" },
-    { v: 18, suffix: "", l: "Cities" },
-    { v: 4.8, suffix: "★", l: "Avg Rating", format: (n: number) => n.toFixed(1) },
+function StatsRow({ arenas, cities, live }: { arenas: number; cities: number; live: number }) {
+  const items: { v: number; suffix: string; l: string; format?: (n: number) => string }[] = [
+    { v: arenas, suffix: "", l: arenas === 1 ? "Arena" : "Arenas" },
+    { v: cities, suffix: "", l: cities === 1 ? "City" : "Cities" },
+    { v: live, suffix: "", l: "Live now" },
   ];
   return (
-    <div className="mt-20 grid grid-cols-2 gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-6 sm:grid-cols-4 sm:p-8">
+    <div className="mt-20 grid grid-cols-3 gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-6 sm:p-8">
       {items.map((it) => (
         <div key={it.l} className="text-center">
           <div className="font-display text-2xl font-black text-white sm:text-3xl">
