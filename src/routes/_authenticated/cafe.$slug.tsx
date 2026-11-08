@@ -95,14 +95,14 @@ function CafeLayout() {
       <div className="mb-4 space-y-3">
         <MaintenanceBanner window={platform} title="CoreCade network maintenance" />
         {cafe && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/30 px-4 py-2.5 backdrop-blur">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="grid min-w-0 gap-3 border border-border/60 bg-card/30 px-3 py-2.5 sm:px-4 xl:flex xl:items-center xl:justify-between">
+            <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
               <Wrench className={`h-3.5 w-3.5 ${cafeInMaint ? "text-amber-300" : ""}`} />
               {cafeInMaint
                 ? <span className="text-amber-200">Maintenance active — public bookings paused.</span>
                 : <span>Need to pause for an hour? Schedule maintenance so customers see why.</span>}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <MaintenanceScheduler
                 scope={{ kind: "cafe", cafeId: (cafe as { id: string }).id, cafeName: cafe.name }}
                 current={cafeMaint}
@@ -161,7 +161,7 @@ function CafeBreadcrumbs({ slug, cafeName }: { slug: string; cafeName: string | 
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       aria-label="Breadcrumb"
-      className="sticky top-[92px] z-10 mb-3 flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-border/50 bg-card/70 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur-xl"
+      className="relative z-10 mb-3 flex min-w-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs font-medium text-muted-foreground lg:sticky lg:top-[92px] [&>a]:shrink-0 [&>span]:shrink-0"
     >
       <Link to="/owner" className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition hover:bg-accent/40 hover:text-foreground">
         <Home className="h-3 w-3" /> Owner Hub

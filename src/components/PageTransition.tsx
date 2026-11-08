@@ -48,7 +48,7 @@ export function PageTransition({ routeKey, children }: { routeKey: string; child
   }, [routeKey, queryClient]);
 
   return (
-    <div className="grid">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)]">
       <motion.div
         className="[grid-area:1/1] min-w-0"
         initial={false}

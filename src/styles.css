@@ -160,7 +160,7 @@
     color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    overflow-y: auto !important;
+    overflow-y: auto;
     overscroll-behavior-y: auto;
     touch-action: pan-x pan-y;
   }
@@ -171,11 +171,10 @@
     font-family: var(--font-sans);
     min-height: 100vh;
     overflow-x: clip;
-    overflow-y: visible !important;
+    overflow-y: visible;
     overscroll-behavior-y: auto;
     touch-action: pan-x pan-y;
     position: relative;
-    pointer-events: auto !important;
   }
 
   #root {
@@ -184,11 +183,9 @@
     touch-action: pan-x pan-y;
   }
 
-  /* Keep normal document scrolling even if a dialog/menu cleanup is interrupted. */
+  /* Let modal primitives lock background scrolling while their content scrolls. */
   body[data-scroll-locked] {
-    overflow-y: visible !important;
-    margin-right: 0 !important;
-    pointer-events: auto !important;
+    overflow: hidden !important;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -1235,5 +1232,23 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
   color: var(--primary-foreground);
   background: var(--gradient-brand-hot);
   box-shadow: 0 0 18px -4px var(--primary);
+}
+
+/* Shared mobile workspace safeguards, scoped away from public pages. */
+.dashboard-content { overflow-wrap: anywhere; }
+.dashboard-content :where(.grid) > *, .dashboard-dialog :where(.grid) > * { min-width: 0; }
+.dashboard-content :where(input, textarea, select), .dashboard-dialog :where(input, textarea, select) { min-width: 0; max-width: 100%; }
+.dashboard-dialog { max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+@media (max-width: 639px) {
+  .dashboard-content :where(h1, h2, h3) { letter-spacing: 0; overflow-wrap: anywhere; }
+  .dashboard-content :where(input, textarea, select), .dashboard-dialog :where(input, textarea, select) { font-size: 16px; }
+  .dashboard-content .overflow-x-auto { max-width: 100%; overscroll-behavior-x: contain; }
+  .lf-seg button { width: 40px; height: 40px; }
+  .lf-chip { min-height: 40px; }
+  .lf-input { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .dashboard-content *, .mobile-dock *, .mobile-sheet * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 

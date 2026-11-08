@@ -94,7 +94,7 @@ function OwnerHub() {
               {cafes.length} café{cafes.length === 1 ? "" : "s"} · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}. Everything — floor, bookings, POS and revenue — from one console.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Link
               to="/owner/help"
               className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-sm font-semibold backdrop-blur transition hover:border-white/25 hover:bg-white/[0.08]"
@@ -387,7 +387,7 @@ function CreateCafeButton() {
           {/* Step 1 — Hours & days */}
           {step === 1 && (
             <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Opens at</Label>
                   <div className="relative">
@@ -408,7 +408,7 @@ function CreateCafeButton() {
               </div>
               <div className="space-y-2">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Days open</Label>
-                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7 sm:gap-2">
                   {[
                     { d: 1, l: "Mon" }, { d: 2, l: "Tue" }, { d: 3, l: "Wed" }, { d: 4, l: "Thu" },
                     { d: 5, l: "Fri" }, { d: 6, l: "Sat" }, { d: 0, l: "Sun" },
@@ -432,7 +432,7 @@ function CreateCafeButton() {
                     );
                   })}
                 </div>
-                <div className="flex gap-2 pt-1">
+                <div className="flex flex-wrap gap-2 pt-1">
                   <button type="button" onClick={() => setOpenDays([1, 2, 3, 4, 5, 6, 0])}
                     className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
                     All week

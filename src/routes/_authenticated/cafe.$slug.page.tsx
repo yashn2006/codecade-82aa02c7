@@ -259,7 +259,7 @@ function PageEditor() {
         <div>
           <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-primary" /> Gallery</Label>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Input value={form.galleryInput} onChange={(e) => setForm({ ...form, galleryInput: e.target.value })} placeholder="Paste image URL…" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGallery(); } }} className="flex-1 min-w-[180px]" />
+            <Input value={form.galleryInput} onChange={(e) => setForm({ ...form, galleryInput: e.target.value })} placeholder="Paste image URL…" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGallery(); } }} className="min-w-0 basis-full sm:flex-1 sm:basis-auto" />
             <Button type="button" variant="outline" onClick={addGallery}>Add URL</Button>
             <ImageUploader cafeId={cafeId} folder="gallery" label="Upload image" onUploaded={(url) => setForm((c) => ({ ...c, gallery: [...c.gallery, url] }))} />
           </div>
@@ -268,7 +268,7 @@ function PageEditor() {
               {form.gallery.map((url, i) => (
                 <div key={i} className="group relative overflow-hidden rounded-lg border border-border/60">
                   <img src={url} alt="" className="aspect-square w-full object-cover" />
-                  <button type="button" onClick={() => removeGallery(i)} className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-destructive/90 text-destructive-foreground opacity-0 transition group-hover:opacity-100">
+                  <button type="button" aria-label="Remove gallery image" onClick={() => removeGallery(i)} className="absolute right-1 top-1 grid h-9 w-9 place-items-center rounded-full bg-destructive/90 text-destructive-foreground opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100">
                     <X className="h-3 w-3" />
                   </button>
                 </div>

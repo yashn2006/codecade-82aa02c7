@@ -57,7 +57,7 @@ function MembershipsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <div className="text-sm text-muted-foreground">{q.data?.length ?? 0} plans</div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

@@ -85,13 +85,13 @@ function AnalyticsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
           <Select value={range} onValueChange={(v) => setRange(v as RangeId)}>
-            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 w-full text-xs sm:h-8 sm:w-[150px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {RANGES.map((r) => <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={deviceFilter} onValueChange={setDeviceFilter}>
-            <SelectTrigger className="h-8 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 w-full text-xs sm:h-8 sm:w-[170px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All devices</SelectItem>
               {devices.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
@@ -229,7 +229,7 @@ function AttendanceHeatmap({ sessions }: { sessions: SessionRow[] }) {
       className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/40 p-5 backdrop-blur-xl"
     >
       <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-magenta/20 blur-3xl" />
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
             <Flame className="h-3 w-3 text-amber-400" /> Attendance heatmap · day × hour

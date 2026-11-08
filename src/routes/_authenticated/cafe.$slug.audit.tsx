@@ -40,9 +40,9 @@ function AuditPage() {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
           {(q.data ?? []).map((e) => (
-            <div key={e.id} className="grid grid-cols-[auto_1fr_auto] gap-3 border-b border-border/40 px-4 py-2.5 text-xs last:border-0">
+            <div key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border/40 px-4 py-2.5 text-xs last:border-0 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
               <div className="font-mono text-muted-foreground"><Clock className="mr-1 inline h-3 w-3" />{new Date(e.created_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</div>
-              <div className="min-w-0">
+              <div className="col-span-2 row-start-2 min-w-0 break-words sm:col-span-1 sm:row-auto">
                 <span className="font-medium">{e.action}</span>
                 {e.resource_type && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">{e.resource_type}{e.resource_id ? `:${e.resource_id.slice(0, 8)}` : ""}</span>}
                 {e.meta && Object.keys(e.meta as object).length > 0 && (

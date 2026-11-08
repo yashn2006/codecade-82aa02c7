@@ -34,7 +34,7 @@ export function TrialBanner({ cafe }: { cafe: TrialInfo | null | undefined }) {
 
   return (
     <div
-      className="relative flex h-10 items-center justify-between gap-3 px-3 sm:px-4"
+      className="relative grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:flex sm:justify-between sm:px-4"
       style={{ background: tone.bg, borderBottom: `1px solid ${tone.border}`, backdropFilter: "blur(16px)" }}
     >
       {/* countdown progress bar */}
@@ -53,7 +53,7 @@ export function TrialBanner({ cafe }: { cafe: TrialInfo | null | undefined }) {
         {expired
           ? <AlertTriangle className="h-3.5 w-3.5 shrink-0" style={{ color: tone.accent }} />
           : <Clock className={`h-3.5 w-3.5 shrink-0 ${urgent ? "animate-dot-pulse" : ""}`} style={{ color: tone.accent }} />}
-        <span className={`truncate ${urgent ? "animate-pulse-soft" : ""}`}>
+        <span className={`min-w-0 leading-snug ${urgent ? "animate-pulse-soft" : ""}`}>
           {expired ? (
             <><span className="font-semibold" style={{ color: tone.accent }}>Trial ended</span>
               <span className="text-foreground/70"> · Upgrade to unlock all features</span></>

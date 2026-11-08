@@ -235,7 +235,7 @@ export function ConsoleShell({
         <div className="relative flex min-w-0 flex-1 flex-col">
           {/* Header bar — 52px (+ notch inset), mobile + desktop */}
           <header
-            className="mobile-header sticky top-0 z-30 flex items-center justify-between gap-3 px-3 sm:px-4"
+            className="mobile-header sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 sm:flex sm:justify-between sm:px-4"
             style={{
               height: "calc(52px + env(safe-area-inset-top))",
               paddingTop: "env(safe-area-inset-top)",
@@ -324,11 +324,11 @@ export function ConsoleShell({
           </header>
 
           {banner ? (
-            <div className="sticky z-20" style={{ top: "calc(52px + env(safe-area-inset-top))" }}>{banner}</div>
+            <div className="relative z-20 lg:sticky" style={{ top: "calc(52px + env(safe-area-inset-top))" }}>{banner}</div>
           ) : null}
 
           {/* Main content */}
-          <main className="min-w-0 px-3 pb-36 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
+          <main className="dashboard-content min-w-0 max-w-full px-3 pb-36 pt-4 sm:px-5 lg:px-6 xl:px-8 lg:pb-10">
             <PageTransition routeKey={path}>{children}</PageTransition>
           </main>
 
@@ -411,7 +411,7 @@ export function ConsoleShell({
               onDragEnd={(_, info) => {
                 if (info.offset.y > 90 || info.velocity.y > 500) setOpen(false);
               }}
-              className="mobile-sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col overflow-hidden rounded-t-[30px] lg:hidden"
+              className="mobile-sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[88dvh] flex-col overflow-hidden rounded-t-[30px] lg:hidden"
               style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)", willChange: "transform" }}
               aria-label="More navigation"
             >
@@ -441,7 +441,7 @@ export function ConsoleShell({
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
                 {groups.map((g, gi) => (
                   <div key={g.label ?? "root"} className="mb-5">
                     {g.label && (

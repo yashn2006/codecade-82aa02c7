@@ -76,7 +76,7 @@ function TournamentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <div className="text-sm text-muted-foreground">{rows.length} tournaments</div>
         <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }} onClick={() => setEdit({ cafe_id: cafeId, format: "solo", status: "upcoming", capacity: 16, starts_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16) })}>
           <Plus className="h-4 w-4" /> New tournament

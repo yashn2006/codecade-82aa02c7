@@ -72,7 +72,7 @@ function DevicesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <div className="text-sm text-muted-foreground">{q.data?.length ?? 0} devices</div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -121,8 +121,8 @@ function DevicesPage() {
         ) : !q.data || q.data.length === 0 ? (
           <EmptyState icon={Cpu} title="No devices yet" description="Add your first PC, console, or VR rig." />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/30 backdrop-blur">
-            <table className="w-full text-sm">
+          <div className="min-w-0 max-w-full overflow-x-auto rounded-lg border border-border/60 bg-card/30 backdrop-blur">
+            <table className="min-w-[600px] w-full text-sm">
               <thead className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
                 <tr><th className="p-3">Name</th><th className="p-3">Type</th><th className="p-3">Rate</th><th className="p-3">Status</th><th className="p-3 text-right">Actions</th></tr>
               </thead>

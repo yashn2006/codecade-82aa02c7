@@ -425,7 +425,7 @@ function FloorBuilder() {
 
       {/* Add dialog — two-pane with live preview */}
       <Dialog open={!!adding} onOpenChange={(v) => !v && setAdding(null)}>
-        <DialogContent className="overflow-hidden p-0 sm:max-w-2xl">
+        <DialogContent className="overflow-y-auto p-0 sm:max-w-2xl">
           <NewStationForm
             adding={adding}
             defaultName={`PC-${devices.length + 1}`}

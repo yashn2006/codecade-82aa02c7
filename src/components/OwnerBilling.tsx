@@ -61,7 +61,7 @@ export function OwnerBilling() {
           return (
             <div key={c.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center justify-between gap-2">
-                <div className="truncate text-sm font-semibold">{c.name}</div>
+                <div className="min-w-0 truncate text-sm font-semibold">{c.name}</div>
                 <Badge variant="outline" style={{ color: col, borderColor: `${col}55` }}>
                   {c.subscription_status ?? "trialing"}
                 </Badge>
@@ -87,10 +87,10 @@ export function OwnerBilling() {
           </div>
           <div className="space-y-1.5">
             {events.map((e) => (
-              <div key={e.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-xs">
-                <span className="text-emerald-300">+{e.added_days} days</span>
-                <span className="truncate px-3 text-muted-foreground">{e.reason ?? e.source}</span>
-                <span className="text-muted-foreground">{new Date(e.created_at).toLocaleDateString()}</span>
+              <div key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+                <span className="text-lf-run">+{e.added_days} days</span>
+                <span className="col-span-2 row-start-2 min-w-0 break-words text-muted-foreground sm:col-span-1 sm:row-auto sm:px-3">{e.reason ?? e.source}</span>
+                <span className="col-start-2 row-start-1 shrink-0 text-muted-foreground sm:col-auto sm:row-auto">{new Date(e.created_at).toLocaleDateString()}</span>
               </div>
             ))}
           </div>
@@ -122,7 +122,7 @@ export function OwnerBilling() {
                     navigator.clipboard.writeText(data.payTo.upi_id);
                     toast.success("UPI ID copied");
                   }}
-                  className="mt-0.5 inline-flex items-center gap-1.5 font-mono text-base font-semibold hover:text-primary"
+                  className="mt-0.5 inline-flex max-w-full items-center gap-1.5 break-all text-left font-mono text-base font-semibold hover:text-primary [&>svg]:shrink-0"
                 >
                   {data.payTo.upi_id ?? "UPI ID not set"} <Copy className="h-3.5 w-3.5" />
                 </button>
@@ -142,16 +142,16 @@ export function OwnerBilling() {
               {inv.note ? <p className="mt-1 text-xs text-muted-foreground">{inv.note}</p> : null}
 
               {inv.status === "submitted" ? (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-sky-300">
+                <div className="mt-2 flex min-w-0 items-start gap-1.5 break-all text-xs text-lf-cyan [&>svg]:shrink-0">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Transaction {inv.txn_ref} sent — we're verifying it.
                 </div>
               ) : (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-3 grid min-w-0 gap-2 sm:flex sm:flex-wrap sm:items-center">
                   <Input
                     placeholder="Transaction / UTR ID"
                     value={txn[inv.id] ?? ""}
                     onChange={(e) => setTxn((t) => ({ ...t, [inv.id]: e.target.value }))}
-                    className="h-9 max-w-[240px]"
+                    className="h-11 w-full sm:max-w-[240px]"
                   />
                   <ImageUploader
                     cafeId={inv.cafe_id}

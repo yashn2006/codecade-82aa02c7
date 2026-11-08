@@ -84,7 +84,7 @@ export const FloorStats = memo(function FloorStats({
           <Stat label="Maintenance" value={counts.maintenance} icon={Wrench} tone={STATUS_META.maintenance.tone} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-[auto_auto_auto] xl:grid-cols-1 xl:grid-rows-[auto_auto]">
+      <div className="grid gap-3 sm:grid-cols-[auto_auto_auto] xl:grid-cols-1 xl:grid-rows-[auto_auto]">
         <ClockCard />
         <div className="lf-panel flex items-center justify-between gap-4 px-3.5 py-2.5">
           <div>
@@ -100,7 +100,7 @@ export const FloorStats = memo(function FloorStats({
           type="button"
           onClick={onQuickStart}
           disabled={counts.available === 0}
-          className="lf-btn lf-btn-primary col-span-2 h-10 px-4 text-[13px] sm:col-span-1 xl:hidden"
+          className="lf-btn lf-btn-primary h-11 px-4 text-[13px] xl:hidden"
           title={counts.available === 0 ? "No free stations" : "Start a session on a free station"}
         >
           <Zap className="h-4 w-4" /> Start session

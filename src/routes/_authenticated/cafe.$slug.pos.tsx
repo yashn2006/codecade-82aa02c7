@@ -203,14 +203,14 @@ function POSPage() {
               const tot = o.total_amount || o.subtotal;
               const refundable = (o.status === "paid" || o.status === "refunded") && tot - (o.refund_amount || 0) > 0;
               return (
-                <div key={o.id} className="flex items-center justify-between border-b border-border/40 px-4 py-3 last:border-0">
+                <div key={o.id} className="grid min-w-0 gap-2 border-b border-border/40 px-4 py-3 last:border-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="min-w-0">
                     <div className="truncate text-sm">{o.order_items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</div>
                     <div className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                       {o.receipt_no ?? o.id.slice(0, 6)} · {new Date(o.created_at).toLocaleTimeString()} · {o.payment_method ?? "—"}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <div className="font-display font-bold">₹{tot}</div>
                     <Badge variant={o.status === "paid" ? "default" : o.status === "void" ? "secondary" : o.status === "refunded" ? "destructive" : "outline"}>{o.status}</Badge>
                     {(o.status === "paid" || o.status === "refunded") && (
@@ -241,7 +241,7 @@ function POSPage() {
         </div>
       </div>
 
-      <aside className="sticky top-24 h-fit rounded-2xl border border-border/60 bg-card/60 p-4 backdrop-blur-xl">
+      <aside className="h-fit min-w-0 rounded-lg border border-border/60 bg-card/60 p-4 backdrop-blur-xl lg:sticky lg:top-24">
         <div className="flex items-center gap-2 font-display text-lg font-bold">
           <ShoppingCart className="h-5 w-5 text-primary" /> Cart
         </div>
