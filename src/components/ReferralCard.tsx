@@ -21,9 +21,10 @@ export function ReferralCard() {
   const earned = redeemed * 30;
   const code = primary.referral_code ?? "";
 
-  const inviteUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/auth?ref=${code}`
-    : `/auth?ref=${code}`;
+  const inviteUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/auth?ref=${code}`
+      : `/auth?ref=${code}`;
 
   const copy = async (text: string, key: string) => {
     await navigator.clipboard.writeText(text);
@@ -45,7 +46,11 @@ export function ReferralCard() {
           className="hidden shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-mono text-[11px] font-bold text-primary transition hover:bg-primary/20 sm:inline-flex"
         >
           {code}
-          {copied === "code" ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+          {copied === "code" ? (
+            <Check className="h-3 w-3 text-emerald-400" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
         </button>
         <button
           onClick={() => setOpen((v) => !v)}
@@ -68,34 +73,59 @@ export function ReferralCard() {
           >
             <div className="border-t border-white/10 p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">Both cafés get +30 trial days when they join.</p>
+                <p className="text-xs text-muted-foreground">
+                  Both cafés get +30 trial days when they join.
+                </p>
                 <div className="flex gap-2">
-                  <Badge variant="outline" className="border-emerald-400/30 text-emerald-300">+{earned}d earned</Badge>
-                  <Badge variant="outline" className="border-amber-400/30 text-amber-300">{pending} pending</Badge>
+                  <Badge variant="outline" className="border-emerald-400/30 text-emerald-300">
+                    +{earned}d earned
+                  </Badge>
+                  <Badge variant="outline" className="border-amber-400/30 text-amber-300">
+                    {pending} pending
+                  </Badge>
                 </div>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-white/10 bg-black/30 p-3">
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Your code</div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Your code
+                  </div>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <code className="font-mono text-xl font-bold text-gradient-hot">{code}</code>
                     <Button size="sm" variant="ghost" onClick={() => copy(code, "code2")}>
-                      {copied === "code2" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                      {copied === "code2" ? (
+                        <Check className="h-4 w-4 text-emerald-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-black/30 p-3">
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Invite link</div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Invite link
+                  </div>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <span className="truncate text-xs text-muted-foreground">{inviteUrl}</span>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" onClick={() => copy(inviteUrl, "url")}>
-                        {copied === "url" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                        {copied === "url" ? (
+                          <Check className="h-4 w-4 text-emerald-400" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => {
-                        if (navigator.share) navigator.share({ title: "Join CoreCade", url: inviteUrl }).catch(() => {});
-                        else copy(inviteUrl, "url");
-                      }}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          if (navigator.share)
+                            navigator
+                              .share({ title: "Join CoreCade", url: inviteUrl })
+                              .catch(() => {});
+                          else copy(inviteUrl, "url");
+                        }}
+                      >
                         <Share2 className="h-4 w-4" />
                       </Button>
                     </div>

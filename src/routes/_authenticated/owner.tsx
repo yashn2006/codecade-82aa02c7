@@ -3,9 +3,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  LayoutDashboard, Cpu, CalendarRange, ShoppingBag, Users, Wallet,
+  LayoutDashboard, CalendarRange, ShoppingBag, Users, Wallet,
   BookOpen, LineChart, BadgeCheck, UsersRound, ArrowRight, Building2,
-  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy, Loader2,
+  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy, Zap, Trophy, Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -39,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/owner")({
 const QUICK = [
   { to: "/cafe/$slug",             label: "Overview",    icon: LayoutDashboard },
   { to: "/cafe/$slug/floor",       label: "Live Floor",  icon: BadgeCheck },
-  { to: "/cafe/$slug/devices",     label: "Devices",     icon: Cpu },
+  { to: "/cafe/$slug/tournaments", label: "Tournaments", icon: Trophy },
   { to: "/cafe/$slug/bookings",    label: "Bookings",    icon: CalendarRange },
   { to: "/cafe/$slug/pos",         label: "POS",         icon: ShoppingBag },
   { to: "/cafe/$slug/menu",        label: "Menu",        icon: BookOpen },
@@ -65,6 +65,7 @@ function OwnerHub() {
       subtitle="Owner hub"
       nav={[
         { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true, group: "Workspace" },
+        { label: "Upgrade Plan", icon: Zap, to: "/owner/upgrade", exact: true, group: "Workspace" },
         { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true, group: "Support" },
       ]}
     >
@@ -163,12 +164,11 @@ function OwnerHub() {
                 </Link>
               </div>
 
-              <div className="relative mt-4 grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="relative mt-4 grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
                 <MiniStat label="Today" value={`₹${cafe.revenueToday.toLocaleString("en-IN")}`} />
                 <MiniStat label="All-time" value={`₹${cafe.revenue.toLocaleString("en-IN")}`} />
                 <MiniStat label="Bookings" value={String(cafe.bookings)} />
                 <MiniStat label="Live" value={String(cafe.activeSessions)} />
-                <MiniStat label="Devices" value={String(cafe.devices)} />
                 <MiniStat label="Customers" value={String(cafe.customers)} />
               </div>
 

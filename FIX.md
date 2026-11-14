@@ -1,4 +1,5 @@
 # CoreCade — Pre-Launch Fix Report
+
 _Last updated: this turn. Read top-to-bottom. Copy-paste ready._
 
 ---
@@ -21,7 +22,9 @@ This ONE file supersedes v27 (which errored). It contains:
 10. Sanity pass: enables RLS on every public table that's missing it.
 
 ### Migration order (if starting fresh)
+
 Run in this exact order in Supabase SQL Editor:
+
 ```
 supabase-migration.sql          (base schema)
 supabase-migration-v2.sql
@@ -36,12 +39,14 @@ supabase-migration-v28-FINAL.sql  ← this fixes v27 and closes RLS gaps
 If you already ran v27 successfully somehow, v28 is still idempotent (drops+recreates).
 
 If v27 errored halfway through, run these two lines FIRST, then run v28:
+
 ```sql
 ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS no_overlapping_device_bookings;
 ALTER TABLE public.bookings DROP COLUMN IF EXISTS booking_window;
 ```
 
 ### After running v28 — verify
+
 ```sql
 -- Should return the constraint name
 SELECT conname FROM pg_constraint WHERE conname = 'no_overlapping_device_bookings';
@@ -67,30 +72,34 @@ SELECT id, public FROM storage.buckets WHERE id IN ('cafe-gallery','avatars');
 ## 3. WHAT'S ALREADY DONE (across all 3 portals)
 
 ### Super Admin (`/admin/*`)
+
 Overview, cafés, users + roles, revenue, reports, audit, health, support, announcements, config, backups, API keys, leads.
 User inspector with roles / IP / audit log. Café restriction + maintenance windows.
 
 ### Café Owner (`/cafe/$slug/*`)
+
 Dashboard, devices, floor builder, bookings (+ rich detail dialog: live countdown, mark paid, extend, end early, delete no-show), POS, menu, memberships, tournaments, staff, customers, wallet, ledger, reports, analytics, audit, public page editor (theme + UPI), support tickets.
 
 ### Customer (`/portal`, `/discover`, `/c/$slug`)
+
 Portal with wallet + booking history, discover with search + filters + map, café public page (realtime theme sync, UPI checkout, tournament registration).
 
 ### Cross-cutting
+
 Auth (email/pass + Google), password reset, PWA manifest, sitemap, robots, legal pages (terms/privacy/refund), footer, SEO metadata per route, referrals (+30 trial days), CSV import, session timer, notification bell, idle 30-min logout, redirecting page.
 
 ---
 
 ## 4. WHAT'S LEFT — LAUNCH BLOCKERS ( 🔴 do before launch )
 
-| # | Item | Where | Effort |
-|---|---|---|---|
-| 1 | **Run v28 SQL** in Supabase | SQL editor | 1 min |
-| 2 | **Set Cloudflare env vars** — `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` as Plaintext; `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `SETUP_TOKEN` as Secret | Cloudflare dashboard | 5 min |
-| 3 | **Set Supabase Auth redirect URLs** — add `https://corecade.coreegin.com/**` + `https://codecade.lovable.app/**` under Auth → URL Configuration | Supabase dashboard | 2 min |
-| 4 | **Seed first super admin** — hit `/setup` once with your `SETUP_TOKEN` + email/password | Browser | 1 min |
-| 5 | **Verify storage buckets are Public** — Storage → cafe-gallery + avatars → Public toggle | Supabase | 1 min |
-| 6 | **Smoke-test end-to-end** — signup owner → create café → add device → customer books → owner sees booking → mark paid → complete | Live app | 15 min |
+| #   | Item                                                                                                                                                                    | Where                | Effort |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ------ |
+| 1   | **Run v28 SQL** in Supabase                                                                                                                                             | SQL editor           | 1 min  |
+| 2   | **Set Cloudflare env vars** — `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` as Plaintext; `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `SETUP_TOKEN` as Secret | Cloudflare dashboard | 5 min  |
+| 3   | **Set Supabase Auth redirect URLs** — add `https://corecade.coreegin.com/**` + `https://codecade.lovable.app/**` under Auth → URL Configuration                         | Supabase dashboard   | 2 min  |
+| 4   | **Seed first super admin** — hit `/setup` once with your `SETUP_TOKEN` + email/password                                                                                 | Browser              | 1 min  |
+| 5   | **Verify storage buckets are Public** — Storage → cafe-gallery + avatars → Public toggle                                                                                | Supabase             | 1 min  |
+| 6   | **Smoke-test end-to-end** — signup owner → create café → add device → customer books → owner sees booking → mark paid → complete                                        | Live app             | 15 min |
 
 ---
 
@@ -124,13 +133,13 @@ Auth (email/pass + Google), password reset, PWA manifest, sitemap, robots, legal
 
 ## 7. KNOWN BUGS / GLITCHES
 
-| Severity | Issue | Status |
-|---|---|---|
-| 🟡 | First-paint of dashboard sometimes empty until user clicks another section and back | Mostly fixed via force-invalidate on `_authenticated` mount; edge cases remain on very slow networks. Real fix: SSR-friendly loaders on protected routes (blocked by Supabase-in-localStorage). |
-| 🟡 | Occasional double-tap needed on mobile bottom-nav "More" sheet | Reduced by switching to `pointerdown`; edge cases when scroll momentum is active. |
-| 🟢 | `HeroBackdrop3D` briefly flashes on mobile before hiding | Cosmetic. |
-| 🟢 | Legal markdown renderer doesn't parse tables (mostly plain prose so unused) | Cosmetic. |
-| 🟢 | `SessionTimer` re-renders every second; fine but wastes a few CPU cycles on the owner dashboard when 20+ sessions live | Cosmetic. |
+| Severity | Issue                                                                                                                  | Status                                                                                                                                                                                          |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🟡       | First-paint of dashboard sometimes empty until user clicks another section and back                                    | Mostly fixed via force-invalidate on `_authenticated` mount; edge cases remain on very slow networks. Real fix: SSR-friendly loaders on protected routes (blocked by Supabase-in-localStorage). |
+| 🟡       | Occasional double-tap needed on mobile bottom-nav "More" sheet                                                         | Reduced by switching to `pointerdown`; edge cases when scroll momentum is active.                                                                                                               |
+| 🟢       | `HeroBackdrop3D` briefly flashes on mobile before hiding                                                               | Cosmetic.                                                                                                                                                                                       |
+| 🟢       | Legal markdown renderer doesn't parse tables (mostly plain prose so unused)                                            | Cosmetic.                                                                                                                                                                                       |
+| 🟢       | `SessionTimer` re-renders every second; fine but wastes a few CPU cycles on the owner dashboard when 20+ sessions live | Cosmetic.                                                                                                                                                                                       |
 
 ---
 

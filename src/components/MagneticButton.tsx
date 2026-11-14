@@ -18,13 +18,19 @@ export function MagneticButton({ children, magnetStrength = 0.35, className, ...
       ref={ref}
       style={{ x: sx, y: sy, display: "inline-block" }}
       onPointerMove={(e) => {
-        const r = ref.current?.getBoundingClientRect(); if (!r) return;
+        const r = ref.current?.getBoundingClientRect();
+        if (!r) return;
         x.set((e.clientX - r.left - r.width / 2) * magnetStrength);
         y.set((e.clientY - r.top - r.height / 2) * magnetStrength);
       }}
-      onPointerLeave={() => { x.set(0); y.set(0); }}
+      onPointerLeave={() => {
+        x.set(0);
+        y.set(0);
+      }}
     >
-      <Button className={className} {...rest}>{children}</Button>
+      <Button className={className} {...rest}>
+        {children}
+      </Button>
     </motion.div>
   );
 }

@@ -5,7 +5,7 @@ HHHHHHHHHHHH
 runtime** as the default target. That means it's already Cloudflare-native —
 no code changes needed. Slug routes like `/c/saaad` and `/cafe/saaad/pos`
 work out of the box because they're file-based dynamic routes.
-hioi how wre uy 
+hioi how wre uy
 
 > **Will it crash?** No. The whole stack (SSR, server functions, Supabase
 > client, Razorpay flows) runs identically on Cloudflare's edge as it does
@@ -17,35 +17,39 @@ hioi how wre uy
 ## Option A — Cloudflare Pages (recommended, 5 min)
 
 ### 1. Push the repo to GitHub
+
 Lovable → top-right **GitHub** button → Connect & push.
 
 ### 2. Create a Cloudflare Pages project
+
 - Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
 - Pick your `corecade` repo.
 
 ### 3. Build settings
-| Setting | Value |
-|---|---|
-| Framework preset | **None** (we configure manually) |
-| Build command | `bun install && bun run build` |
-| Build output directory | `.output/public` |
-| Root directory | `/` |
-| Node version | `20` (Settings → Environment variables → `NODE_VERSION = 20`) |
+
+| Setting                | Value                                                         |
+| ---------------------- | ------------------------------------------------------------- |
+| Framework preset       | **None** (we configure manually)                              |
+| Build command          | `bun install && bun run build`                                |
+| Build output directory | `.output/public`                                              |
+| Root directory         | `/`                                                           |
+| Node version           | `20` (Settings → Environment variables → `NODE_VERSION = 20`) |
 
 ### 4. Environment variables (Settings → Variables and Secrets)
 
 From Supabase → **Project Settings → API Keys**, use the keys like this:
 
-| Your screenshot mark | Supabase key | Put in Cloudflare as | Type |
-|---|---|---|---|
-| **1** | New **Publishable key** (`sb_publishable_...`) | `VITE_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_PUBLISHABLE_KEY` | Variable |
-| **2** | New **Secret key** (`sb_secret_...`) | Do **not** use for this app's admin Data API calls | — |
-| **3** | Legacy **anon public JWT** (`eyJ...`, row `anon public`) | `VITE_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY` only if you are not using the publishable key | Variable |
-| **4** | Legacy **service_role secret JWT** (`eyJ...`, row `service_role secret`) | `EXTERNAL_SUPABASE_SERVICE_ROLE_KEY` and/or `SUPABASE_SERVICE_ROLE_KEY` | Secret |
+| Your screenshot mark | Supabase key                                                             | Put in Cloudflare as                                                                           | Type     |
+| -------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | -------- |
+| **1**                | New **Publishable key** (`sb_publishable_...`)                           | `VITE_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_PUBLISHABLE_KEY`                                 | Variable |
+| **2**                | New **Secret key** (`sb_secret_...`)                                     | Do **not** use for this app's admin Data API calls                                             | —        |
+| **3**                | Legacy **anon public JWT** (`eyJ...`, row `anon public`)                 | `VITE_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY` only if you are not using the publishable key | Variable |
+| **4**                | Legacy **service_role secret JWT** (`eyJ...`, row `service_role secret`) | `EXTERNAL_SUPABASE_SERVICE_ROLE_KEY` and/or `SUPABASE_SERVICE_ROLE_KEY`                        | Secret   |
 
 For this codebase, the most reliable setup is:
 
 **Build-time (Production + Preview):**
+
 ```
 NODE_VERSION = 20
 VITE_SUPABASE_URL          = https://nggaiqniweggifcjtoio.supabase.co
@@ -53,6 +57,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY = <mark 1: sb_publishable_...>
 ```
 
 **Runtime secrets (mark as "Secret"):**
+
 ```
 SUPABASE_URL               = https://nggaiqniweggifcjtoio.supabase.co
 SUPABASE_PUBLISHABLE_KEY   = <mark 1: sb_publishable_...>
@@ -74,14 +79,17 @@ After changing variables, go to **Deployments → Retry deployment / Redeploy**.
 Old deployments keep the old env, so data will not appear until a fresh deploy finishes.
 
 ### 5. Compatibility flags
+
 Settings → Functions → **Compatibility flags** → add `nodejs_compat` for
 **both** Production and Preview.
 
 ### 6. Deploy
+
 Hit **Save and Deploy**. First build takes ~3 minutes. You'll get a URL like
 `corecade.pages.dev`.
 
 ### 7. Custom domain (after domain purchase)
+
 - Pages project → **Custom domains** → **Set up a custom domain**
 - Enter `corecade.in` (and again for `www.corecade.in`)
 - Cloudflare auto-provisions SSL (LetsEncrypt) in ~60 seconds
@@ -89,7 +97,9 @@ Hit **Save and Deploy**. First build takes ~3 minutes. You'll get a URL like
   Cloudflare (Cloudflare gives you 2 NS records to paste at your registrar)
 
 ### 8. Update Supabase Auth redirect URLs
+
 Supabase Dashboard → **Authentication** → **URL Configuration**:
+
 - **Site URL**: `https://corecade.in`
 - **Redirect URLs** (add all):
   - `https://corecade.in/**`
@@ -97,6 +107,7 @@ Supabase Dashboard → **Authentication** → **URL Configuration**:
   - `http://localhost:5173/**`
 
 ### 9. Razorpay live mode
+
 - Razorpay Dashboard → **Settings** → **API Keys** → **Generate Live Key**
 - Update `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET` in Cloudflare with live values
 - Complete KYC if not already (required for live)
@@ -114,6 +125,7 @@ npx wrangler deploy        # uses wrangler.toml in this repo
 ```
 
 Set secrets via CLI:
+
 ```bash
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 npx wrangler secret put RAZORPAY_KEY_SECRET
@@ -126,6 +138,7 @@ npx wrangler secret put RAZORPAY_KEY_SECRET
 
 The build targets **Cloudflare Workers runtime**, not Node.js. Putting
 this on a $5 VPS means:
+
 - Re-configuring Nitro preset to `node-server` (breaks things)
 - Manually setting up nginx + PM2 + certbot
 - You become the SRE for security patches, DDoS, backups
@@ -137,12 +150,12 @@ this on a $5 VPS means:
 
 ## ✅ Slug routes — verified working
 
-| User action | URL it generates | Why it works |
-|---|---|---|
-| Owner creates café "SAAAD" with slug `saaad` | `/c/saaad` (public) | Dynamic file `routes/c.$slug.tsx` |
-| Owner opens dashboard | `/cafe/saaad/pos` etc. | Dynamic file `routes/_authenticated/cafe.$slug.*` |
-| Customer books device | `/c/saaad` → BookingFlow modal | No URL change needed |
-| New café added next month | works instantly | No rebuild — slug is just a DB row |
+| User action                                  | URL it generates               | Why it works                                      |
+| -------------------------------------------- | ------------------------------ | ------------------------------------------------- |
+| Owner creates café "SAAAD" with slug `saaad` | `/c/saaad` (public)            | Dynamic file `routes/c.$slug.tsx`                 |
+| Owner opens dashboard                        | `/cafe/saaad/pos` etc.         | Dynamic file `routes/_authenticated/cafe.$slug.*` |
+| Customer books device                        | `/c/saaad` → BookingFlow modal | No URL change needed                              |
+| New café added next month                    | works instantly                | No rebuild — slug is just a DB row                |
 
 ---
 
@@ -159,6 +172,7 @@ Run through this list on your live domain:
 7. **Notifications** — bell shows unread count, real-time INSERT updates pop in
 
 If anything fails, check:
+
 - Browser console for client errors
 - Cloudflare dashboard → Workers → Logs (real-time)
 - Supabase → Logs → API/Auth
@@ -167,17 +181,17 @@ If anything fails, check:
 
 ## What's left in the codebase (TODO sweep)
 
-| Area | Status |
-|---|---|
-| Landing scroll-to-top | ✅ Fixed |
-| Discover logo + autocomplete | ✅ Fixed |
-| Mobile perf (heavy canvases, backdrop-blur) | ✅ Disabled on mobile + reduced-motion respected |
-| Booking payment methods | ✅ Pay online / cash / at-café |
-| Razorpay wallet + booking | ✅ Wired (needs live keys) |
-| RLS migration v13 + v14 | ⚠️ Must run in Supabase SQL Editor |
-| Google OAuth | ⚠️ Enable in Supabase dashboard (5-min setup) |
-| Notification real-time | ✅ Working via Supabase Realtime |
-| Security headers (CSP, HSTS) | ⏳ Add via Cloudflare Transform Rules post-deploy |
+| Area                                        | Status                                            |
+| ------------------------------------------- | ------------------------------------------------- |
+| Landing scroll-to-top                       | ✅ Fixed                                          |
+| Discover logo + autocomplete                | ✅ Fixed                                          |
+| Mobile perf (heavy canvases, backdrop-blur) | ✅ Disabled on mobile + reduced-motion respected  |
+| Booking payment methods                     | ✅ Pay online / cash / at-café                    |
+| Razorpay wallet + booking                   | ✅ Wired (needs live keys)                        |
+| RLS migration v13 + v14                     | ⚠️ Must run in Supabase SQL Editor                |
+| Google OAuth                                | ⚠️ Enable in Supabase dashboard (5-min setup)     |
+| Notification real-time                      | ✅ Working via Supabase Realtime                  |
+| Security headers (CSP, HSTS)                | ⏳ Add via Cloudflare Transform Rules post-deploy |
 
 You're production-ready. Buy the domain → push to GitHub → follow the
 8 steps above → live in 30 min.

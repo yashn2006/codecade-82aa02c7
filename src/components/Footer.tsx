@@ -17,18 +17,42 @@ export function Footer() {
           </div>
         </div>
         <div>
-          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Product</div>
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Product
+          </div>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/discover" className="hover:text-primary">Discover cafés</Link></li>
-            <li><Link to="/auth" className="hover:text-primary">Sign in</Link></li>
+            <li>
+              <Link to="/discover" className="hover:text-primary">
+                Discover cafés
+              </Link>
+            </li>
+            <li>
+              <Link to="/auth" className="hover:text-primary">
+                Sign in
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
-          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Legal</div>
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Legal
+          </div>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/terms" className="hover:text-primary">Terms of Service</Link></li>
-            <li><Link to="/privacy" className="hover:text-primary">Privacy Policy</Link></li>
-            <li><Link to="/refund-policy" className="hover:text-primary">Refund Policy</Link></li>
+            <li>
+              <Link to="/terms" className="hover:text-primary">
+                Terms of Service
+              </Link>
+            </li>
+            <li>
+              <Link to="/privacy" className="hover:text-primary">
+                Privacy Policy
+              </Link>
+            </li>
+            <li>
+              <Link to="/refund-policy" className="hover:text-primary">
+                Refund Policy
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

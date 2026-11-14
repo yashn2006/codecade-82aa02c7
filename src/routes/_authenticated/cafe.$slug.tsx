@@ -1,10 +1,14 @@
-import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
-import { Activity, Cpu, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed, Wrench, LineChart, ChevronRight, Home, LayoutDashboard, Trophy, History, BarChart3, LifeBuoy } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
+import { Activity, CalendarRange, Users, Settings, ScrollText, Wallet, Crown, Receipt, Globe, LayoutGrid, AlertOctagon, Mail, UtensilsCrossed, Wrench, LineChart, Trophy, History, BarChart3, LifeBuoy } from "lucide-react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { getCafeBySlug } from "@/lib/cafes.functions";
+import { listDevices } from "@/lib/devices.functions";
+import { listBookings } from "@/lib/bookings.functions";
+import { listCafeCustomerTickets } from "@/lib/tickets.functions";
 import { getPlatformMaintenance } from "@/lib/platform.functions";
 import { MaintenanceScheduler } from "@/components/MaintenanceScheduler";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
@@ -30,8 +34,13 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug")({
 
 function CafeLayout() {
   const { slug } = Route.useParams();
+  const qc = useQueryClient();
   const fn = useServerFn(getCafeBySlug);
   const platFn = useServerFn(getPlatformMaintenance);
+  const devicesFn = useServerFn(listDevices);
+  const bookingsFn = useServerFn(listBookings);
+  const supportFn = useServerFn(listCafeCustomerTickets);
+
   const { data: cafe, refetch } = useQuery({
     queryKey: ["cafe", slug],
     queryFn: () => fn({ data: { slug } }),
@@ -39,6 +48,14 @@ function CafeLayout() {
   const { data: platform } = useQuery({
     queryKey: ["platform-maintenance"], queryFn: () => platFn(), refetchInterval: 60_000,
   });
+
+  const cafeId = (cafe as { id?: string } | undefined)?.id;
+  useEffect(() => {
+    if (!cafeId) return;
+    void qc.prefetchQuery({ queryKey: ["devices", cafeId], queryFn: () => devicesFn({ data: { cafe_id: cafeId } }) });
+    void qc.prefetchQuery({ queryKey: ["bookings", cafeId], queryFn: () => bookingsFn({ data: { cafe_id: cafeId } }) });
+    void qc.prefetchQuery({ queryKey: ["cafe-customer-tickets", cafeId], queryFn: () => supportFn({ data: { cafe_id: cafeId } }) });
+  }, [cafeId, qc, devicesFn, bookingsFn, supportFn]);
 
   const restricted = !!(cafe as { restricted_message?: string | null } | undefined)?.restricted_message;
   const sub = (cafe as { subscription_status?: string | null; trial_ends_at?: string | null } | undefined);
@@ -63,7 +80,7 @@ function CafeLayout() {
       banner={<TrialBanner cafe={cafe as { trial_ends_at?: string | null; subscription_status?: string | null; plan?: string | null } | null | undefined} />}
       tabs={[
         { label: "Floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
-        { label: "Ops", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug }, match: ["/cafe/$slug/devices", "/cafe/$slug/floor"] },
+        { label: "Ops", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug }, match: ["/cafe/$slug/floor"] },
         { label: "Money", icon: Receipt, to: "/cafe/$slug/pos", params: { slug }, match: ["/cafe/$slug/wallet", "/cafe/$slug/ledger"] },
         { label: "People", icon: Users, to: "/cafe/$slug/customers", params: { slug }, match: ["/cafe/$slug/staff", "/cafe/$slug/memberships"] },
         { label: "More", icon: LayoutGrid, more: true },
@@ -71,7 +88,6 @@ function CafeLayout() {
       nav={[
         { group: "Operations", label: "Live floor", icon: Activity, to: "/cafe/$slug", params: { slug }, exact: true },
         { group: "Operations", label: "Floor builder", icon: LayoutGrid, to: "/cafe/$slug/floor", params: { slug } },
-        { group: "Operations", label: "Devices", icon: Cpu, to: "/cafe/$slug/devices", params: { slug } },
         { group: "Operations", label: "Bookings", icon: CalendarRange, to: "/cafe/$slug/bookings", params: { slug } },
 
         { group: "Revenue", label: "POS counter", icon: Receipt, to: "/cafe/$slug/pos", params: { slug } },
@@ -91,16 +107,17 @@ function CafeLayout() {
         { group: "Manage", label: "Support", icon: LifeBuoy, to: "/cafe/$slug/support", params: { slug } },
       ]}
     >
-      <CafeBreadcrumbs slug={slug} cafeName={cafe?.name ?? null} />
       <div className="mb-4 space-y-3">
         <MaintenanceBanner window={platform} title="CoreCade network maintenance" />
         {cafe && (
-          <div className="grid min-w-0 gap-3 border border-border/60 bg-card/30 px-3 py-2.5 sm:px-4 xl:flex xl:items-center xl:justify-between">
-            <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-              <Wrench className={`h-3.5 w-3.5 ${cafeInMaint ? "text-amber-300" : ""}`} />
+          <div className="liquid-glass-card rounded-2xl p-3 px-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 border border-white/10 shadow-lg">
+            <div className="flex min-w-0 items-center gap-2.5 text-xs text-muted-foreground">
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${cafeInMaint ? "bg-amber-400/20 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.4)]" : "bg-white/5 text-muted-foreground"}`}>
+                <Wrench className="h-3.5 w-3.5" />
+              </span>
               {cafeInMaint
-                ? <span className="text-amber-200">Maintenance active — public bookings paused.</span>
-                : <span>Need to pause for an hour? Schedule maintenance so customers see why.</span>}
+                ? <span className="font-semibold text-amber-200">Maintenance active — public bookings paused.</span>
+                : <span className="text-foreground/80">Need to pause for an hour? Schedule maintenance so customers see why.</span>}
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <MaintenanceScheduler
@@ -108,7 +125,7 @@ function CafeLayout() {
                 current={cafeMaint}
                 onSaved={() => refetch()}
                 trigger={
-                  <Button size="sm" variant={cafeInMaint ? "destructive" : "outline"} className="gap-1.5">
+                  <Button size="sm" variant={cafeInMaint ? "destructive" : "outline"} className="gap-1.5 h-8 text-xs font-semibold rounded-xl border-white/10 hover:bg-white/10">
                     <Wrench className="h-3.5 w-3.5" />
                     {cafeInMaint ? "Edit maintenance" : "Schedule maintenance"}
                   </Button>
@@ -118,7 +135,6 @@ function CafeLayout() {
               <OwnerInbox />
               <OwnerMessageAdmin cafeId={(cafe as { id: string }).id} />
               <DeleteCafeButton cafeId={(cafe as { id: string }).id} slug={cafe.slug} name={cafe.name} />
-
             </div>
           </div>
         )}
@@ -129,72 +145,6 @@ function CafeLayout() {
         <Outlet />
       </div>
     </ConsoleShell>
-  );
-}
-
-const SECTION_LABELS: Record<string, { label: string; icon: typeof Activity }> = {
-  analytics: { label: "Analytics", icon: LineChart },
-  floor: { label: "Floor builder", icon: LayoutGrid },
-  menu: { label: "Menu", icon: UtensilsCrossed },
-  pos: { label: "POS counter", icon: Receipt },
-  devices: { label: "Devices", icon: Cpu },
-  bookings: { label: "Bookings", icon: CalendarRange },
-  tournaments: { label: "Tournaments", icon: Trophy },
-  customers: { label: "Customers", icon: Users },
-  wallet: { label: "Wallet", icon: Wallet },
-  memberships: { label: "Memberships", icon: Crown },
-  ledger: { label: "Ledger", icon: ScrollText },
-  audit: { label: "Audit log", icon: History },
-  page: { label: "Public page", icon: Globe },
-  staff: { label: "Staff", icon: Settings },
-  support: { label: "Support", icon: LifeBuoy },
-};
-
-function CafeBreadcrumbs({ slug, cafeName }: { slug: string; cafeName: string | null }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const segments = pathname.split("/").filter(Boolean); // ["cafe", slug, maybeSection]
-  const section = segments[2];
-  const sectionMeta = section ? SECTION_LABELS[section] : null;
-
-  return (
-    <motion.nav
-      initial={{ opacity: 0, y: -6 }}
-      animate={{ opacity: 1, y: 0 }}
-      aria-label="Breadcrumb"
-      className="relative z-10 mb-3 flex min-w-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs font-medium text-muted-foreground lg:sticky lg:top-[92px] [&>a]:shrink-0 [&>span]:shrink-0"
-    >
-      <Link to="/owner" className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition hover:bg-accent/40 hover:text-foreground">
-        <Home className="h-3 w-3" /> Owner Hub
-      </Link>
-      <ChevronRight className="h-3 w-3 shrink-0 text-primary/80" />
-      <Link
-        to="/cafe/$slug"
-        params={{ slug }}
-        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition hover:bg-accent/40 hover:text-foreground"
-      >
-        <LayoutDashboard className="h-3 w-3" />
-        <span className="max-w-[160px] truncate">{cafeName ?? slug}</span>
-      </Link>
-      {sectionMeta ? (
-        <>
-          <ChevronRight className="h-3 w-3 shrink-0 text-primary/80" />
-          <span aria-current="page" className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-1.5 py-0.5 font-bold text-foreground">
-            <sectionMeta.icon className="h-3 w-3" /> {sectionMeta.label}
-          </span>
-        </>
-      ) : (
-        <span aria-current="page" className="ml-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-foreground">Overview</span>
-      )}
-      {sectionMeta && (
-        <Link
-          to="/cafe/$slug"
-          params={{ slug }}
-          className="ml-auto inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground/80 transition hover:border-primary/50 hover:text-foreground"
-        >
-          <Activity className="h-3 w-3" /> Back to Overview
-        </Link>
-      )}
-    </motion.nav>
   );
 }
 

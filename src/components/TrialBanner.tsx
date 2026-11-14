@@ -68,8 +68,7 @@ export function TrialBanner({ cafe }: { cafe: TrialInfo | null | undefined }) {
       </div>
 
       <Link
-        to="/"
-        hash="pricing"
+        to="/owner/upgrade"
         className="btn-glow-magenta inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold text-primary-foreground transition hover:brightness-110"
         style={{ background: "var(--gradient-brand-hot)" }}
       >

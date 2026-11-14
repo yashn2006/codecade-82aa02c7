@@ -23,12 +23,20 @@ export function HeroBackdrop3D() {
     mx.set(((e.clientX - r.left) / r.width) * 2 - 1);
     my.set(((e.clientY - r.top) / r.height) * 2 - 1);
   }
-  function onLeave() { mx.set(0); my.set(0); }
+  function onLeave() {
+    mx.set(0);
+    my.set(0);
+  }
 
   if (isMobile) {
     return (
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at top, rgba(120,40,200,.25), transparent 60%)" }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse at top, rgba(120,40,200,.25), transparent 60%)",
+          }}
+        />
       </div>
     );
   }
@@ -61,7 +69,9 @@ export function HeroBackdrop3D() {
         >
           <div
             className="h-full w-full rounded-full opacity-70 animate-pulse-soft"
-            style={{ background: "radial-gradient(circle, oklch(0.72 0.26 330 / 0.85), transparent 65%)" }}
+            style={{
+              background: "radial-gradient(circle, oklch(0.72 0.26 330 / 0.85), transparent 65%)",
+            }}
           />
         </motion.div>
 

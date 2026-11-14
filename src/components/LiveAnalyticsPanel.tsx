@@ -44,7 +44,10 @@ export function LiveAnalyticsPanel({
     mx.set(((e.clientX - r.left) / r.width - 0.5) * 2);
     my.set(((e.clientY - r.top) / r.height - 0.5) * 2);
   }
-  function onLeave() { mx.set(0); my.set(0); }
+  function onLeave() {
+    mx.set(0);
+    my.set(0);
+  }
 
   // — Derived metrics
   const { hourly, todayRevenue, weekPath, weekArea, top, peakHour } = useMemo(() => {
@@ -66,18 +69,22 @@ export function LiveAnalyticsPanel({
 
     // Sparkline path from 7-day totals
     const max = Math.max(1, ...dayTotals);
-    const W = 320, H = 60;
+    const W = 320,
+      H = 60;
     const pts = dayTotals.map((v, i) => {
       const x = (i / (dayTotals.length - 1)) * W;
       const y = H - (v / max) * (H - 6) - 3;
       return [x, y] as const;
     });
-    const weekPath = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+    const weekPath = pts
+      .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`)
+      .join(" ");
     const weekArea = `${weekPath} L ${W} ${H} L 0 ${H} Z`;
 
     // Top stations
     const byDev = new Map<string, number>();
-    for (const s of sessions) byDev.set(s.device_id, (byDev.get(s.device_id) ?? 0) + (s.amount ?? 0));
+    for (const s of sessions)
+      byDev.set(s.device_id, (byDev.get(s.device_id) ?? 0) + (s.amount ?? 0));
     const nameOf = new Map(devices.map((d) => [d.id, d.name]));
     const top = [...byDev.entries()]
       .map(([id, v]) => ({ name: nameOf.get(id) ?? "—", v }))
@@ -85,10 +92,23 @@ export function LiveAnalyticsPanel({
       .slice(0, 4);
     const topMax = Math.max(1, ...top.map((t) => t.v));
 
-    let peakHour = 0, peakVal = -1;
-    hourly.forEach((v, i) => { if (v > peakVal) { peakVal = v; peakHour = i; } });
+    let peakHour = 0,
+      peakVal = -1;
+    hourly.forEach((v, i) => {
+      if (v > peakVal) {
+        peakVal = v;
+        peakHour = i;
+      }
+    });
 
-    return { hourly, todayRevenue, weekPath, weekArea, top: top.map((t) => ({ ...t, pct: t.v / topMax })), peakHour };
+    return {
+      hourly,
+      todayRevenue,
+      weekPath,
+      weekArea,
+      top: top.map((t) => ({ ...t, pct: t.v / topMax })),
+      peakHour,
+    };
   }, [sessions, devices]);
 
   const hourlyMax = Math.max(1, ...hourly);
@@ -107,7 +127,8 @@ export function LiveAnalyticsPanel({
       {/* Aurora bloom */}
       <div className="pointer-events-none absolute -left-20 -top-24 h-72 w-72 rounded-full bg-magenta/30 blur-3xl animate-pulse-soft" />
       <div className="pointer-events-none absolute -right-20 -bottom-24 h-72 w-72 rounded-full bg-violet/30 blur-3xl animate-pulse-soft" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.06]"
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
         style={{
           backgroundImage:
             "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
@@ -116,11 +137,18 @@ export function LiveAnalyticsPanel({
         }}
       />
       {/* Top conic border accent */}
-      <div className="pointer-events-none absolute inset-x-6 top-0 h-px"
-        style={{ background: "linear-gradient(90deg, transparent, oklch(0.7 0.26 335 / 0.6), oklch(0.78 0.18 220 / 0.6), transparent)" }}
+      <div
+        className="pointer-events-none absolute inset-x-6 top-0 h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, oklch(0.7 0.26 335 / 0.6), oklch(0.78 0.18 220 / 0.6), transparent)",
+        }}
       />
 
-      <div className="relative grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]" style={{ transform: "translateZ(30px)" }}>
+      <div
+        className="relative grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]"
+        style={{ transform: "translateZ(30px)" }}
+      >
         {/* === Revenue card with sparkline === */}
         <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-background/40 p-4">
           <div className="flex items-start justify-between">
@@ -156,7 +184,8 @@ export function LiveAnalyticsPanel({
             <motion.path
               d={weekArea}
               fill="url(#rev-grad)"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ delay: 0.7, duration: 0.6 }}
             />
             <motion.path
@@ -172,7 +201,9 @@ export function LiveAnalyticsPanel({
             />
           </svg>
           <div className="mt-1 flex justify-between font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground/60">
-            {["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => <span key={d}>{d}</span>)}
+            {["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => (
+              <span key={d}>{d}</span>
+            ))}
           </div>
         </div>
 
@@ -197,10 +228,14 @@ export function LiveAnalyticsPanel({
                   transition={{ delay: 0.4 + h * 0.018, duration: 0.4 }}
                   style={{
                     transformOrigin: "bottom",
-                    background: intensity > 0
-                      ? `linear-gradient(180deg, oklch(0.78 0.22 ${335 - intensity * 60}) , oklch(0.55 0.22 285))`
-                      : "oklch(1 0 0 / 0.05)",
-                    boxShadow: intensity > 0.5 ? `0 0 12px -2px oklch(0.7 0.26 335 / ${intensity})` : undefined,
+                    background:
+                      intensity > 0
+                        ? `linear-gradient(180deg, oklch(0.78 0.22 ${335 - intensity * 60}) , oklch(0.55 0.22 285))`
+                        : "oklch(1 0 0 / 0.05)",
+                    boxShadow:
+                      intensity > 0.5
+                        ? `0 0 12px -2px oklch(0.7 0.26 335 / ${intensity})`
+                        : undefined,
                   }}
                   className="h-10 rounded-sm"
                   title={`${String(h).padStart(2, "0")}:00 · ₹${Math.round(v)}`}
@@ -209,7 +244,11 @@ export function LiveAnalyticsPanel({
             })}
           </div>
           <div className="mt-2 flex justify-between font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground/60">
-            <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
+            <span>00</span>
+            <span>06</span>
+            <span>12</span>
+            <span>18</span>
+            <span>23</span>
           </div>
         </div>
 
@@ -228,31 +267,38 @@ export function LiveAnalyticsPanel({
               <div className="flex h-24 items-center justify-center font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
                 <Sparkles className="mr-2 h-3 w-3" /> awaiting first session
               </div>
-            ) : top.map((t, i) => (
-              <div key={t.name + i} className="space-y-1">
-                <div className="flex items-baseline justify-between text-xs">
-                  <span className="font-mono text-muted-foreground">
-                    <span className="mr-1.5 inline-flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold"
-                      style={{
-                        background: i === 0 ? "oklch(0.7 0.26 335 / 0.2)" : "oklch(1 0 0 / 0.05)",
-                        color: i === 0 ? "oklch(0.78 0.22 335)" : undefined,
-                      }}
-                    >{i + 1}</span>
-                    {t.name}
-                  </span>
-                  <span className="font-display font-bold tabular-nums">₹{Math.round(t.v).toLocaleString("en-IN")}</span>
+            ) : (
+              top.map((t, i) => (
+                <div key={t.name + i} className="space-y-1">
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="font-mono text-muted-foreground">
+                      <span
+                        className="mr-1.5 inline-flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold"
+                        style={{
+                          background: i === 0 ? "oklch(0.7 0.26 335 / 0.2)" : "oklch(1 0 0 / 0.05)",
+                          color: i === 0 ? "oklch(0.78 0.22 335)" : undefined,
+                        }}
+                      >
+                        {i + 1}
+                      </span>
+                      {t.name}
+                    </span>
+                    <span className="font-display font-bold tabular-nums">
+                      ₹{Math.round(t.v).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${t.pct * 100}%` }}
+                      transition={{ delay: 0.5 + i * 0.1, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                      className="h-full rounded-full"
+                      style={{ background: "var(--gradient-brand-hot)" }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${t.pct * 100}%` }}
-                    transition={{ delay: 0.5 + i * 0.1, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                    className="h-full rounded-full"
-                    style={{ background: "var(--gradient-brand-hot)" }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

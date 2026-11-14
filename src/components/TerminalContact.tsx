@@ -6,11 +6,23 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 
 type Field = "name" | "email" | "phone" | "message";
-const FIELDS: { key: Field; label: string; type: string; required: boolean; placeholder: string }[] = [
+const FIELDS: {
+  key: Field;
+  label: string;
+  type: string;
+  required: boolean;
+  placeholder: string;
+}[] = [
   { key: "name", label: "name", type: "text", required: true, placeholder: "your full name" },
   { key: "email", label: "email", type: "email", required: true, placeholder: "you@cafe.in" },
   { key: "phone", label: "phone", type: "tel", required: false, placeholder: "+91 · optional" },
-  { key: "message", label: "message", type: "text", required: true, placeholder: "what are you building?" },
+  {
+    key: "message",
+    label: "message",
+    type: "text",
+    required: true,
+    placeholder: "what are you building?",
+  },
 ];
 
 /**
@@ -21,13 +33,19 @@ const FIELDS: { key: Field; label: string; type: string; required: boolean; plac
 export function TerminalContact() {
   const submit = useServerFn(submitContact);
   const [step, setStep] = useState(0); // index in FIELDS
-  const [values, setValues] = useState<Record<Field, string>>({ name: "", email: "", phone: "", message: "" });
+  const [values, setValues] = useState<Record<Field, string>>({
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [boot, setBoot] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasInteractedRef = useRef(false);
 
   // Boot sequence
   useEffect(() => {
@@ -45,8 +63,16 @@ export function TerminalContact() {
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => { inputRef.current?.focus(); }, [step]);
-  useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [values, step, boot, done]);
+  useEffect(() => {
+    if (hasInteractedRef.current) {
+      inputRef.current?.focus({ preventScroll: true });
+    }
+  }, [step]);
+  useEffect(() => {
+    if (hasInteractedRef.current) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    }
+  }, [values, step, boot, done]);
 
   const current = FIELDS[Math.min(step, FIELDS.length - 1)];
   const allFilled = FIELDS.every((f) => !f.required || values[f.key].trim().length > 0);
@@ -150,7 +176,10 @@ export function TerminalContact() {
 
         <div
           ref={scrollRef}
-          onClick={() => inputRef.current?.focus()}
+          onClick={() => {
+            hasInteractedRef.current = true;
+            inputRef.current?.focus({ preventScroll: true });
+          }}
           className="h-[440px] cursor-text overflow-y-auto px-4 py-4 font-mono text-[13px] leading-relaxed text-emerald-200/90"
         >
           {/* Boot */}
@@ -200,7 +229,8 @@ export function TerminalContact() {
                 <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-emerald-300" />
               </div>
               <div className="mt-2 text-[11px] text-white/30">
-                [enter] next · type <span className="text-emerald-300">:send</span> to transmit · <span className="text-rose-300">:clear</span> to reset
+                [enter] next · type <span className="text-emerald-300">:send</span> to transmit ·{" "}
+                <span className="text-rose-300">:clear</span> to reset
               </div>
             </div>
           )}
@@ -209,12 +239,16 @@ export function TerminalContact() {
             {sending && (
               <motion.div
                 key="sending"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
                 className="mt-4 flex items-center gap-3 rounded-md border border-sky-400/30 bg-sky-400/5 p-3"
               >
                 <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
                 <div>
-                  <div className="text-sky-200">transmitting packet · TLS handshake → relay → inbox</div>
+                  <div className="text-sky-200">
+                    transmitting packet · TLS handshake → relay → inbox
+                  </div>
                   <div className="mt-0.5 flex gap-1 text-[11px] text-white/40">
                     {["dns", "tcp", "tls", "auth", "send"].map((s, i) => (
                       <motion.span
@@ -234,13 +268,17 @@ export function TerminalContact() {
             {error && !sending && (
               <motion.div
                 key="error"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
                 className="mt-4 rounded-md border border-rose-400/40 bg-rose-400/5 p-3"
               >
                 <div className="flex items-center gap-2 text-rose-300">
                   <AlertTriangle className="h-4 w-4" /> transmission failed · {error}
                 </div>
-                <div className="mt-1 text-white/40">stderr: connection reset · no data persisted</div>
+                <div className="mt-1 text-white/40">
+                  stderr: connection reset · no data persisted
+                </div>
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={retry}
@@ -249,7 +287,11 @@ export function TerminalContact() {
                     <RefreshCw className="h-3 w-3" /> retry :send
                   </button>
                   <button
-                    onClick={() => { setError(null); setStep(0); setValues({ name: "", email: "", phone: "", message: "" }); }}
+                    onClick={() => {
+                      setError(null);
+                      setStep(0);
+                      setValues({ name: "", email: "", phone: "", message: "" });
+                    }}
                     className="rounded-md border border-white/10 bg-white/5 px-3 py-1 font-mono text-[11px] text-white/60 transition hover:bg-white/10"
                   >
                     :clear &amp; restart
@@ -261,16 +303,19 @@ export function TerminalContact() {
             {done && (
               <motion.div
                 key="done"
-                initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 18 }}
                 className="mt-4 overflow-hidden rounded-md border border-emerald-400/40 bg-emerald-400/5 p-3"
               >
                 <div className="flex items-center gap-2 text-emerald-300">
-                  <CheckCircle2 className="h-4 w-4" /> transmission complete · we reply within 24h IST
+                  <CheckCircle2 className="h-4 w-4" /> transmission complete · we reply within 24h
+                  IST
                 </div>
                 <div className="mt-1 text-white/40">connection closed. socket released.</div>
                 <motion.div
-                  initial={{ width: 0 }} animate={{ width: "100%" }}
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
                   transition={{ duration: 1.2, ease: "easeOut" }}
                   className="mt-2 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 via-sky-300 to-fuchsia-400"
                 />
@@ -282,8 +327,12 @@ export function TerminalContact() {
         {/* Footer / fallback button */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 bg-white/[0.02] px-4 py-2.5 text-[11px]">
           <div className="flex items-center gap-3 font-mono text-white/40">
-            <span><span className="text-emerald-300">●</span> connected</span>
-            <span>step {Math.min(step + 1, FIELDS.length)}/{FIELDS.length}</span>
+            <span>
+              <span className="text-emerald-300">●</span> connected
+            </span>
+            <span>
+              step {Math.min(step + 1, FIELDS.length)}/{FIELDS.length}
+            </span>
           </div>
           <button
             type="button"

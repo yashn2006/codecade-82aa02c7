@@ -24,6 +24,15 @@ export const updateBookingStatus = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+
+    // Fetch booking details before update so we can notify the customer
+    const { data: booking } = await supabaseAdmin
+      .from("bookings")
+      .select("id, cafe_id, scheduled_at, cafes(name), customers(user_id, full_name)")
+      .eq("id", data.id)
+      .maybeSingle();
+
     const patch: Record<string, unknown> = { status: data.status };
     if (data.status === "no_show") patch.no_show_at = new Date().toISOString();
     const { error } = await context.supabase
@@ -31,6 +40,36 @@ export const updateBookingStatus = createServerFn({ method: "POST" })
       .update(patch)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    // Send customer notification if user_id is linked to the customer
+    const custUser = (booking?.customers as any)?.user_id;
+    if (custUser && (data.status === "confirmed" || data.status === "cancelled")) {
+      const cafeName = (booking?.cafes as any)?.name ?? "The café";
+      const scheduledStr = booking?.scheduled_at
+        ? new Date(booking.scheduled_at).toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            day: "numeric",
+            month: "short",
+          })
+        : "";
+      const isConfirmed = data.status === "confirmed";
+      try {
+        await supabaseAdmin.from("notifications").insert({
+          user_id: custUser,
+          cafe_id: booking?.cafe_id,
+          kind: isConfirmed ? "booking_confirmed" : "booking_cancelled",
+          title: isConfirmed ? "Booking Confirmed! 🎮" : "Booking Cancelled ❌",
+          body: isConfirmed
+            ? `${cafeName} confirmed your booking for ${scheduledStr}. See you on the floor!`
+            : `Your booking at ${cafeName} for ${scheduledStr} has been cancelled.`,
+          link: "/portal#bookings",
+        });
+      } catch (err) {
+        console.warn("Could not insert notification", err);
+      }
+    }
+
     return { ok: true };
   });
 
@@ -90,13 +129,21 @@ export const createBookingForCustomer = createServerFn({ method: "POST" })
 export const listMyBookings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: customers } = await supabaseAdmin
+      .from("customers")
+      .select("id")
+      .eq("user_id", context.userId);
+    const ids = (customers ?? []).map((c) => c.id);
+    if (!ids.length) return [];
+
+    const { data, error } = await supabaseAdmin
       .from("bookings")
-      .select("id, scheduled_at, duration_minutes, status, cafes(name, slug, city), devices(name, type), customers!inner(user_id)")
-      .eq("customers.user_id", context.userId)
+      .select("id, cafe_id, scheduled_at, duration_minutes, status, deposit_amount, payment_method, cafes(id, name, slug, city, address), devices(name, type, specs, hourly_rate)")
+      .in("customer_id", ids)
       .order("scheduled_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return (data ?? []) as any[];
   });
 
 export const customerCreateBooking = createServerFn({ method: "POST" })

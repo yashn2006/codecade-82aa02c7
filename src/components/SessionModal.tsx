@@ -4,28 +4,57 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  X, Plus, Square, Wrench, Pause, Play, MessageSquare, Loader2, Send, StickyNote,
+  X,
+  Plus,
+  Square,
+  Wrench,
+  Pause,
+  Play,
+  MessageSquare,
+  Loader2,
+  Send,
+  StickyNote,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  extendSession, endSession, suspendSession, resumeSession,
-  setSessionNotes, listSessionAlerts, logSessionAlert, customerSessionStats,
+  extendSession,
+  endSession,
+  suspendSession,
+  resumeSession,
+  setSessionNotes,
+  listSessionAlerts,
+  logSessionAlert,
+  customerSessionStats,
 } from "@/lib/sessions.functions";
 import type { DeviceStatus } from "@/lib/devices.functions";
 
 export type LiveDevice = {
-  id: string; name: string; type: string; hourly_rate: number; status: string;
+  id: string;
+  name: string;
+  type: string;
+  hourly_rate: number;
+  status: string;
 };
 export type LiveSession = {
-  id: string; device_id: string; started_at: string; status: string;
-  planned_minutes?: number | null; package_name?: string | null;
-  amount_paid?: number | null; payment_method?: string | null;
-  paused_ms?: number | null; paused_at?: string | null; notes?: string | null;
+  id: string;
+  device_id: string;
+  started_at: string;
+  status: string;
+  planned_minutes?: number | null;
+  package_name?: string | null;
+  amount_paid?: number | null;
+  payment_method?: string | null;
+  paused_ms?: number | null;
+  paused_at?: string | null;
+  notes?: string | null;
   customers?: {
-    id?: string; full_name?: string | null; phone?: string | null;
-    email?: string | null; wallet_balance?: number | null;
+    id?: string;
+    full_name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    wallet_balance?: number | null;
   } | null;
 };
 
@@ -53,11 +82,25 @@ function fmtClock(ms: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
 function initials(t: string) {
-  return t.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+  return (
+    t
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase() || "?"
+  );
 }
 
 export function SessionModal({
-  device, session, cafeId, now, onClose, onChanged, onSetStatus,
+  device,
+  session,
+  cafeId,
+  now,
+  onClose,
+  onChanged,
+  onSetStatus,
 }: {
   device: LiveDevice;
   session: LiveSession;
@@ -87,9 +130,13 @@ export function SessionModal({
   const [msg, setMsg] = useState("");
   const [notes, setNotes] = useState(session.notes ?? "");
 
-  useEffect(() => { setNotes(session.notes ?? ""); }, [session.id, session.notes]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    setNotes(session.notes ?? "");
+  }, [session.id, session.notes]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -104,28 +151,55 @@ export function SessionModal({
     queryFn: () => alertsFn({ data: { session_id: session.id } }),
   });
 
-  const after = (m: string) => { toast.success(m); onChanged(); };
+  const after = (m: string) => {
+    toast.success(m);
+    onChanged();
+  };
   const fail = (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed");
 
-  const extendM = useMutation({ mutationFn: extendFn, onSuccess: () => after("Time extended"), onError: fail });
+  const extendM = useMutation({
+    mutationFn: extendFn,
+    onSuccess: () => after("Time extended"),
+    onError: fail,
+  });
   const endM = useMutation({
     mutationFn: endFn,
     onSuccess: (r) => {
-      toast.success(`Ended · ${r.minutes}m · ₹${r.amount}${r.refund ? ` · refund ₹${r.refund}` : ""}${r.due ? ` · due ₹${r.due}` : ""}`);
-      onChanged(); onClose();
+      toast.success(
+        `Ended · ${r.minutes}m · ₹${r.amount}${r.refund ? ` · refund ₹${r.refund}` : ""}${r.due ? ` · due ₹${r.due}` : ""}`,
+      );
+      onChanged();
+      onClose();
     },
     onError: fail,
   });
-  const suspendM = useMutation({ mutationFn: suspendFn, onSuccess: () => after("Session suspended"), onError: fail });
-  const resumeM = useMutation({ mutationFn: resumeFn, onSuccess: () => after("Session resumed"), onError: fail });
-  const notesM = useMutation({ mutationFn: notesFn, onSuccess: () => after("Note saved"), onError: fail });
+  const suspendM = useMutation({
+    mutationFn: suspendFn,
+    onSuccess: () => after("Session suspended"),
+    onError: fail,
+  });
+  const resumeM = useMutation({
+    mutationFn: resumeFn,
+    onSuccess: () => after("Session resumed"),
+    onError: fail,
+  });
+  const notesM = useMutation({
+    mutationFn: notesFn,
+    onSuccess: () => after("Note saved"),
+    onError: fail,
+  });
   const alertM = useMutation({
     mutationFn: logAlertFn,
-    onSuccess: () => { setMsg(""); qc.invalidateQueries({ queryKey: ["session-alerts", session.id] }); },
+    onSuccess: () => {
+      setMsg("");
+      qc.invalidateQueries({ queryKey: ["session-alerts", session.id] });
+    },
     onError: fail,
   });
 
-  const pausedMs = Number(session.paused_ms ?? 0) + (session.paused_at ? now - new Date(session.paused_at).getTime() : 0);
+  const pausedMs =
+    Number(session.paused_ms ?? 0) +
+    (session.paused_at ? now - new Date(session.paused_at).getTime() : 0);
   const elapsedMs = Math.max(0, now - new Date(session.started_at).getTime() - pausedMs);
   const plannedMin = Number(session.planned_minutes ?? 0);
   const remainingMs = plannedMin > 0 ? plannedMin * 60000 - elapsedMs : null;
@@ -143,11 +217,18 @@ export function SessionModal({
     if (!body) return;
     alertM.mutate({ data: { session_id: session.id, cafe_id: cafeId, message: body, channel } });
     const phone = (customer?.phone ?? "").replace(/[^\d]/g, "");
-    if (typeof window !== "undefined" && phone) {
-      const url = channel === "whatsapp"
-        ? `https://wa.me/${phone.length === 10 ? "91" + phone : phone}?text=${encodeURIComponent(body)}`
-        : `sms:${phone}?body=${encodeURIComponent(body)}`;
-      window.open(url, "_blank", "noopener");
+    if (typeof document !== "undefined" && phone) {
+      const url =
+        channel === "whatsapp"
+          ? `https://wa.me/${phone.length === 10 ? "91" + phone : phone}?text=${encodeURIComponent(body)}`
+          : `sms:${phone}?body=${encodeURIComponent(body)}`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   };
 
@@ -155,7 +236,9 @@ export function SessionModal({
     <AnimatePresence>
       <motion.div
         key="overlay"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/70 p-3 backdrop-blur-md sm:p-6"
         onClick={onClose}
         role="dialog"
@@ -179,7 +262,8 @@ export function SessionModal({
               <div className="min-w-0">
                 <div className="truncate text-[19px] font-black leading-tight">{name}</div>
                 <div className="truncate font-mono text-[11px] text-muted-foreground">
-                  {customer?.phone ?? "no phone"}{customer?.email ? ` · ${customer.email}` : ""}
+                  {customer?.phone ?? "no phone"}
+                  {customer?.email ? ` · ${customer.email}` : ""}
                 </div>
               </div>
             </div>
@@ -198,11 +282,19 @@ export function SessionModal({
               {[
                 { k: "Visits", v: statsQ.data ? String(statsQ.data.visits) : "—" },
                 { k: "Hours", v: statsQ.data ? (statsQ.data.minutes / 60).toFixed(1) : "—" },
-                { k: "Spend", v: statsQ.data ? `₹${statsQ.data.spend.toLocaleString("en-IN")}` : "—" },
-                { k: "Wallet", v: `₹${Number(customer?.wallet_balance ?? 0).toLocaleString("en-IN")}` },
+                {
+                  k: "Spend",
+                  v: statsQ.data ? `₹${statsQ.data.spend.toLocaleString("en-IN")}` : "—",
+                },
+                {
+                  k: "Wallet",
+                  v: `₹${Number(customer?.wallet_balance ?? 0).toLocaleString("en-IN")}`,
+                },
               ].map((s) => (
                 <div key={s.k} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                  <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{s.k}</div>
+                  <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                    {s.k}
+                  </div>
                   <div className="mt-1 text-[16px] font-bold tabular-nums">{s.v}</div>
                 </div>
               ))}
@@ -211,9 +303,15 @@ export function SessionModal({
             {/* session info + timer */}
             <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
               <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-muted-foreground">
-                <span>{device.name} · {device.type.toUpperCase()}</span>
                 <span>
-                  Started {new Date(session.started_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                  {device.name} · {device.type.toUpperCase()}
+                </span>
+                <span>
+                  Started{" "}
+                  {new Date(session.started_at).toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -237,19 +335,29 @@ export function SessionModal({
                 {fmtClock(remainingMs !== null ? Math.max(0, remainingMs) : elapsedMs)}
               </div>
               <div className="mt-1 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-                <span>{remainingMs !== null ? "remaining" : "elapsed"} · {fmtClock(elapsedMs)} played</span>
+                <span>
+                  {remainingMs !== null ? "remaining" : "elapsed"} · {fmtClock(elapsedMs)} played
+                </span>
                 <span className="text-[13px] font-bold text-foreground">₹{runningCost}</span>
               </div>
               {progress !== null && (
                 <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/8">
-                  <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${color}, #a855f7)` }} />
+                  <div
+                    className="h-full rounded-full transition-[width] duration-700"
+                    style={{
+                      width: `${progress}%`,
+                      background: `linear-gradient(90deg, ${color}, #a855f7)`,
+                    }}
+                  />
                 </div>
               )}
             </div>
 
             {/* actions */}
             <section className="space-y-2">
-              <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Actions</Label>
+              <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Actions
+              </Label>
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={addMin}
@@ -265,7 +373,8 @@ export function SessionModal({
                   disabled={extendM.isPending}
                   className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-emerald-400/40 bg-emerald-400/12 px-3 text-[12px] font-bold text-emerald-200 transition hover:bg-emerald-400/22"
                 >
-                  <Plus className="h-4 w-4" /> Extend · ₹{Math.ceil((device.hourly_rate * addMin) / 60)}
+                  <Plus className="h-4 w-4" /> Extend · ₹
+                  {Math.ceil((device.hourly_rate * addMin) / 60)}
                 </button>
                 {paused ? (
                   <button
@@ -283,7 +392,10 @@ export function SessionModal({
                   </button>
                 )}
                 <button
-                  onClick={() => { endM.mutate({ data: { id: session.id } }); onSetStatus("maintenance"); }}
+                  onClick={() => {
+                    endM.mutate({ data: { id: session.id } });
+                    onSetStatus("maintenance");
+                  }}
                   className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-400/12 px-3 text-[12px] font-bold text-amber-200 transition hover:bg-amber-400/22"
                 >
                   <Wrench className="h-4 w-4" /> Maintenance
@@ -295,9 +407,17 @@ export function SessionModal({
                       disabled={endM.isPending}
                       className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-rose-400/60 bg-rose-500/25 px-3 text-[12px] font-bold text-rose-100"
                     >
-                      {endM.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />} Confirm end
+                      {endM.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}{" "}
+                      Confirm end
                     </button>
-                    <button onClick={() => setConfirmEnd(false)} className="text-[12px] text-muted-foreground hover:text-foreground">
+                    <button
+                      onClick={() => setConfirmEnd(false)}
+                      className="text-[12px] text-muted-foreground hover:text-foreground"
+                    >
                       cancel
                     </button>
                   </span>
@@ -345,7 +465,11 @@ export function SessionModal({
                           </button>
                         ))}
                       </div>
-                      <Input placeholder="Custom message…" value={msg} onChange={(e) => setMsg(e.target.value)} />
+                      <Input
+                        placeholder="Custom message…"
+                        value={msg}
+                        onChange={(e) => setMsg(e.target.value)}
+                      />
                       <div className="flex gap-2">
                         <button
                           onClick={() => sendAlert(msg, "whatsapp")}
@@ -364,10 +488,17 @@ export function SessionModal({
                       </div>
                       <div className="space-y-1">
                         {(alertsQ.data ?? []).map((a) => (
-                          <div key={a.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.04] px-2.5 py-1.5">
+                          <div
+                            key={a.id}
+                            className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.04] px-2.5 py-1.5"
+                          >
                             <span className="min-w-0 truncate text-[12px]">{a.message}</span>
                             <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                              {a.channel} · {new Date(a.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                              {a.channel} ·{" "}
+                              {new Date(a.created_at).toLocaleTimeString("en-IN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </span>
                           </div>
                         ))}
@@ -400,7 +531,8 @@ export function SessionModal({
                 disabled={notesM.isPending}
                 className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/12 px-3 text-[12px] font-semibold text-foreground/85 transition hover:bg-white/8"
               >
-                {notesM.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Save note
+                {notesM.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Save
+                note
               </button>
             </section>
           </div>

@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/EmptyState";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
+import { ConfirmModal } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/tournaments")({
@@ -65,6 +66,7 @@ function TournamentsPage() {
 
   const [edit, setEdit] = useState<Partial<T> | null>(null);
   const [view, setView] = useState<T | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<null | { id: string; title: string }>(null);
   const regsQ = useQuery({
     queryKey: ["regs", view?.id],
     queryFn: () => regs({ data: { tournament_id: view!.id } }),
@@ -114,7 +116,7 @@ function TournamentsPage() {
                       <Trophy className="mr-1 h-3 w-3" /> Bracket
                     </a>
                     <Button size="sm" variant="ghost" onClick={() => setEdit(t)}>Edit</Button>
-                    <Button size="icon" variant="ghost" className="ml-auto" onClick={() => { if (confirm("Delete?")) rm.mutate({ data: { id: t.id } }); }}>
+                    <Button size="icon" variant="ghost" className="ml-auto" onClick={() => setDeleteTarget({ id: t.id, title: t.title })}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
@@ -215,6 +217,14 @@ function TournamentsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <ConfirmModal
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={`Delete "${deleteTarget?.title ?? "tournament"}"?`}
+        description="This deletes the tournament, registrations, and bracket matches."
+        confirmLabel="Delete Tournament"
+        onConfirm={() => deleteTarget ? rm.mutateAsync({ data: { id: deleteTarget.id } }) : Promise.resolve()}
+      />
     </div>
   );
 }

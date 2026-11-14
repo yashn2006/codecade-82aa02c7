@@ -77,15 +77,15 @@ function ApiKeysPage() {
               Rotating a secret here updates every server function automatically — no redeploy needed.
             </p>
           </div>
-          <a
-            href="https://supabase.com/dashboard/project/_/settings/api"
-            target="_blank" rel="noreferrer"
-          >
-            <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+          <Button asChild className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+            <a
+              href="https://supabase.com/dashboard/project/_/settings/api"
+              target="_blank" rel="noreferrer"
+            >
               <ExternalLink className="h-4 w-4" />
               Manage in Supabase
-            </Button>
-          </a>
+            </a>
+          </Button>
         </div>
       </motion.div>
 

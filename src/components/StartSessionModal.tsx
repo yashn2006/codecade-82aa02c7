@@ -6,10 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export type StartDevice = {
-  id: string; name: string; type: string; hourly_rate: number; status: string;
+  id: string;
+  name: string;
+  type: string;
+  hourly_rate: number;
+  status: string;
 };
 export type StartCustomer = {
-  id: string; full_name?: string | null; phone?: string | null; wallet_balance?: number | null;
+  id: string;
+  full_name?: string | null;
+  phone?: string | null;
+  wallet_balance?: number | null;
 };
 
 export type StartPayload = {
@@ -40,11 +47,23 @@ const PACKAGES: { label: string; minutes: number | null }[] = [
 const METHODS: StartPayload["payment_method"][] = ["counter", "cash", "upi", "card", "wallet"];
 
 function initials(t: string) {
-  return t.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+  return (
+    t
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase() || "?"
+  );
 }
 
 export function StartSessionModal({
-  device, customers, busy, onClose, onStart,
+  device,
+  customers,
+  busy,
+  onClose,
+  onStart,
 }: {
   device: StartDevice;
   customers: StartCustomer[];
@@ -74,12 +93,14 @@ export function StartSessionModal({
   const submit = () => {
     onStart({
       customer_id: picked?.id ?? null,
-      new_customer: !picked && creating && newName.trim()
-        ? { full_name: newName.trim(), phone: newPhone.trim() || null }
-        : null,
+      new_customer:
+        !picked && creating && newName.trim()
+          ? { full_name: newName.trim(), phone: newPhone.trim() || null }
+          : null,
       planned_minutes: pkg.minutes,
       package_name: pkg.minutes ? pkg.label : null,
-      amount_paid: paid === "" ? (method === "counter" ? 0 : price) : Math.max(0, Number(paid) || 0),
+      amount_paid:
+        paid === "" ? (method === "counter" ? 0 : price) : Math.max(0, Number(paid) || 0),
       payment_method: method,
     });
   };
@@ -88,7 +109,9 @@ export function StartSessionModal({
     <AnimatePresence>
       <motion.div
         key="overlay"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/70 p-3 backdrop-blur-md sm:p-6"
         onClick={onClose}
         role="dialog"
@@ -136,7 +159,9 @@ export function StartSessionModal({
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[14px] font-bold">{picked.full_name}</div>
-                    <div className="font-mono text-[11px] text-muted-foreground">{picked.phone ?? "no phone"}</div>
+                    <div className="font-mono text-[11px] text-muted-foreground">
+                      {picked.phone ?? "no phone"}
+                    </div>
                   </div>
                   <button
                     onClick={() => setPicked(null)}
@@ -147,8 +172,18 @@ export function StartSessionModal({
                 </div>
               ) : creating ? (
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <Input placeholder="Full name" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
-                  <Input placeholder="+91 phone" inputMode="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+                  <Input
+                    placeholder="Full name"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    autoFocus
+                  />
+                  <Input
+                    placeholder="+91 phone"
+                    inputMode="tel"
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                  />
                   <button
                     onClick={() => setCreating(false)}
                     className="text-left font-mono text-[11px] text-muted-foreground underline-offset-2 hover:underline"
@@ -178,8 +213,12 @@ export function StartSessionModal({
                           {initials(c.full_name ?? "?")}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13px] font-semibold">{c.full_name}</span>
-                          <span className="block font-mono text-[10px] text-muted-foreground">{c.phone ?? "—"}</span>
+                          <span className="block truncate text-[13px] font-semibold">
+                            {c.full_name}
+                          </span>
+                          <span className="block font-mono text-[10px] text-muted-foreground">
+                            {c.phone ?? "—"}
+                          </span>
                         </span>
                       </button>
                     ))}
@@ -190,7 +229,11 @@ export function StartSessionModal({
                       <UserPlus className="h-4 w-4" /> New customer
                     </button>
                     <button
-                      onClick={() => { setPicked(null); setCreating(false); setSearch(""); }}
+                      onClick={() => {
+                        setPicked(null);
+                        setCreating(false);
+                        setSearch("");
+                      }}
                       className="w-full rounded-xl px-3 py-1.5 text-left font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
                     >
                       or continue as walk-in
@@ -214,7 +257,9 @@ export function StartSessionModal({
                       key={p.label}
                       onClick={() => setPkg(p)}
                       className={`rounded-xl border px-3 py-2.5 text-left transition ${
-                        on ? "border-primary/60 bg-primary/12" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
+                        on
+                          ? "border-primary/60 bg-primary/12"
+                          : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
                       }`}
                     >
                       <div className="text-[13px] font-bold">{p.label}</div>
@@ -238,7 +283,9 @@ export function StartSessionModal({
                     key={m}
                     onClick={() => setMethod(m)}
                     className={`rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] transition ${
-                      method === m ? "border-primary/60 bg-primary/15 text-primary" : "border-white/10 text-muted-foreground hover:text-foreground"
+                      method === m
+                        ? "border-primary/60 bg-primary/15 text-primary"
+                        : "border-white/10 text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {m === "counter" ? "pay at counter" : m}
@@ -253,7 +300,9 @@ export function StartSessionModal({
                   value={paid}
                   onChange={(e) => setPaid(e.target.value.replace(/[^\d]/g, ""))}
                 />
-                <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">amount paid</span>
+                <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
+                  amount paid
+                </span>
               </div>
             </section>
           </div>

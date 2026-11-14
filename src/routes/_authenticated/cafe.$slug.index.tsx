@@ -114,18 +114,19 @@ function LiveFloor() {
   const setBooking = useServerFn(updateBookingStatus);
   const addCust = useServerFn(createCustomer);
 
-  const devices = (devicesQ.data ?? []) as unknown as FloorDevice[];
-  const sessions = (sessionsQ.data ?? []) as unknown as (FloorSession & { ended_at?: string | null; amount?: number | null })[];
-  const bookings = (bookingsQ.data ?? []) as unknown as FloorBooking[];
-  const customers = (customersQ.data ?? []) as unknown as FloorCustomer[];
+  const devices = useMemo(() => (Array.isArray(devicesQ.data) ? devicesQ.data : []) as unknown as FloorDevice[], [devicesQ.data]);
+  const sessions = useMemo(() => (Array.isArray(sessionsQ.data) ? sessionsQ.data : []) as unknown as (FloorSession & { ended_at?: string | null; amount?: number | null })[], [sessionsQ.data]);
+  const bookings = useMemo(() => (Array.isArray(bookingsQ.data) ? bookingsQ.data : []) as unknown as FloorBooking[], [bookingsQ.data]);
+  const customers = useMemo(() => (Array.isArray(customersQ.data) ? customersQ.data : []) as unknown as FloorCustomer[], [customersQ.data]);
 
   const codes = useMemo(() => stationCodes(devices), [devices]);
   const counts = useMemo(() => countByStatus(devices), [devices]);
 
   const sessionsByDevice = useMemo(() => {
     const m = new Map<string, FloorSession>();
+    if (!Array.isArray(sessions)) return m;
     for (const s of sessions) {
-      if ((s.status === "active" || s.status === "paused") && !s.ended_at && !m.has(s.device_id)) m.set(s.device_id, s);
+      if (s && (s.status === "active" || s.status === "paused") && !s.ended_at && s.device_id && !m.has(s.device_id)) m.set(s.device_id, s);
     }
     return m;
   }, [sessions]);
@@ -133,11 +134,12 @@ function LiveFloor() {
   const bookingsByDevice = useMemo(() => {
     const now = Date.now();
     const m = new Map<string, FloorBooking>();
+    if (!Array.isArray(bookings)) return m;
     const live = bookings
-      .filter((b) => (b.status === "pending" || b.status === "confirmed") &&
-        new Date(b.scheduled_at).getTime() + b.duration_minutes * 60000 > now)
-      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-    for (const b of live) if (!m.has(b.device_id)) m.set(b.device_id, b);
+      .filter((b) => b && (b.status === "pending" || b.status === "confirmed") &&
+        new Date(b.scheduled_at).getTime() + (b.duration_minutes || 0) * 60000 > now)
+      .sort((a, b) => (a.scheduled_at || "").localeCompare(b.scheduled_at || ""));
+    for (const b of live) if (b && b.device_id && !m.has(b.device_id)) m.set(b.device_id, b);
     return m;
   }, [bookings]);
 

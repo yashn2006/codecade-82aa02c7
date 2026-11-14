@@ -36,9 +36,11 @@ export function useRealtime({ cafeId, userId }: Options) {
     mounted.current = true;
     const channels: ReturnType<typeof supabase.channel>[] = [];
 
+    const suffix = Math.random().toString(36).slice(2, 8);
+
     if (cafeId) {
       const bookings = supabase
-        .channel(`rt:bookings:${cafeId}`)
+        .channel(`rt:bookings:${cafeId}:${suffix}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "bookings", filter: `cafe_id=eq.${cafeId}` },
@@ -54,7 +56,7 @@ export function useRealtime({ cafeId, userId }: Options) {
       channels.push(bookings);
 
       const payments = supabase
-        .channel(`rt:payments:${cafeId}`)
+        .channel(`rt:payments:${cafeId}:${suffix}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "revenue_entries", filter: `cafe_id=eq.${cafeId}` },
@@ -74,7 +76,7 @@ export function useRealtime({ cafeId, userId }: Options) {
 
     if (userId) {
       const messages = supabase
-        .channel(`rt:msg:${userId}`)
+        .channel(`rt:msg:${userId}:${suffix}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "admin_messages", filter: `recipient_id=eq.${userId}` },

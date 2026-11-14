@@ -42,7 +42,8 @@ export function BookingDialog({
     setDraft(null); setDate(s.date); setTime(s.time); setMinutes(60); setTried(false);
   }, [open, device?.id]);
 
-  const startMs = date && time ? new Date(`${date}T${time}`).getTime() : NaN;
+  const formattedTime = time ? (time.length === 5 ? `${time}:00` : time) : "";
+  const startMs = date && formattedTime ? new Date(`${date}T${formattedTime}`).getTime() : NaN;
   const conflict = useMemo(
     () => (device && Number.isFinite(startMs) ? findBookingConflict(bookings, device.id, startMs, minutes) : null),
     [bookings, device, startMs, minutes],

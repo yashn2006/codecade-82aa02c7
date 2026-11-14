@@ -13,7 +13,9 @@ export function Sparkline({
   const w = 100;
   const step = data.length > 1 ? w / (data.length - 1) : w;
   const pts = data.map((p, i) => [i * step, height - (p.v / max) * (height - 6) - 3] as const);
-  const path = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+  const path = pts
+    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`)
+    .join(" ");
   const fill = `${path} L${w},${height} L0,${height} Z`;
   const accentVar = `var(--${accent})`;
   return (
@@ -35,8 +37,11 @@ export function Sparkline({
         vectorEffect="non-scaling-stroke"
       />
       <motion.path
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 0.6 }}
-        d={fill} fill={`url(#spark-${accent})`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4, duration: 0.6 }}
+        d={fill}
+        fill={`url(#spark-${accent})`}
       />
     </svg>
   );

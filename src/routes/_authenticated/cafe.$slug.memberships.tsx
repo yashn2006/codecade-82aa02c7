@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/EmptyState";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
+import { ConfirmModal } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/memberships")({
@@ -52,6 +53,7 @@ function MembershipsPage() {
   });
   const [open, setOpen] = useState(false);
   const [grantTo, setGrantTo] = useState<null | { id: string; name: string }>(null);
+  const [deleteTarget, setDeleteTarget] = useState<null | { id: string; name: string }>(null);
 
   if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
 
@@ -121,7 +123,7 @@ function MembershipsPage() {
                   <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setGrantTo({ id: m.id, name: m.name })}>
                     <UserPlus className="h-3.5 w-3.5" /> Grant
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete plan?")) delM.mutate({ data: { id: m.id } }); }}>
+                  <Button size="icon" variant="ghost" onClick={() => setDeleteTarget({ id: m.id, name: m.name })}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
@@ -151,6 +153,14 @@ function MembershipsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <ConfirmModal
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={`Delete ${deleteTarget?.name ?? "membership plan"}?`}
+        description="Existing active holders retain their validity, but new grants will be unavailable."
+        confirmLabel="Delete Plan"
+        onConfirm={() => deleteTarget ? delM.mutateAsync({ data: { id: deleteTarget.id } }) : Promise.resolve()}
+      />
     </div>
   );
 }

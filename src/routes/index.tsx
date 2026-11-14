@@ -1,16 +1,18 @@
 import { DemoFloor } from "@/components/DemoFloor";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import {
   Zap, Shield, BarChart3, Users, Cpu, ArrowRight, Check,
-  Activity, Sparkles, Terminal, Gamepad2,
+  Activity, Sparkles, Terminal, Gamepad2, LayoutDashboard, Menu, X,
 } from "lucide-react";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandMark } from "@/components/Brand";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { ConsoleMockup } from "@/components/ConsoleMockup";
 import { TerminalContact } from "@/components/TerminalContact";
+import { supabase } from "@/lib/supabase/client";
+import { getDashboardPathForUser } from "@/lib/auth-routing";
 
 
 
@@ -60,6 +62,7 @@ function Landing() {
 
 
 function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 200], [0, -2]);
   const blur = useTransform(scrollY, [0, 200], [12, 22]);
@@ -67,7 +70,7 @@ function Header() {
 
   return (
     <motion.header style={{ y }} className="sticky top-0 z-50">
-      <div className="mx-auto mt-4 max-w-7xl px-3 sm:px-6">
+      <div className="mx-auto mt-2.5 sm:mt-4 max-w-7xl px-3 sm:px-6">
         <div className="relative">
           {/* Outer glow halo */}
           <div
@@ -84,13 +87,13 @@ function Header() {
             />
             <motion.nav
               style={{ backdropFilter: filter, WebkitBackdropFilter: filter as unknown as string }}
-              className="relative flex items-center justify-between rounded-2xl bg-background/55 px-3 py-2.5 sm:px-5"
+              className="mobile-keep-blur relative flex items-center justify-between gap-2 rounded-2xl bg-background/65 px-3 py-2 sm:px-5 sm:py-2.5"
             >
-              <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,oklch(0.18_0.04_300_/_0.55),oklch(0.1_0.02_300_/_0.7))]" aria-hidden />
+              <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,oklch(0.18_0.04_300_/_0.55),oklch(0.1_0.02_300_/_0.75))]" aria-hidden />
               <div className="absolute inset-x-8 -top-px h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" aria-hidden />
 
-              <div className="relative">
-                <BrandLockup size={32} />
+              <div className="relative shrink-0">
+                <BrandLockup size={30} />
               </div>
 
               <div className="relative hidden items-center gap-1 md:flex">
@@ -115,26 +118,98 @@ function Header() {
                 </Link>
               </div>
 
-              <MagneticSignIn />
+              <div className="relative flex items-center gap-2">
+                <MagneticSignIn />
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen((v) => !v)}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/15 bg-white/[0.06] text-foreground transition active:scale-95 md:hidden"
+                  aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                  aria-expanded={mobileMenuOpen}
+                >
+                  {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                </button>
+              </div>
             </motion.nav>
           </div>
         </div>
+
+        {/* Mobile Liquid-Glass Navigation Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+              className="mobile-keep-blur mt-2 overflow-hidden rounded-2xl border border-white/15 bg-[#0e0a1f]/90 p-3 shadow-[0_24px_60px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-2xl md:hidden"
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "Features", href: "#features" },
+                  { label: "Live Demo", href: "#demo" },
+                  { label: "Pricing", href: "#pricing" },
+                  { label: "Contact", href: "#contact" },
+                ].map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white/90 transition active:scale-[0.98]"
+                  >
+                    <span>{item.label}</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary/80" />
+                  </a>
+                ))}
+              </div>
+              <Link
+                to="/discover"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mt-2 flex min-h-[46px] w-full items-center justify-between rounded-xl border border-fuchsia-400/35 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/15 to-blue-500/15 px-4 text-sm font-semibold text-white transition active:scale-[0.98]"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Gamepad2 className="h-4 w-4 text-fuchsia-300" />
+                  Discover Gaming Arenas
+                </span>
+                <ArrowRight className="h-4 w-4 text-fuchsia-300" />
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.header>
   );
 }
 
 function MagneticSignIn() {
+  const [dashboardPath, setDashboardPath] = useState<string | null>(null);
   const ref = useRef<HTMLAnchorElement>(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const x = useSpring(mx, { stiffness: 200, damping: 15 });
   const y = useSpring(my, { stiffness: 200, damping: 15 });
 
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session?.user) {
+        try {
+          const path = await getDashboardPathForUser(data.session.user);
+          setDashboardPath(path);
+        } catch {
+          setDashboardPath("/portal");
+        }
+      }
+    });
+  }, []);
+
+  const target = dashboardPath ?? "/auth";
+  const label = dashboardPath ? "Go to Dashboard" : "Sign in";
+
   return (
     <Link
       ref={ref}
-      to="/auth"
+      to={target as any}
+      search={(dashboardPath ? undefined : { mode: "signin" }) as any}
       onMouseMove={(e) => {
         const r = ref.current?.getBoundingClientRect();
         if (!r) return;
@@ -161,7 +236,7 @@ function MagneticSignIn() {
         <span className="absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
           <span className="absolute -inset-y-2 -left-1/2 w-1/2 rotate-12 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 transition-all duration-700 group-hover:left-[120%] group-hover:opacity-100" />
         </span>
-        <span className="relative">Sign in</span>
+        <span className="relative">{label}</span>
         <ArrowRight className="relative h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
       </motion.span>
     </Link>
@@ -169,19 +244,34 @@ function MagneticSignIn() {
 }
 
 function Hero() {
+  const [dashboardPath, setDashboardPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session?.user) {
+        try {
+          const path = await getDashboardPathForUser(data.session.user);
+          setDashboardPath(path);
+        } catch {
+          setDashboardPath("/portal");
+        }
+      }
+    });
+  }, []);
+
   return (
-    <section className="relative px-4 pt-16 pb-24 sm:px-6">
+    <section className="relative px-4 pt-9 pb-16 sm:px-6 sm:pt-16 sm:pb-24">
       <AuroraBackground intensity="immersive" />
       {/* CSS-only animated grid texture */}
       <div className="grid-pulse pointer-events-none absolute inset-0 -z-0" aria-hidden />
 
 
-      <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-8">
+      <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-8">
         {/* LEFT — typography column */}
         <div>
           <motion.div
             initial="hidden" animate="visible" variants={fadeUp}
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur"
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-3.5 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur"
           >
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
@@ -192,7 +282,7 @@ function Hero() {
 
           <motion.h1
             initial="hidden" animate="visible" custom={1} variants={fadeUp}
-            className="mt-6 font-display font-extrabold leading-[0.92] tracking-[-0.045em] text-[2.5rem] sm:text-[4.5rem] xl:text-[6rem]"
+            className="mt-5 font-display font-extrabold leading-[0.94] tracking-[-0.04em] text-[2.45rem] sm:mt-6 sm:text-[4.5rem] xl:text-[6rem]"
           >
             <span className="block text-foreground/95">The OS that runs</span>
             <span className="relative block">
@@ -203,7 +293,7 @@ function Hero() {
 
           <motion.p
             initial="hidden" animate="visible" custom={2} variants={fadeUp}
-            className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg"
+            className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg"
           >
             Live sessions. Per-minute billing. Bookings, memberships, devices, analytics —
             collapsed into one ridiculously fast console you can run from a phone.
@@ -211,20 +301,21 @@ function Hero() {
 
           <motion.div
             initial="hidden" animate="visible" custom={3} variants={fadeUp}
-            className="mt-9 flex flex-wrap items-center gap-3"
+            className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:flex-wrap sm:items-center"
           >
             <Link
-              to="/auth"
-              className="cta-shimmer group relative inline-flex items-center gap-2 overflow-hidden rounded-xl px-7 py-3.5 text-sm font-semibold text-primary-foreground glow-violet"
+              to={dashboardPath ? (dashboardPath as any) : "/auth"}
+              search={(dashboardPath ? undefined : { mode: "signup" }) as any}
+              className="cta-shimmer group relative inline-flex min-h-[48px] w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-7 py-3.5 text-sm font-semibold text-primary-foreground glow-violet sm:w-auto"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
-              <span className="relative z-10">Launch your café</span>
+              <span className="relative z-10">{dashboardPath ? "Go to Dashboard" : "Launch your café"}</span>
               <ArrowRight className="relative z-10 h-4 w-4 transition group-hover:translate-x-1" />
             </Link>
 
             <a
               href="#demo"
-              className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/40 px-6 py-3.5 text-sm font-semibold backdrop-blur transition hover:border-primary/50 hover:bg-background/60"
+              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/40 px-6 py-3.5 text-sm font-semibold backdrop-blur transition hover:border-primary/50 hover:bg-background/60 sm:w-auto"
             >
               Explore the OS
             </a>

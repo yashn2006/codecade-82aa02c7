@@ -84,26 +84,30 @@ export const FloorStats = memo(function FloorStats({
           <Stat label="Maintenance" value={counts.maintenance} icon={Wrench} tone={STATUS_META.maintenance.tone} />
         </div>
       </div>
-      <div className="grid gap-3 sm:grid-cols-[auto_auto_auto] xl:grid-cols-1 xl:grid-rows-[auto_auto]">
+      <div className="grid gap-2.5 sm:grid-cols-[auto_auto_auto] xl:grid-cols-1">
         <ClockCard />
-        <div className="lf-panel flex items-center justify-between gap-4 px-3.5 py-2.5">
+        <div className="lf-panel liquid-glass-card flex items-center justify-between gap-4 px-3.5 py-2.5 border border-white/10">
           <div>
-            <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-lf-dim">Running bill</div>
-            <div className="font-mono text-[15px] font-bold text-lf-run"><RunningBill devices={devices} sessionsByDevice={sessionsByDevice} /></div>
+            <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-lf-dim">Live Running bill</div>
+            <div className="font-mono text-[16px] font-extrabold text-lf-run drop-shadow-[0_0_8px_rgba(0,229,160,0.5)]">
+              <RunningBill devices={devices} sessionsByDevice={sessionsByDevice} />
+            </div>
           </div>
           <div className="text-right">
             <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-lf-dim">Closed today</div>
-            <div className="font-mono text-[15px] font-bold">₹{revenueToday.toLocaleString("en-IN")}</div>
+            <div className="font-mono text-[16px] font-extrabold text-foreground">₹{revenueToday.toLocaleString("en-IN")}</div>
           </div>
         </div>
         <button
           type="button"
           onClick={onQuickStart}
           disabled={counts.available === 0}
-          className="lf-btn lf-btn-primary h-11 px-4 text-[13px] xl:hidden"
+          className="group relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl font-bold text-xs uppercase tracking-wider text-white shadow-lg transition hover:scale-[1.01] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
+          style={{ background: "var(--gradient-brand-hot)" }}
           title={counts.available === 0 ? "No free stations" : "Start a session on a free station"}
         >
-          <Zap className="h-4 w-4" /> Start session
+          <Zap className="h-3.5 w-3.5 transition group-hover:scale-125" />
+          <span>Quick Start ({counts.available} free)</span>
         </button>
       </div>
     </section>

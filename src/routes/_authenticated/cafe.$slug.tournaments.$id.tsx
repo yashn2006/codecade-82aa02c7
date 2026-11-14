@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ConfirmModal } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/tournaments/$id")({
@@ -65,6 +66,13 @@ function BracketPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const [payoutOpen, setPayoutOpen] = useState(false);
+  const [confirmRegen, setConfirmRegen] = useState(false);
+  const [pendingPayout, setPendingPayout] = useState<{
+    tournament_id: string;
+    customer_id: string;
+    winner_team: string;
+    amount: number;
+  } | null>(null);
 
   const matches = matchQ.data ?? [];
   const roundsMap = new Map<number, typeof matches>();
@@ -109,7 +117,7 @@ function BracketPage() {
                 <Crown className="h-3 w-3" /> ₹{t.payout_amount} paid to {t.winner_team}
               </Badge>
             )}
-            <Button onClick={() => { if (confirm("Regenerate bracket? Existing matches will be wiped.")) genM.mutate({ data: { tournament_id: id } }); }} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+            <Button onClick={() => setConfirmRegen(true)} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
               <Shuffle className="h-4 w-4" /> {matches.length === 0 ? "Generate" : "Regenerate"} bracket
             </Button>
           </div>
@@ -149,8 +157,7 @@ function BracketPage() {
               if (!customer_id) return toast.error("Pick the winning customer");
               if (!winner_team) return toast.error("Team name required");
               if (amount <= 0) return toast.error("Amount must be > 0");
-              if (!confirm(`Credit ₹${amount} to ${winner_team}'s wallet? This cannot be undone.`)) return;
-              payM.mutate({ data: { tournament_id: id, customer_id, winner_team, amount } });
+              setPendingPayout({ tournament_id: id, customer_id, winner_team, amount });
             }}
             className="space-y-3"
           >
@@ -180,6 +187,26 @@ function BracketPage() {
           </form>
         </DialogContent>
       </Dialog>
+      <ConfirmModal
+        open={confirmRegen}
+        onOpenChange={setConfirmRegen}
+        title={matches.length === 0 ? "Generate bracket?" : "Regenerate bracket?"}
+        description="Existing matches and recorded scores in this bracket will be wiped."
+        confirmLabel={matches.length === 0 ? "Generate" : "Regenerate"}
+        onConfirm={() => genM.mutateAsync({ data: { tournament_id: id } })}
+      />
+
+      <ConfirmModal
+        open={!!pendingPayout}
+        onOpenChange={(o) => !o && setPendingPayout(null)}
+        title={`Credit ₹${pendingPayout?.amount ?? 0} to ${pendingPayout?.winner_team ?? "winner"}?`}
+        description="This immediately credits the prize pool to the selected customer's wallet and cannot be undone."
+        confirmLabel="Confirm Payout"
+        tone="default"
+        onConfirm={() =>
+          pendingPayout ? payM.mutateAsync({ data: pendingPayout }) : Promise.resolve()
+        }
+      />
     </div>
   );
 }

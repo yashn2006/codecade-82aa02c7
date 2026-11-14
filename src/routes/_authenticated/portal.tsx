@@ -1,11 +1,32 @@
-import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
-import { useState, useEffect, useMemo } from "react";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Home, CalendarRange, User as UserIcon, Gamepad2, MapPin, Wallet, Crown,
-  Trophy, Clock, X, Plus, ArrowRight, ArrowDownLeft, ArrowUpRight, RotateCcw,
-  LogOut, KeyRound, Compass, Zap,
+  Home,
+  CalendarRange,
+  User as UserIcon,
+  MapPin,
+  Wallet,
+  Crown,
+  Trophy,
+  Clock,
+  X,
+  Plus,
+  ArrowRight,
+  ArrowDownLeft,
+  ArrowUpRight,
+  RotateCcw,
+  LogOut,
+  KeyRound,
+  Compass,
+  QrCode,
+  Copy,
+  Monitor,
+  Flame,
+  Award,
+  LifeBuoy,
+  MessageSquare,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -15,14 +36,23 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { PageSkeleton } from "@/components/LoadingSkeleton";
+import { ConfirmModal } from "@/components/ConfirmDialog";
+import { SupportTickets, type BookingSupportPrefill } from "@/components/SupportTickets";
+import { computeGamerProgression } from "@/lib/support-thread";
 import { listMyBookings } from "@/lib/bookings.functions";
 import { getMyRoles } from "@/lib/me.functions";
 import { getMyOwnedCafes } from "@/lib/cafes.functions";
 import { getPlatformMaintenance } from "@/lib/platform.functions";
+import { listMyTickets, listCustomerBookingCafes } from "@/lib/tickets.functions";
 import {
-  getMyPortalSummary, cancelMyBooking, getMyProfile, updateMyProfile,
-  getMyPortalHome, getMyWalletLedger, getMyTournaments,
+  getMyPortalSummary,
+  cancelMyBooking,
+  getMyProfile,
+  updateMyProfile,
+  getMyPortalHome,
+  getMyWalletLedger,
+  getMyTournaments,
+  customerSubmitTopupProof,
 } from "@/lib/portal.functions";
 import { createTopupOrder, verifyTopupPayment, getRazorpayConfig } from "@/lib/razorpay.functions";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
@@ -31,12 +61,22 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type RzpOpts = {
-  key: string; amount: number; currency: string; order_id: string; name: string; description: string;
+  key: string;
+  amount: number;
+  currency: string;
+  order_id: string;
+  name: string;
+  description: string;
   handler: (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void;
   prefill?: { name?: string; email?: string; contact?: string };
-  modal?: { ondismiss?: () => void }; theme?: { color?: string };
+  modal?: { ondismiss?: () => void };
+  theme?: { color?: string };
 };
-declare global { interface Window { Razorpay?: new (o: RzpOpts) => { open: () => void } } }
+declare global {
+  interface Window {
+    Razorpay?: new (o: RzpOpts) => { open: () => void };
+  }
+}
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -53,10 +93,10 @@ function loadRazorpayScript(): Promise<boolean> {
 export const Route = createFileRoute("/_authenticated/portal")({
   head: () => ({
     meta: [
-      { title: "My Portal — CoreCade" },
-      { name: "description", content: "Your bookings, wallet, memberships and tournaments across every CoreCade café." },
-      { property: "og:title", content: "My Portal — CoreCade" },
-      { property: "og:description", content: "Your bookings, wallet, memberships and tournaments across every CoreCade café." },
+      { title: "Gamer Portal — CoreCade" },
+      { name: "description", content: "Your sessions, wallet balance, active bookings and tournaments in one cyber command center." },
+      { property: "og:title", content: "Gamer Portal — CoreCade" },
+      { property: "og:description", content: "Your sessions, wallet balance, active bookings and tournaments in one cyber command center." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -64,26 +104,50 @@ export const Route = createFileRoute("/_authenticated/portal")({
   component: Portal,
 });
 
-type TabKey = "home" | "bookings" | "wallet" | "tournaments" | "profile";
+type TabKey = "home" | "bookings" | "wallet" | "tournaments" | "support" | "profile";
 const TABS: { key: TabKey; label: string; icon: typeof Home }[] = [
-  { key: "home", label: "Home", icon: Home },
-  { key: "bookings", label: "Bookings", icon: CalendarRange },
-  { key: "wallet", label: "Wallet", icon: Wallet },
+  { key: "home", label: "Dashboard", icon: Home },
+  { key: "bookings", label: "My Bookings", icon: CalendarRange },
+  { key: "wallet", label: "Cyber Wallet", icon: Wallet },
   { key: "tournaments", label: "Tournaments", icon: Trophy },
+  { key: "support", label: "Support", icon: LifeBuoy },
   { key: "profile", label: "Profile", icon: UserIcon },
 ];
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 function Portal() {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
   const fetchRoles = useServerFn(getMyRoles);
   const fetchOwned = useServerFn(getMyOwnedCafes);
   const fetchPlat = useServerFn(getPlatformMaintenance);
   const fetchSummary = useServerFn(getMyPortalSummary);
+  const fetchHome = useServerFn(getMyPortalHome);
+  const fetchBookings = useServerFn(listMyBookings);
+  const fetchLedger = useServerFn(getMyWalletLedger);
+  const fetchTournaments = useServerFn(getMyTournaments);
+  const fetchProfile = useServerFn(getMyProfile);
+  const fetchTickets = useServerFn(listMyTickets);
+  const fetchSupportCafes = useServerFn(listCustomerBookingCafes);
+
+  const [supportPrefill, setSupportPrefill] = useState<BookingSupportPrefill | null>(null);
+
   const { data: roleData } = useQuery({ queryKey: ["my-roles"], queryFn: () => fetchRoles() });
   const { data: ownedCafes } = useQuery({ queryKey: ["my-owned-cafes"], queryFn: () => fetchOwned() });
   const { data: platform } = useQuery({ queryKey: ["platform-maintenance"], queryFn: () => fetchPlat(), refetchInterval: 60_000 });
-  const { data: summary } = useQuery({ queryKey: ["portal-summary"], queryFn: () => fetchSummary() });
+  const { data: summary } = useQuery({ queryKey: ["portal-summary"], queryFn: () => fetchSummary(), refetchInterval: 15_000 });
+
+  useEffect(() => {
+    void qc.prefetchQuery({ queryKey: ["portal-home"], queryFn: () => fetchHome() });
+    void qc.prefetchQuery({ queryKey: ["my-bookings"], queryFn: () => fetchBookings() });
+    void qc.prefetchQuery({ queryKey: ["portal-wallet"], queryFn: () => fetchLedger() });
+    void qc.prefetchQuery({ queryKey: ["portal-tournaments"], queryFn: () => fetchTournaments() });
+    void qc.prefetchQuery({ queryKey: ["my-profile"], queryFn: () => fetchProfile() });
+    void qc.prefetchQuery({ queryKey: ["my-tickets", "customer", "all"], queryFn: () => fetchTickets() });
+    void qc.prefetchQuery({ queryKey: ["customer-support-cafes"], queryFn: () => fetchSupportCafes() });
+  }, [qc, fetchHome, fetchBookings, fetchLedger, fetchTournaments, fetchProfile, fetchTickets, fetchSupportCafes]);
+
   const roles = roleData?.roles ?? [];
   const isSuper = roles.some((r) => r.role === "super_admin");
   const ownerCafe = (ownedCafes ?? [])[0];
@@ -91,11 +155,34 @@ function Portal() {
   const hash = useRouterState({ select: (s) => (s.location.hash ?? "").replace(/^#/, "") });
   const active: TabKey = TABS.find((t) => t.key === hash)?.key ?? "home";
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function openBookingSupport(booking: any) {
+    const ref = `#BK-${String(booking.id).slice(0, 8).toUpperCase()}`;
+    const when = new Date(booking.scheduled_at).toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+    const cafeName = booking.cafes?.name ?? "Arena";
+    const rigName = booking.devices?.name ?? "Gaming Rig";
+    setSupportPrefill({
+      key: Date.now(),
+      cafeId: booking.cafe_id ?? booking.cafes?.id ?? null,
+      cafeName,
+      bookingId: booking.id,
+      bookingRef: ref,
+      bookingSummary: `${rigName} · ${when} (${booking.duration_minutes}m)`,
+      category: "bookings",
+      subject: `Booking ${ref} — update or cancellation`,
+      description: `Hi ${cafeName} team, I need help with my booking ${ref} (${rigName} on ${when}).`,
+    });
+    void navigate({ to: "/portal", hash: "support" });
+  }
+
   return (
     <ConsoleShell
-      badge="Customer"
-      title="Your Arcade"
-      subtitle="Sessions, wallet, tournaments — all in one place."
+      badge="Player Console"
+      title="Gamer Portal"
+      subtitle="Your live stations, wallet credits, verified bookings & tournaments."
       nav={TABS.map((t) => ({
         label: t.label,
         icon: t.icon,
@@ -105,26 +192,66 @@ function Portal() {
       }))}
       intensity="hero"
     >
-      <div className="mb-4"><MaintenanceBanner window={platform} title="CoreCade network maintenance" /></div>
+      <div className="mb-4">
+        <MaintenanceBanner window={platform} title="CoreCade network maintenance" />
+      </div>
+
       {(isSuper || ownerCafe) && (
-        <div className="mb-6 flex flex-wrap gap-2">
-          {isSuper && <Link to="/admin"><Button variant="outline" size="sm">Open Super Admin →</Button></Link>}
-          {ownerCafe && <Link to="/owner"><Button variant="outline" size="sm">Open Owner Dashboard →</Button></Link>}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {isSuper && (
+            <Link to="/admin">
+              <Button variant="outline" size="sm" className="min-h-[40px] border-primary/40 text-xs">
+                Open Super Admin →
+              </Button>
+            </Link>
+          )}
+          {ownerCafe && (
+            <Link to="/owner">
+              <Button variant="outline" size="sm" className="min-h-[40px] border-primary/40 text-xs">
+                Open Owner Hub →
+              </Button>
+            </Link>
+          )}
         </div>
       )}
+
+      {/* Mobile horizontal quick-section rail (all 6 portal views) */}
+      <div className="-mx-4 mb-5 flex flex-nowrap items-center gap-2 overflow-x-auto px-4 pb-1 lg:hidden">
+        {TABS.map((t) => {
+          const isTabActive = active === t.key;
+          const Icon = t.icon;
+          return (
+            <Link
+              key={t.key}
+              to="/portal"
+              hash={t.key === "home" ? "" : t.key}
+              className={cn(
+                "flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-2xl border px-3.5 text-xs font-semibold transition active:scale-[0.97]",
+                isTabActive
+                  ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_20px_-6px_oklch(0.7_0.26_335/0.8)]"
+                  : "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-white",
+              )}
+            >
+              <Icon className={cn("h-3.5 w-3.5", isTabActive ? "text-primary" : "text-muted-foreground")} />
+              <span>{t.label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
       <AnimatePresence mode="wait">
         <motion.div
           key={active}
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
         >
-          {active === "home" && <HomeTab summary={summary} />}
-          {active === "bookings" && <BookingsTab />}
+          {active === "home" && <HomeTab summary={summary} onMessageCafe={openBookingSupport} />}
+          {active === "bookings" && <BookingsTab onMessageCafe={openBookingSupport} />}
           {active === "wallet" && <WalletTab />}
           {active === "tournaments" && <TournamentsTab />}
+          {active === "support" && <SupportTab prefill={supportPrefill} />}
           {active === "profile" && <ProfileTab />}
         </motion.div>
       </AnimatePresence>
@@ -132,7 +259,7 @@ function Portal() {
   );
 }
 
-/* ══════════════════ TAB 1 — HOME ══════════════════ */
+/* ══════════════════ TAB 1 — HOME DASHBOARD ══════════════════ */
 
 function useTick(ms = 1000) {
   const [, setN] = useState(0);
@@ -142,193 +269,399 @@ function useTick(ms = 1000) {
   }, [ms]);
 }
 
-function HomeTab({ summary }: { summary: Awaited<ReturnType<typeof getMyPortalSummary>> | undefined }) {
+function HomeTab({
+  summary,
+  onMessageCafe,
+}: {
+  summary: Awaited<ReturnType<typeof getMyPortalSummary>> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onMessageCafe: (booking: any) => void;
+}) {
   const fetchHome = useServerFn(getMyPortalHome);
   const fetchProfile = useServerFn(getMyProfile);
-  const { data, isLoading } = useQuery({ queryKey: ["portal-home"], queryFn: () => fetchHome(), refetchInterval: 30_000 });
+
+  const { data } = useQuery({ queryKey: ["portal-home"], queryFn: () => fetchHome(), refetchInterval: 15_000 });
   const { data: profile } = useQuery({ queryKey: ["my-profile"], queryFn: () => fetchProfile() });
 
-  const firstName = (profile?.full_name || profile?.email || "Gamer").split(" ")[0].split("@")[0];
-  const initials = firstName.slice(0, 2).toUpperCase();
+  const fullName = profile?.full_name || profile?.email?.split("@")[0] || "Cyber Gamer";
+  const initials = fullName.slice(0, 2).toUpperCase();
+  const prog = computeGamerProgression(summary);
 
-  if (isLoading) return <PageSkeleton rows={2} />;
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const active = data?.activeSession as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const next = data?.nextBooking as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const memberships = (data?.memberships ?? []) as any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activity = (data?.activity ?? []) as any[];
 
   return (
-    <div className="space-y-4">
-      {/* Greeting */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div
-            className="grid h-[52px] w-[52px] place-items-center rounded-full font-display text-lg font-black text-white"
-            style={{ background: "linear-gradient(135deg,#ff006e,#7b2fff)", border: "2px solid rgba(255,0,110,0.3)" }}
-          >
-            {initials}
+    <div className="space-y-6">
+      {/* HOLOGRAPHIC GAMER VIP IDENTITY BANNER */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-3xl border border-white/12 bg-gradient-to-br from-[#16102c] via-[#0d0918] to-[#190c26] p-5 shadow-2xl sm:p-8"
+      >
+        {/* Glow orb */}
+        <div
+          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full opacity-50 blur-[80px]"
+          style={{ background: "radial-gradient(circle, oklch(0.7 0.26 335 / 0.6), transparent 70%)" }}
+          aria-hidden
+        />
+
+        <div className="relative flex flex-wrap items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div
+                className="grid h-16 w-16 place-items-center rounded-2xl font-display text-2xl font-black text-white shadow-lg"
+                style={{
+                  background: "var(--gradient-brand-hot)",
+                  boxShadow: "0 0 25px oklch(0.7 0.26 335 / 0.5)",
+                }}
+              >
+                {initials}
+              </div>
+              <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-black font-bold">
+                ✓
+              </span>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary">
+                  CoreCade Verified Gamer
+                </span>
+                <span className="rounded-full bg-amber-400/15 px-2 py-0.5 font-mono text-[9px] font-bold text-amber-300">
+                  {prog.tier}
+                </span>
+              </div>
+              <h2 className="mt-0.5 font-display text-2xl font-black text-white sm:text-3xl">{fullName}</h2>
+              <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="font-mono">ID: #{profile?.id ? profile.id.slice(0, 8).toUpperCase() : "CC-8942"}</span>
+                <span>·</span>
+                <span>{summary?.totalHours ?? 0} Hours Logged</span>
+              </div>
+            </div>
           </div>
-          <h2 className="font-display text-2xl font-bold">Hey, {firstName} 👋</h2>
+
+          {/* Quick Wallet CTA & Action in Header */}
+          <div className="grid w-full grid-cols-1 sm:w-auto sm:flex sm:items-center gap-3">
+            <Link
+              to="/portal"
+              hash="wallet"
+              className="group flex items-center justify-between sm:justify-start gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-5 py-3 transition hover:border-primary/60 hover:bg-primary/20"
+            >
+              <div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Wallet Balance</div>
+                <div className="font-display text-2xl font-extrabold text-white tabular-nums">
+                  {inr(summary?.walletTotal ?? 0)}
+                </div>
+              </div>
+              <div className="rounded-xl bg-primary p-2 text-white shadow-md transition-transform group-hover:scale-110">
+                <Plus className="h-4 w-4" />
+              </div>
+            </Link>
+
+            <Link to="/discover" className="w-full sm:w-auto">
+              <Button className="h-12 w-full sm:w-auto gap-2 text-xs font-bold text-white shadow-lg" style={{ background: "var(--gradient-brand-hot)" }}>
+                <Compass className="h-4 w-4" /> Discover Arenas
+              </Button>
+            </Link>
+          </div>
         </div>
-        <Link
-          to="/portal" hash="wallet"
-          className="inline-flex items-center gap-3 rounded-full px-4 py-2"
-          style={{ background: "rgba(255,0,110,0.1)", border: "1px solid rgba(255,0,110,0.2)" }}
-        >
-          <span className="font-display text-lg font-bold tabular-nums">{inr(summary?.walletTotal ?? 0)}</span>
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary"><Plus className="h-3 w-3" /> Top Up</span>
-        </Link>
-      </div>
 
-      {active && <ActiveSessionCard s={active} />}
-      {next && <NextBookingCard b={next} />}
-      {memberships.map((m) => <MembershipCard key={m.id} m={m} />)}
+        {/* Level & XP Progression HUD */}
+        <div className="mt-5 border-t border-white/5 pt-4">
+          <div className="flex items-center justify-between text-[11px] font-mono">
+            <span className="flex items-center gap-1.5 font-bold text-white">
+              <Award className="h-3.5 w-3.5 text-primary" /> LEVEL {prog.level} {prog.tier}
+            </span>
+            <span className="text-muted-foreground tabular-nums">
+              {prog.xp.toLocaleString("en-IN")} / {prog.nextLevelXp.toLocaleString("en-IN")} XP ({prog.progressPct}%)
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10 ring-1 ring-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-primary via-accent to-emerald-400 transition-all duration-500"
+              style={{ width: `${prog.progressPct}%` }}
+            />
+          </div>
+        </div>
+      </motion.div>
 
-      {/* Quick stats */}
+      {/* LIVE ACTIVE SESSION HUD (If playing right now) */}
+      {active && <ActiveSessionCockpit session={active} />}
+
+      {/* NEXT UPCOMING BOOKING TICKET */}
+      {next && <NextBookingCyberPass booking={next} onMessageCafe={() => onMessageCafe(next)} />}
+
+      {/* MEMBERSHIPS CARDS */}
+      {memberships.length > 0 && (
+        <div className="space-y-3">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-primary">Active Memberships</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {memberships.map((m) => (
+              <MembershipCyberCard key={m.id} m={m} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* HUD STATS GRID */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MiniStat icon={CalendarRange} label="Upcoming" value={String(summary?.upcoming ?? 0)} />
-        <MiniStat icon={Clock} label="Hours played" value={String(summary?.totalHours ?? 0)} />
-        <MiniStat icon={Trophy} label="Cafés visited" value={String(summary?.cafesVisited ?? 0)} />
-        <MiniStat icon={Zap} label="Sessions" value={String(summary?.completed ?? 0)} />
+        <TelemetryCard icon={CalendarRange} label="Upcoming Slots" value={String(summary?.upcoming ?? 0)} color="#a855f7" />
+        <TelemetryCard icon={Clock} label="Playtime Logged" value={`${summary?.totalHours ?? 0} hrs`} color="#00e5a0" />
+        <TelemetryCard icon={Trophy} label="Arenas Visited" value={String(summary?.cafesVisited ?? 0)} color="#ff006e" />
+        <TelemetryCard icon={Flame} label="Completed Sessions" value={String(summary?.completed ?? 0)} color="#ff9b45" />
       </div>
 
-      {/* Recent activity */}
-      <div className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Recent activity</div>
-          <Link to="/portal" hash="wallet" className="text-xs text-primary hover:underline">View all</Link>
+      {/* RECENT ACTIVITY & LEDGER */}
+      <div className="rounded-3xl border border-white/10 bg-card/40 p-5 backdrop-blur-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-primary">Recent Transactions & Passes</div>
+          <Link to="/portal" hash="wallet" className="text-xs text-primary font-semibold hover:underline">
+            View Ledger →
+          </Link>
         </div>
+
         {activity.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">Nothing yet — your sessions and top-ups land here.</p>
+          <div className="py-8 text-center text-xs text-muted-foreground">
+            No activity logged yet. Book a station or add funds to see transactions here.
+          </div>
         ) : (
-          <div className="space-y-2">{activity.slice(0, 3).map((t) => <TxRow key={t.id} t={t} />)}</div>
+          <div className="space-y-2">
+            {activity.slice(0, 4).map((t) => (
+              <TxRow key={t.id} t={t} />
+            ))}
+          </div>
         )}
       </div>
 
-      {(!active && !next) && (
+      {!active && !next && (
         <EmptyState
-          icon={Compass} title="Ready to play?"
-          description="Find an arena near you and lock a rig in under a minute."
-          action={<Link to="/discover"><Button style={{ background: "var(--gradient-brand-hot)" }}>Find a Café <ArrowRight className="ml-1 h-4 w-4" /></Button></Link>}
+          icon={Compass}
+          title="Ready For Game Night?"
+          description="Locate high-refresh RTX rigs or PS5 lounges near you and lock a seat in under 30 seconds."
+          action={
+            <Link to="/discover">
+              <Button className="h-11 text-xs font-bold text-white shadow-lg" style={{ background: "var(--gradient-brand-hot)" }}>
+                Find Your Arena Now <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+            </Link>
+          }
         />
       )}
     </div>
   );
 }
 
-function MiniStat({ icon: Icon, label, value }: { icon: typeof Wallet; label: string; value: string }) {
+function TelemetryCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: typeof Wallet;
+  label: string;
+  value: string;
+  color: string;
+}) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur">
-      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-primary" /> {label}
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur transition hover:border-white/20">
+      <div className="flex items-center gap-2">
+        <div className="rounded-lg p-1.5" style={{ background: `${color}20`, color }}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
-      <div className="mt-1.5 font-display text-2xl font-extrabold tabular-nums">{value}</div>
+      <div className="mt-2 font-display text-2xl font-black text-white tabular-nums">{value}</div>
     </div>
   );
 }
 
-function ActiveSessionCard({ s }: { s: any }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ActiveSessionCockpit({ session }: { session: any }) {
   useTick(1000);
-  const started = new Date(s.started_at).getTime();
+  const started = new Date(session.started_at).getTime();
   const mins = Math.max(0, Math.floor((Date.now() - started) / 60000));
   const secs = Math.max(0, Math.floor((Date.now() - started) / 1000) % 60);
-  const rate = s.devices?.hourly_rate ?? 0;
+  const rate = session.devices?.hourly_rate ?? 80;
   const amount = Math.ceil((rate * mins) / 60);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-[20px] p-5"
-      style={{ background: "rgba(0,255,100,0.04)", border: "1px solid rgba(0,255,100,0.3)", boxShadow: "0 0 40px rgba(0,255,100,0.08)" }}
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="relative overflow-hidden rounded-3xl border border-emerald-500/40 bg-gradient-to-br from-emerald-950/30 via-[#0a140f] to-[#060b09] p-6 shadow-[0_0_50px_-10px_rgba(16,185,129,0.3)] backdrop-blur-2xl"
     >
-      <motion.div
-        aria-hidden className="pointer-events-none absolute inset-0"
-        animate={{ opacity: [0.25, 0.5, 0.25] }} transition={{ duration: 3, repeat: Infinity }}
-        style={{ background: "radial-gradient(60% 60% at 50% 0%, rgba(0,255,100,0.10), transparent 70%)" }}
-      />
-      <div className="relative">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-300">
-          🟢 Live session
-        </span>
-        <div className="mt-3 font-display text-lg font-bold">{s.cafes?.name ?? "Café"}</div>
-        <div className="font-mono text-xs text-muted-foreground">
-          <Gamepad2 className="mr-1 inline h-3 w-3" />{s.devices?.name ?? "Station"} · {(s.devices?.type ?? "").toUpperCase()}
-        </div>
-        <div className="mt-4 flex flex-wrap items-end gap-6">
-          <div className="font-mono text-[36px] font-bold leading-none text-emerald-400 tabular-nums">
-            {String(Math.floor(mins / 60)).padStart(2, "0")}:{String(mins % 60).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            <span>Live Station Cockpit</span>
           </div>
-          <div className="font-display text-2xl font-bold text-primary tabular-nums">{inr(amount)}</div>
+
+          <h3 className="mt-2 font-display text-xl sm:text-2xl font-extrabold text-white">
+            {session.cafes?.name ?? "Arena"}
+          </h3>
+          <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+            <Monitor className="h-3.5 w-3.5 text-emerald-400" />
+            <span>{session.devices?.name ?? "Station Rig"}</span>
+            <span>·</span>
+            <span className="font-mono text-emerald-400 uppercase">{session.devices?.type ?? "PC"}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 rounded-2xl border border-white/10 bg-black/30 p-3.5 sm:flex sm:items-center sm:gap-6 sm:border-0 sm:bg-transparent sm:p-0">
+          <div className="sm:text-right">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Elapsed Time</div>
+            <div className="font-mono text-2xl sm:text-3xl font-black text-emerald-400 tabular-nums">
+              {String(Math.floor(mins / 60)).padStart(2, "0")}:{String(mins % 60).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+            </div>
+          </div>
+
+          <div className="border-l border-white/10 pl-4 sm:pl-6 sm:text-right">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Current Tab</div>
+            <div className="font-display text-2xl sm:text-3xl font-black text-white tabular-nums">
+              {inr(amount)}
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>
   );
 }
 
-function NextBookingCard({ b }: { b: any }) {
-  const at = new Date(b.scheduled_at);
-  const hrs = Math.max(0, Math.round((at.getTime() - Date.now()) / 3600000));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function NextBookingCyberPass({ booking, onMessageCafe }: { booking: any; onMessageCafe: () => void }) {
+  const at = new Date(booking.scheduled_at);
+  const hoursLeft = Math.max(0, Math.round((at.getTime() - Date.now()) / 3600000));
+  const cafe = booking.cafes;
+  const device = booking.devices;
+
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <CalendarRange className="mt-0.5 h-5 w-5 text-primary" />
+    <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-r from-card/60 via-card/40 to-primary/5 p-4 sm:p-5 backdrop-blur-xl">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/20 text-primary">
+            <CalendarRange className="h-6 w-6" />
+          </div>
           <div>
-            <div className="font-display text-base font-bold">{b.cafes?.name ?? "Café"}</div>
-            <div className="font-mono text-xs text-muted-foreground">
-              {b.devices?.name ?? b.devices?.type ?? "Station"} · {at.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · {Math.round(b.duration_minutes / 60 * 10) / 10}h
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-primary">Confirmed Seat Locked</span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`BK-${booking.id.slice(0, 8).toUpperCase()}`);
+                  toast.success("Booking ID copied to clipboard!");
+                }}
+                className="inline-flex min-h-[28px] items-center gap-1 rounded bg-white/10 px-2 py-0.5 font-mono text-[10px] font-bold text-white transition hover:bg-white/20"
+                title="Click to copy Booking ID"
+              >
+                <Copy className="h-3 w-3 text-muted-foreground" />
+                #BK-{booking.id.slice(0, 8).toUpperCase()}
+              </button>
+              <span className="rounded-full bg-amber-400/15 px-2 py-0.5 font-mono text-[9px] font-bold text-amber-300">
+                In {hoursLeft <= 1 ? "Under 1 hour" : `${hoursLeft} hours`}
+              </span>
             </div>
-            <div className="mt-1 font-mono text-xs text-amber-400">In {hrs < 1 ? "less than an hour" : `${hrs} hour${hrs === 1 ? "" : "s"}`}</div>
+            <h4 className="mt-1 font-display text-lg font-bold text-white">{cafe?.name ?? "Café"}</h4>
+            <div className="text-xs text-muted-foreground">
+              {device?.name ?? "Gaming Station"} · {at.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" })} at {at.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}
+            </div>
           </div>
         </div>
-        <Link to="/portal" hash="bookings" className="text-xs text-primary hover:underline">View all</Link>
+
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Button size="sm" variant="outline" onClick={onMessageCafe} className="min-h-[44px] flex-1 sm:flex-initial gap-1.5 border-white/15 text-xs">
+            <MessageSquare className="h-3.5 w-3.5 text-primary" /> Message Café
+          </Button>
+          {cafe?.city && (
+            <a
+              href={`https://maps.google.com/?q=${encodeURIComponent(`${cafe.name} ${cafe.city}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 sm:flex-initial"
+            >
+              <Button size="sm" variant="outline" className="min-h-[44px] w-full border-white/15 text-xs">
+                <MapPin className="mr-1 h-3.5 w-3.5 text-primary" /> Directions
+              </Button>
+            </a>
+          )}
+          <Link to="/portal" hash="bookings" className="w-full sm:w-auto">
+            <Button size="sm" className="min-h-[44px] w-full text-xs font-semibold text-white" style={{ background: "var(--gradient-brand-hot)" }}>
+              View Pass →
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
 }
 
-function MembershipCard({ m }: { m: any }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function MembershipCyberCard({ m }: { m: any }) {
   const ends = new Date(m.ends_at).getTime();
   const starts = new Date(m.starts_at ?? Date.now()).getTime();
   const total = Math.max(1, ends - starts);
   const left = Math.max(0, ends - Date.now());
   const pct = Math.min(100, Math.max(0, (left / total) * 100));
   const days = Math.ceil(left / 86400000);
+
   return (
     <div className="rounded-2xl border border-amber-400/30 bg-amber-500/5 p-4 backdrop-blur">
-      <div className="flex items-center gap-2">
-        <Crown className="h-4 w-4 text-amber-400" />
-        <span className="font-display text-base font-bold">{m.memberships?.name ?? "Membership"}</span>
-        {m.hours_remaining != null && (
-          <Badge variant="secondary" className="ml-auto">{m.hours_remaining}h left</Badge>
-        )}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Crown className="h-4 w-4 text-amber-400" />
+          <span className="font-display text-sm font-bold text-white">{m.memberships?.name ?? "VIP Membership"}</span>
+        </div>
+        <span className="font-mono text-xs font-bold text-amber-400">{days}d left</span>
       </div>
-      <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-        Valid until {new Date(m.ends_at).toLocaleDateString("en-IN", { dateStyle: "medium" })} · {days} day{days === 1 ? "" : "s"} remaining
+      <div className="mt-2 text-[11px] text-muted-foreground">
+        Valid until {new Date(m.ends_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}
       </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div className="h-full rounded-full bg-amber-400" style={{ width: `${pct}%` }} />
+      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div className="h-full rounded-full bg-amber-400 transition-all duration-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function TxRow({ t }: { t: any }) {
   const credit = t.amount > 0;
   const Icon = t.kind === "refund" ? RotateCcw : credit ? ArrowDownLeft : ArrowUpRight;
   const label =
-    t.kind === "topup" ? "Wallet top-up"
-      : t.kind === "session" ? "Session payment"
-        : t.kind === "refund" ? "Refund"
-          : t.note || "Adjustment";
+    t.kind === "topup"
+      ? "Wallet top-up"
+      : t.kind === "session"
+      ? "Session payment"
+      : t.kind === "refund"
+      ? "Refund"
+      : t.note || "Adjustment";
+
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/40 p-3">
-      <div className={cn("grid h-9 w-9 place-items-center rounded-full", credit ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400")}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm">{label}</div>
-        <div className="font-mono text-[11px] text-muted-foreground">{new Date(t.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</div>
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/[0.02] p-3 transition hover:bg-white/[0.04]">
+      <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            "grid h-9 w-9 place-items-center rounded-xl",
+            credit ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <div className="text-xs font-semibold text-white">{label}</div>
+          <div className="font-mono text-[10px] text-muted-foreground">
+            {new Date(t.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+          </div>
+        </div>
       </div>
       <div className={cn("font-mono text-sm font-bold tabular-nums", credit ? "text-emerald-400" : "text-rose-400")}>
         {credit ? "+" : "−"}{inr(Math.abs(t.amount))}
@@ -337,139 +670,274 @@ function TxRow({ t }: { t: any }) {
   );
 }
 
-/* ══════════════════ TAB 2 — BOOKINGS ══════════════════ */
+/* ══════════════════ TAB 2 — MY BOOKINGS (BOARDING PASS FORMAT) ══════════════════ */
 
-function BookingsTab() {
-  const fn = useServerFn(listMyBookings);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function BookingsTab({ onMessageCafe }: { onMessageCafe: (booking: any) => void }) {
+  const fetchBookings = useServerFn(listMyBookings);
   const cancelFn = useServerFn(cancelMyBooking);
   const qc = useQueryClient();
+
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
-  const { data, isLoading } = useQuery({ queryKey: ["my-bookings"], queryFn: () => fn() });
-  const cancel = useMutation({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [cancelTarget, setCancelTarget] = useState<any | null>(null);
+  const { data } = useQuery({ queryKey: ["my-bookings"], queryFn: () => fetchBookings() });
+
+  const cancelMutation = useMutation({
     mutationFn: cancelFn,
     onSuccess: () => {
-      toast.success("Booking cancelled");
+      toast.success("Booking cancelled — full refund credited to your wallet.");
       qc.invalidateQueries({ queryKey: ["my-bookings"] });
       qc.invalidateQueries({ queryKey: ["portal-summary"] });
       qc.invalidateQueries({ queryKey: ["portal-home"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to cancel"),
   });
 
-  if (isLoading) return <PageSkeleton rows={3} />;
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawList = Array.isArray(data) ? data : Array.isArray((data as any)?.data) ? (data as any).data : [];
+  const all = Array.isArray(rawList) ? rawList : [];
   const now = Date.now();
-  const all = data ?? [];
-  const upcoming = all.filter((b) => ["pending", "confirmed"].includes(b.status) && new Date(b.scheduled_at).getTime() > now);
-  const past = all.filter((b) => !upcoming.includes(b));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const upcoming = all.filter((b: any) => b && ["pending", "confirmed"].includes(b?.status) && new Date(b?.scheduled_at).getTime() > now);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const past = all.filter((b: any) => b && !upcoming.includes(b));
   const list = tab === "upcoming" ? upcoming : past;
 
   return (
-    <div className="space-y-4">
-      <div className="inline-flex rounded-full border border-border/60 bg-card/40 p-1">
-        {(["upcoming", "past"] as const).map((k) => (
-          <button
-            key={k} type="button" onClick={() => setTab(k)}
-            className={cn(
-              "rounded-full px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] transition",
-              tab === k ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {k}
-          </button>
-        ))}
+    <div className="space-y-6">
+      {/* Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+          {(["upcoming", "past"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setTab(k)}
+              className={cn(
+                "min-h-[40px] rounded-xl px-5 py-2 font-mono text-xs font-bold uppercase tracking-wider transition",
+                tab === k
+                  ? "bg-primary text-white shadow-md"
+                  : "text-white/75 hover:text-white"
+              )}
+            >
+              {k} ({k === "upcoming" ? upcoming.length : past.length})
+            </button>
+          ))}
+        </div>
+
+        <Link to="/discover">
+          <Button size="sm" className="min-h-[40px] gap-1.5 text-xs font-bold text-white" style={{ background: "var(--gradient-brand-hot)" }}>
+            <Plus className="h-3.5 w-3.5" /> Book New Rig
+          </Button>
+        </Link>
       </div>
 
       {list.length === 0 ? (
         <EmptyState
           icon={CalendarRange}
-          title={tab === "upcoming" ? "No upcoming bookings" : "No past bookings"}
-          description="Book a rig at any CoreCade arena and it shows up here."
-          action={<Link to="/discover"><Button style={{ background: "var(--gradient-brand-hot)" }}>Find a Café <ArrowRight className="ml-1 h-4 w-4" /></Button></Link>}
+          title={tab === "upcoming" ? "No Active Rig Bookings" : "No Past Booking History"}
+          description="Find a gaming café near you, choose your RTX or console setup, and lock your slot instantly."
+          action={
+            <Link to="/discover">
+              <Button style={{ background: "var(--gradient-brand-hot)" }}>
+                Browse Arenas <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+            </Link>
+          }
         />
       ) : (
-        <div className="space-y-2">
-          {list.map((b) => (
-            <BookingRow
-              key={b.id} b={b as any}
-              canCancel={tab === "upcoming" && b.status === "confirmed" && new Date(b.scheduled_at).getTime() - now > 2 * 3600_000}
-              onCancel={() => cancel.mutate({ data: { id: b.id } })}
-              pending={cancel.isPending}
+        <div className="space-y-4">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {list.map((booking: any) => (
+            <CyberBoardingPass
+              key={booking.id}
+              booking={booking}
+              canCancel={tab === "upcoming" && (booking.status === "pending" || booking.status === "confirmed")}
+              onCancel={() => setCancelTarget(booking)}
+              onMessageCafe={() => onMessageCafe(booking)}
+              isCancelling={cancelMutation.isPending}
             />
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!cancelTarget}
+        onOpenChange={(o) => !o && setCancelTarget(null)}
+        title="Cancel this booking?"
+        description={
+          cancelTarget
+            ? `Cancel #BK-${String(cancelTarget.id).slice(0, 8).toUpperCase()} at ${cancelTarget.cafes?.name ?? "this café"}? Any paid deposit is refunded back to your wallet immediately.`
+            : undefined
+        }
+        confirmLabel="Cancel Booking"
+        onConfirm={() =>
+          cancelTarget
+            ? cancelMutation.mutateAsync({ data: { id: cancelTarget.id } })
+            : Promise.resolve()
+        }
+      />
     </div>
   );
 }
 
-function BookingRow({ b, canCancel, onCancel, pending }: {
-  b: any; canCancel?: boolean; onCancel?: () => void; pending?: boolean;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CyberBoardingPass({
+  booking,
+  canCancel,
+  onCancel,
+  onMessageCafe,
+  isCancelling,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  booking: any;
+  canCancel?: boolean;
+  onCancel?: () => void;
+  onMessageCafe?: () => void;
+  isCancelling?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const cafe = b.cafes as { name?: string; city?: string; slug?: string } | null;
-  const device = b.devices as { name?: string; type?: string } | null;
-  const at = new Date(b.scheduled_at);
-  const accent = b.status === "confirmed" ? "#00e58a" : b.status === "pending" ? "#ffb020" : "#ff4d6d";
+  const cafe = booking.cafes;
+  const device = booking.devices;
+  const at = new Date(booking.scheduled_at);
+  const isConfirmed = booking.status === "confirmed";
+  const isPending = booking.status === "pending";
+  const isCancelled = booking.status === "cancelled";
 
   return (
-    <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-2xl border p-4 backdrop-blur"
-      style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.07)" }}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0e0c1a] shadow-xl md:flex-row"
     >
-      <div className="absolute left-0 top-0 h-full w-[3px]" style={{ background: accent }} />
-      <button type="button" onClick={() => setOpen((v) => !v)} className="w-full pl-3 text-left">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="font-display text-[15px] font-bold">{cafe?.name ?? "—"}</div>
-            <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-              {device?.name ?? device?.type ?? "Station"} · {at.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · {b.duration_minutes}m
-            </div>
-          </div>
+      {/* Left Station Info Section */}
+      <div className="flex-1 p-6">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            {b.deposit_amount ? <span className="font-mono text-xs text-primary">{inr(b.deposit_amount)}</span> : null}
-            <Badge variant={b.status === "confirmed" ? "default" : b.status === "cancelled" || b.status === "no_show" ? "destructive" : "secondary"}>
-              {b.status}
-            </Badge>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-primary">Station Pass</span>
+            <span className="text-white/20">·</span>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(`BK-${booking.id.slice(0, 8).toUpperCase()}`);
+                toast.success("Booking ID copied to clipboard!");
+              }}
+              className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 font-mono text-xs font-bold text-white transition hover:bg-white/20"
+              title="Click to copy Booking ID"
+            >
+              <Copy className="h-3 w-3 text-muted-foreground" />
+              #BK-{booking.id.slice(0, 8).toUpperCase()}
+            </button>
+          </div>
+
+          <div>
+            {isConfirmed ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Seat Locked
+              </span>
+            ) : isPending ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/15 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300 animate-pulse">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                Awaiting Café Review
+              </span>
+            ) : isCancelled ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/40 bg-rose-500/15 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-rose-300">
+                Cancelled & Refunded
+              </span>
+            ) : (
+              <Badge variant="secondary">{booking.status}</Badge>
+            )}
           </div>
         </div>
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden pl-3"
-          >
-            <div className="mt-3 space-y-2 border-t border-border/50 pt-3 text-sm text-muted-foreground">
-              {cafe?.city && <div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {cafe.city}</div>}
-              <div className="flex flex-wrap gap-2">
-                {cafe?.slug && (
-                  <Link to="/c/$slug" params={{ slug: cafe.slug }}>
-                    <Button size="sm" variant="outline">Café page</Button>
-                  </Link>
-                )}
-                {cafe?.city && (
-                  <a href={`https://maps.google.com/?q=${encodeURIComponent(`${cafe.name} ${cafe.city}`)}`} target="_blank" rel="noreferrer">
-                    <Button size="sm" variant="outline">Get directions</Button>
-                  </a>
-                )}
-                {canCancel && (
-                  <Button size="sm" variant="outline" onClick={onCancel} disabled={pending} className="text-destructive hover:bg-destructive/10">
-                    <X className="h-3.5 w-3.5" /> Cancel
-                  </Button>
-                )}
-              </div>
+
+        <h3 className="mt-3 font-display text-2xl font-black text-white">{cafe?.name ?? "Gaming Café"}</h3>
+
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <MapPin className="h-3.5 w-3.5 text-primary" />
+          <span>{cafe?.city || "India"}</span>
+          <span>·</span>
+          <span>{device?.name ?? "Rig"} ({(device?.type ?? "PC").toUpperCase()})</span>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-4 border-t border-white/5 pt-4 sm:grid-cols-3">
+          <div>
+            <div className="font-mono text-[10px] uppercase text-muted-foreground">Date</div>
+            <div className="font-semibold text-sm text-white">
+              {at.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" })}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+          <div>
+            <div className="font-mono text-[10px] uppercase text-muted-foreground">Slot Time</div>
+            <div className="font-mono font-bold text-sm text-emerald-400">
+              {at.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} ({booking.duration_minutes}m)
+            </div>
+          </div>
+          <div>
+            <div className="font-mono text-[10px] uppercase text-muted-foreground">Deposit</div>
+            <div className="font-mono font-bold text-sm text-white">
+              {booking.deposit_amount ? inr(booking.deposit_amount) : "₹0 (Pay at counter)"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Perforated Divider for Desktop */}
+      <div className="relative hidden w-0 border-r border-dashed border-white/20 md:block">
+        <div className="absolute -top-3 -left-3 h-6 w-6 rounded-full bg-[#07060d]" />
+        <div className="absolute -bottom-3 -left-3 h-6 w-6 rounded-full bg-[#07060d]" />
+      </div>
+
+      {/* Right Ticket Stub / Check-in QR */}
+      <div className="flex flex-col justify-between border-t border-dashed border-white/20 bg-black/40 p-6 md:w-64 md:border-t-0">
+        <div className="text-center">
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl border border-white/10 bg-white p-2">
+            <QrCode className="h-full w-full text-black" />
+          </div>
+          <div className="mt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            Show at counter to unlock
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onMessageCafe}
+            className="min-h-[38px] w-full gap-1.5 border-white/15 text-xs"
+          >
+            <MessageSquare className="h-3.5 w-3.5 text-primary" /> Message Café
+          </Button>
+
+          {cafe?.slug && (
+            <Link to="/c/$slug" params={{ slug: cafe.slug }} className="w-full">
+              <Button size="sm" variant="outline" className="min-h-[38px] w-full border-white/15 text-xs">
+                Café Info &amp; Menu
+              </Button>
+            </Link>
+          )}
+
+          {canCancel && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={onCancel}
+              disabled={isCancelling}
+              className="min-h-[38px] w-full text-xs"
+            >
+              <X className="mr-1 h-3 w-3" /> Cancel Booking
+            </Button>
+          )}
+        </div>
+      </div>
     </motion.div>
   );
 }
 
-/* ══════════════════ TAB 3 — WALLET ══════════════════ */
+/* ══════════════════ TAB 3 — TACTILE CYBER WALLET ══════════════════ */
 
-const QUICK = [100, 200, 500, 1000];
+const QUICK_TOPUP_CHIPS = [100, 200, 500, 1000];
 
 function WalletTab() {
   const fetchLedger = useServerFn(getMyWalletLedger);
@@ -477,47 +945,103 @@ function WalletTab() {
   const createOrder = useServerFn(createTopupOrder);
   const verify = useServerFn(verifyTopupPayment);
   const fetchProfile = useServerFn(getMyProfile);
+  const submitProof = useServerFn(customerSubmitTopupProof);
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["portal-wallet"], queryFn: () => fetchLedger() });
+
+  const { data } = useQuery({ queryKey: ["portal-wallet"], queryFn: () => fetchLedger() });
   const { data: cfg } = useQuery({ queryKey: ["rzp-config"], queryFn: () => fetchCfg() });
   const { data: profile } = useQuery({ queryKey: ["my-profile"], queryFn: () => fetchProfile() });
 
-  const [open, setOpen] = useState(false);
+  const [topupModalOpen, setTopupModalOpen] = useState(false);
   const [amount, setAmount] = useState(500);
-  const [custom, setCustom] = useState("");
+  const [customAmount, setCustomAmount] = useState("");
   const [cafeId, setCafeId] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [payMethod, setPayMethod] = useState<"gateway" | "upi">("gateway");
+  const [utrNumber, setUtrNumber] = useState("");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const customers = (data?.customers ?? []) as any[];
-  useEffect(() => { if (!cafeId && customers[0]) setCafeId(customers[0].cafe_id); }, [customers, cafeId]);
-  const selected = customers.find((c) => c.cafe_id === cafeId);
-  const finalAmount = custom ? Math.max(0, parseInt(custom, 10) || 0) : amount;
+  useEffect(() => {
+    if (!cafeId && customers[0]) setCafeId(customers[0].cafe_id);
+  }, [customers, cafeId]);
 
-  async function pay() {
-    if (!selected) { toast.error("Visit a café first to open a wallet"); return; }
-    if (finalAmount < 1) { toast.error("Enter an amount"); return; }
-    if (!cfg?.enabled) { toast.error("Online payments are not enabled yet"); return; }
+  const selectedCustomer = customers.find((c) => c.cafe_id === cafeId) ?? customers[0];
+  const finalAmount = customAmount ? Math.max(0, parseInt(customAmount, 10) || 0) : amount;
+
+  const proofMutation = useMutation({
+    mutationFn: submitProof,
+    onSuccess: () => {
+      toast.success(`${inr(finalAmount)} credited to your gaming wallet!`);
+      qc.invalidateQueries({ queryKey: ["portal-wallet"] });
+      qc.invalidateQueries({ queryKey: ["portal-summary"] });
+      setTopupModalOpen(false);
+      setUtrNumber("");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Top-up failed"),
+  });
+
+  async function handleTopup() {
+    if (finalAmount < 1) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    if (payMethod === "upi" || !cfg?.enabled) {
+      if (!utrNumber.trim() || utrNumber.trim().length < 4) {
+        toast.error("Please enter the 12-digit UPI UTR or Transaction Reference");
+        return;
+      }
+      proofMutation.mutate({
+        data: {
+          cafe_id: selectedCustomer?.cafe_id || "",
+          customer_id: selectedCustomer?.id || "",
+          amount: finalAmount,
+          utr_number: utrNumber.trim(),
+        },
+      });
+      return;
+    }
+
     setBusy(true);
     try {
       const ok = await loadRazorpayScript();
       if (!ok) throw new Error("Could not load payment gateway");
-      const order = await createOrder({ data: { cafe_id: selected.cafe_id, customer_id: selected.id, amount: finalAmount } });
+
+      const order = await createOrder({
+        data: {
+          cafe_id: selectedCustomer.cafe_id,
+          customer_id: selectedCustomer.id,
+          amount: finalAmount,
+        },
+      });
+
       const rzp = new window.Razorpay!({
-        key: order.key_id, amount: finalAmount * 100, currency: "INR", order_id: order.order_id,
-        name: "CoreCade", description: `Wallet top-up · ${selected.cafes?.name ?? "Café"}`,
-        prefill: { name: profile?.full_name ?? undefined, email: profile?.email ?? undefined, contact: profile?.phone ?? undefined },
+        key: order.key_id,
+        amount: finalAmount * 100,
+        currency: "INR",
+        order_id: order.order_id,
+        name: "CoreCade Cyber Wallet",
+        description: `Wallet top-up · ${selectedCustomer.cafes?.name ?? "Gaming Arena"}`,
+        prefill: {
+          name: profile?.full_name ?? undefined,
+          email: profile?.email ?? undefined,
+          contact: profile?.phone ?? undefined,
+        },
         theme: { color: "#ff006e" },
         modal: { ondismiss: () => setBusy(false) },
         handler: async (resp) => {
           try {
             await verify({ data: { topup_id: order.topup_id, ...resp } });
-            toast.success(`${inr(finalAmount)} added to wallet!`);
+            toast.success(`${inr(finalAmount)} added to your wallet!`);
             qc.invalidateQueries({ queryKey: ["portal-wallet"] });
             qc.invalidateQueries({ queryKey: ["portal-summary"] });
-            setOpen(false);
+            setTopupModalOpen(false);
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Verification failed");
-          } finally { setBusy(false); }
+          } finally {
+            setBusy(false);
+          }
         },
       });
       rzp.open();
@@ -527,31 +1051,78 @@ function WalletTab() {
     }
   }
 
-  if (isLoading) return <PageSkeleton rows={3} />;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const txs = (data?.transactions ?? []) as any[];
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card/40 to-accent/10 p-8 text-center">
-        <div className="font-display text-[52px] font-extrabold leading-none tabular-nums">{inr(data?.balance ?? 0)}</div>
-        <div className="mt-1 text-sm text-muted-foreground">Available balance</div>
+    <div className="space-y-8">
+      {/* 3D HOLOGRAPHIC TITANIUM CYBER WALLET CARD */}
+      <motion.div
+        whileHover={{ y: -4, rotateX: 2 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        className="relative mx-auto max-w-xl overflow-hidden rounded-3xl border border-white/20 p-5 sm:p-8 shadow-2xl backdrop-blur-2xl"
+        style={{
+          background: "linear-gradient(135deg, rgba(255,0,110,0.18) 0%, rgba(123,47,255,0.25) 50%, rgba(0,229,160,0.15) 100%), #0d0a1c",
+          boxShadow: "0 25px 60px -15px oklch(0.7 0.26 335 / 0.4)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-display text-lg font-black tracking-wider text-white">CORECADE</span>
+            <span className="rounded bg-white/20 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">NFC PASS</span>
+          </div>
+          <Flame className="h-6 w-6 text-primary" />
+        </div>
+
+        <div className="mt-6 sm:mt-8">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-white/70">Available Balance</div>
+          <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-white tabular-nums drop-shadow-md">
+            {inr(data?.balance ?? 0)}
+          </div>
+        </div>
+
+        <div className="mt-6 sm:mt-8 flex items-end justify-between">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-wider text-white/60">Cardholder</div>
+            <div className="font-display text-sm font-bold text-white">{profile?.full_name || "PRO GAMER"}</div>
+          </div>
+          <div className="text-right">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-white/60">Instant Top-Up</div>
+            <div className="font-mono text-xs font-semibold text-emerald-300">Zero Convenience Fee</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Action Buttons */}
+      <div className="mx-auto flex max-w-xl gap-3">
         <Button
-          onClick={() => setOpen(true)}
-          className="mx-auto mt-5 h-12 w-full max-w-xs border-0 text-white"
+          onClick={() => setTopupModalOpen(true)}
+          className="h-12 flex-1 gap-2 text-xs font-bold text-white shadow-xl transition-transform hover:-translate-y-0.5"
           style={{ background: "var(--gradient-brand-hot)" }}
         >
-          <Plus className="mr-1 h-4 w-4" /> Add Money
+          <Plus className="h-4 w-4" /> Add Money to Wallet
         </Button>
+        <Link to="/discover" className="flex-1">
+          <Button variant="outline" className="w-full h-12 text-xs font-semibold border-white/15">
+            Book Arena Slot →
+          </Button>
+        </Link>
       </div>
 
+      {/* Cafes Switcher if customer frequents multiple arenas */}
       {customers.length > 1 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground mr-1">Arena Balance:</span>
           {customers.map((c) => (
             <button
-              key={c.id} type="button" onClick={() => setCafeId(c.cafe_id)}
+              key={c.id}
+              type="button"
+              onClick={() => setCafeId(c.cafe_id)}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-xs transition",
-                cafeId === c.cafe_id ? "border-primary/60 bg-primary/15 text-primary" : "border-border/60 text-muted-foreground hover:text-foreground",
+                "rounded-xl border px-3.5 py-1.5 text-xs font-semibold transition",
+                cafeId === c.cafe_id
+                  ? "border-primary bg-primary/20 text-white"
+                  : "border-white/10 text-muted-foreground hover:text-white"
               )}
             >
               {c.cafes?.name ?? "Café"} · {inr(c.wallet_balance ?? 0)}
@@ -560,43 +1131,136 @@ function WalletTab() {
         </div>
       )}
 
+      {/* Transaction History Ledger */}
       <div>
-        <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Transactions</div>
+        <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-primary">All Wallet Transactions</div>
         {txs.length === 0 ? (
-          <EmptyState icon={Wallet} title="No transactions yet" description="Top up your wallet to skip the counter queue." />
+          <EmptyState
+            icon={Wallet}
+            title="No Transactions Yet"
+            description="Add money to your wallet to pay instantly at café counters and lock online slots."
+          />
         ) : (
-          <div className="space-y-2">{txs.map((t) => <TxRow key={t.id} t={t} />)}</div>
+          <div className="space-y-2">
+            {txs.map((t) => (
+              <TxRow key={t.id} t={t} />
+            ))}
+          </div>
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogTitle>Add money</DialogTitle>
-          <div className="mt-2 space-y-4">
+      {/* Top-up Dialog */}
+      <Dialog open={topupModalOpen} onOpenChange={setTopupModalOpen}>
+        <DialogContent className="max-w-md border-white/15 bg-[#0e0c1a] text-foreground">
+          <DialogTitle className="font-display text-xl font-bold text-white">Add Money to Cyber Wallet</DialogTitle>
+          <div className="mt-3 space-y-4">
+            {/* Quick Chips */}
             <div className="grid grid-cols-4 gap-2">
-              {QUICK.map((q) => (
+              {QUICK_TOPUP_CHIPS.map((chip) => (
                 <button
-                  key={q} type="button"
-                  onClick={() => { setAmount(q); setCustom(""); }}
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    setAmount(chip);
+                    setCustomAmount("");
+                  }}
                   className={cn(
-                    "rounded-full border py-2 text-sm font-semibold transition",
-                    !custom && amount === q ? "border-primary bg-primary/15 text-primary" : "border-border/60 text-muted-foreground hover:text-foreground",
+                    "rounded-xl border py-2.5 text-xs font-bold transition",
+                    !customAmount && amount === chip
+                      ? "border-primary bg-primary/20 text-white shadow"
+                      : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-white"
                   )}
                 >
-                  ₹{q}
+                  ₹{chip}
                 </button>
               ))}
             </div>
+
+            {/* Custom Input */}
             <div className="space-y-1.5">
-              <Label>Or enter amount</Label>
+              <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Custom Amount</Label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
-                <Input className="pl-7" inputMode="numeric" value={custom} onChange={(e) => setCustom(e.target.value.replace(/\D/g, ""))} placeholder="Custom amount" />
+                <Input
+                  className="pl-8 font-mono text-base"
+                  inputMode="numeric"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Enter amount (e.g. 750)"
+                />
               </div>
             </div>
-            {selected && <p className="text-xs text-muted-foreground">Credited to your <b>{selected.cafes?.name}</b> wallet.</p>}
-            <Button onClick={pay} disabled={busy || finalAmount < 1} className="h-12 w-full border-0 text-white" style={{ background: "var(--gradient-brand-hot)" }}>
-              {busy ? "Opening…" : `Pay ${inr(finalAmount)} via UPI/Card →`}
+
+            {/* Payment Method Switcher */}
+            {cfg?.enabled && (
+              <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+                <button
+                  type="button"
+                  onClick={() => setPayMethod("gateway")}
+                  className={cn(
+                    "flex-1 rounded-lg py-2 text-xs font-semibold transition",
+                    payMethod === "gateway" ? "bg-primary text-white shadow" : "text-muted-foreground"
+                  )}
+                >
+                  Razorpay Gateway
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayMethod("upi")}
+                  className={cn(
+                    "flex-1 rounded-lg py-2 text-xs font-semibold transition",
+                    payMethod === "upi" ? "bg-primary text-white shadow" : "text-muted-foreground"
+                  )}
+                >
+                  Direct UPI / UTR
+                </button>
+              </div>
+            )}
+
+            {/* Direct UPI details */}
+            {(payMethod === "upi" || !cfg?.enabled) && (
+              <div className="space-y-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">UPI ID:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText("corecade@upi");
+                      toast.success("UPI ID copied!");
+                    }}
+                    className="flex items-center gap-1 font-mono font-bold text-primary hover:underline"
+                  >
+                    <span>corecade@upi</span>
+                    <Copy className="h-3 w-3" />
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    12-Digit UPI Reference / UTR Number *
+                  </Label>
+                  <Input
+                    value={utrNumber}
+                    onChange={(e) => setUtrNumber(e.target.value)}
+                    placeholder="e.g. 431289012345"
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Transfer ₹{finalAmount} to corecade@upi from GPay/PhonePe, then paste the UTR here.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <Button
+              onClick={handleTopup}
+              disabled={busy || proofMutation.isPending || finalAmount < 1}
+              className="h-12 w-full text-xs font-bold text-white shadow-xl"
+              style={{ background: "var(--gradient-brand-hot)" }}
+            >
+              {busy || proofMutation.isPending
+                ? "Processing Top-Up…"
+                : `Confirm & Add ${inr(finalAmount)} to Wallet →`}
             </Button>
           </div>
         </DialogContent>
@@ -608,35 +1272,48 @@ function WalletTab() {
 /* ══════════════════ TAB 4 — TOURNAMENTS ══════════════════ */
 
 function TournamentsTab() {
-  const fn = useServerFn(getMyTournaments);
-  const { data, isLoading } = useQuery({ queryKey: ["portal-tournaments"], queryFn: () => fn() });
-  if (isLoading) return <PageSkeleton rows={2} />;
+  const fetchTournaments = useServerFn(getMyTournaments);
+  const { data } = useQuery({ queryKey: ["portal-tournaments"], queryFn: () => fetchTournaments() });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mine = (data?.mine ?? []) as any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const upcoming = (data?.upcoming ?? []) as any[];
 
   return (
     <div className="space-y-8">
       <div>
-        <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">My tournaments</div>
+        <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-primary">Registered Tournaments</div>
         {mine.length === 0 ? (
-          <EmptyState icon={Trophy} title="No registrations yet" description="Join an upcoming tournament below to compete." />
+          <EmptyState
+            icon={Trophy}
+            title="No Active Registrations"
+            description="Sign up for an arena tournament below to compete for cash prize pools and leaderboard glory."
+          />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {mine.map((r) => {
               const t = r.tournaments;
               if (!t) return null;
-              return <TournamentCard key={r.id} t={t} note={`Team: ${r.team_name}`} />;
+              return <TournamentCyberCard key={r.id} t={t} note={`Team: ${r.team_name}`} />;
             })}
           </div>
         )}
       </div>
+
       <div>
-        <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Discover tournaments</div>
+        <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-primary">Open Brackets & Championships</div>
         {upcoming.length === 0 ? (
-          <EmptyState icon={Trophy} title="No upcoming tournaments" description="Check back soon — cafés post new brackets weekly." />
+          <EmptyState
+            icon={Trophy}
+            title="No Upcoming Brackets"
+            description="Cafés post weekly Valorant, CS2, Tekken, and FIFA brackets. Check back soon."
+          />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {upcoming.map((t) => <TournamentCard key={t.id} t={t} register />)}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {upcoming.map((t) => (
+              <TournamentCyberCard key={t.id} t={t} register />
+            ))}
           </div>
         )}
       </div>
@@ -644,26 +1321,40 @@ function TournamentsTab() {
   );
 }
 
-function TournamentCard({ t, note, register }: { t: any; note?: string; register?: boolean }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function TournamentCyberCard({ t, note, register }: { t: any; note?: string; register?: boolean }) {
   const cafe = t.cafes as { name?: string; slug?: string } | null;
+
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur transition hover:border-primary/40">
+    <div className="rounded-3xl border border-white/10 bg-card/40 p-5 backdrop-blur-xl transition hover:border-primary/40">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="font-display text-base font-bold">{t.title}</div>
-          <div className="font-mono text-[11px] text-muted-foreground">{t.game} · {t.format} · {cafe?.name ?? "—"}</div>
-          <div className="font-mono text-[11px] text-muted-foreground">{new Date(t.starts_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</div>
-          {note && <div className="mt-1 text-xs text-primary">{note}</div>}
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-primary">{t.game || "Esports"}</span>
+            <span className="text-white/20">·</span>
+            <span className="text-xs text-muted-foreground">{t.format || "5v5 Bracket"}</span>
+          </div>
+          <h4 className="mt-1 font-display text-lg font-bold text-white">{t.title}</h4>
+          <div className="text-xs text-muted-foreground mt-0.5">{cafe?.name ?? "Arena"}</div>
+          {note && <div className="mt-1 font-mono text-xs text-emerald-400">{note}</div>}
         </div>
-        <Badge variant={t.status === "live" ? "default" : "secondary"} className={cn(t.status === "live" && "animate-pulse")}>{t.status}</Badge>
+
+        <Badge variant={t.status === "live" ? "default" : "secondary"}>
+          {t.status}
+        </Badge>
       </div>
-      <div className="mt-3 flex items-center justify-between">
-        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-amber-300">
-          Prize {inr(t.prize_pool ?? 0)}
-        </span>
+
+      <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
+        <div>
+          <span className="font-mono text-[10px] uppercase text-muted-foreground block">Prize Pool</span>
+          <span className="font-display font-black text-amber-300 text-base">{inr(t.prize_pool ?? 0)}</span>
+        </div>
+
         {cafe?.slug && (
           <Link to="/c/$slug/tournaments/$id" params={{ slug: cafe.slug, id: t.id }}>
-            <Button size="sm" variant="outline">{register ? "Register" : "View bracket"} →</Button>
+            <Button size="sm" variant="outline" className="text-xs border-white/10">
+              {register ? "Register Team" : "View Bracket"} →
+            </Button>
           </Link>
         )}
       </div>
@@ -671,102 +1362,147 @@ function TournamentCard({ t, note, register }: { t: any; note?: string; register
   );
 }
 
-/* ══════════════════ TAB 5 — PROFILE ══════════════════ */
+/* ══════════════════ TAB 5 — BOOKING & ARENA SUPPORT CHAT ══════════════════ */
+
+function SupportTab({ prefill }: { prefill: BookingSupportPrefill | null }) {
+  const fetchBookings = useServerFn(listMyBookings);
+  const { data } = useQuery({ queryKey: ["my-bookings"], queryFn: () => fetchBookings() });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawList = Array.isArray(data) ? data : Array.isArray((data as any)?.data) ? (data as any).data : [];
+  const bookings = Array.isArray(rawList) ? rawList : [];
+
+  return (
+    <div className="space-y-4">
+      <SupportTickets role="customer" bookingPrefill={prefill} bookings={bookings} />
+    </div>
+  );
+}
+
+/* ══════════════════ TAB 6 — PROFILE & SECURITY ══════════════════ */
 
 function ProfileTab() {
   const fetchFn = useServerFn(getMyProfile);
   const updateFn = useServerFn(updateMyProfile);
-  const fetchHome = useServerFn(getMyPortalHome);
   const qc = useQueryClient();
-  const { data: profile, isLoading } = useQuery({ queryKey: ["my-profile"], queryFn: () => fetchFn() });
-  const { data: home } = useQuery({ queryKey: ["portal-home"], queryFn: () => fetchHome() });
+
+  const { data: profile } = useQuery({ queryKey: ["my-profile"], queryFn: () => fetchFn() });
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [confirmOut, setConfirmOut] = useState(false);
+  const [confirmSignout, setConfirmSignout] = useState(false);
 
   useEffect(() => {
-    if (profile) { setName(profile.full_name ?? ""); setPhone((profile.phone ?? "").replace(/^\+91/, "")); }
+    if (profile) {
+      setName(profile.full_name ?? "");
+      setPhone((profile.phone ?? "").replace(/^\+91/, ""));
+    }
   }, [profile]);
 
-  const m = useMutation({
+  const updateMutation = useMutation({
     mutationFn: updateFn,
-    onSuccess: () => { toast.success("Profile saved"); qc.invalidateQueries({ queryKey: ["my-profile"] }); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+    onSuccess: () => {
+      toast.success("Profile updated successfully");
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update profile"),
   });
 
-  const memberships = (home?.memberships ?? []) as any[];
-  const initials = useMemo(() => (name || profile?.email || "?").slice(0, 2).toUpperCase(), [name, profile?.email]);
-
-  async function signOut() {
+  async function handleSignOut() {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
     window.location.href = "/auth";
   }
 
-  if (isLoading) return <PageSkeleton rows={2} />;
-
   return (
-    <div className="max-w-2xl space-y-4">
-      <div className="rounded-2xl border border-border/60 bg-card/40 p-6 text-center backdrop-blur">
+    <div className="max-w-xl space-y-6">
+      <div className="rounded-3xl border border-white/10 bg-card/40 p-6 text-center backdrop-blur-xl">
         <div
-          className="mx-auto grid h-[72px] w-[72px] place-items-center rounded-full font-display text-2xl font-black text-white"
-          style={{ background: "linear-gradient(135deg,#ff006e,#7b2fff)", border: "2px solid rgba(255,0,110,0.3)" }}
+          className="mx-auto grid h-20 w-20 place-items-center rounded-2xl font-display text-2xl font-black text-white shadow-xl"
+          style={{ background: "var(--gradient-brand-hot)" }}
         >
-          {initials}
+          {(name || profile?.email || "P").slice(0, 2).toUpperCase()}
         </div>
-        <div className="mt-3 font-display text-[22px] font-bold">{name || "Gamer"}</div>
-        <div className="text-sm text-muted-foreground">{profile?.email}</div>
+        <h3 className="mt-3 font-display text-2xl font-bold text-white">{name || "Gamer"}</h3>
+        <p className="text-xs text-muted-foreground font-mono">{profile?.email}</p>
       </div>
 
       <form
-        className="space-y-4 rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur"
         onSubmit={(e) => {
           e.preventDefault();
-          m.mutate({ data: { full_name: name, phone: phone ? `+91${phone.replace(/\D/g, "").slice(-10)}` : null } });
+          updateMutation.mutate({
+            data: {
+              full_name: name.trim(),
+              phone: phone ? `+91${phone.replace(/\D/g, "").slice(-10)}` : null,
+            },
+          });
         }}
+        className="space-y-4 rounded-3xl border border-white/10 bg-card/40 p-6 backdrop-blur-xl"
       >
+        <div className="font-mono text-[10px] uppercase tracking-widest text-primary">Identity Details</div>
         <div className="space-y-1.5">
-          <Label>Full name</Label>
+          <Label className="text-xs">Gamer Handle / Full Name</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
         </div>
+
         <div className="space-y-1.5">
-          <Label>Phone</Label>
+          <Label className="text-xs">Phone Number (For Booking SMS Confirmation)</Label>
           <div className="flex items-center gap-2">
-            <span className="rounded-md border border-border/60 px-3 py-2 font-mono text-sm">🇮🇳 +91</span>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="9876543210" />
+            <span className="rounded-md border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm">🇮🇳 +91</span>
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              inputMode="numeric"
+              placeholder="9876543210"
+            />
           </div>
         </div>
-        <Button type="submit" disabled={m.isPending} className="border-0 text-white" style={{ background: "var(--gradient-brand-hot)" }}>
-          {m.isPending ? "Saving…" : "Save changes"}
+
+        <Button
+          type="submit"
+          disabled={updateMutation.isPending}
+          className="w-full text-xs font-bold text-white"
+          style={{ background: "var(--gradient-brand-hot)" }}
+        >
+          {updateMutation.isPending ? "Saving Changes…" : "Update Profile"}
         </Button>
       </form>
 
-      {memberships.length > 0 && (
-        <div className="rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur">
-          <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Memberships</div>
-          <div className="space-y-2">{memberships.map((mm) => <MembershipCard key={mm.id} m={mm} />)}</div>
+      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-card/40 p-4">
+        <div>
+          <div className="font-semibold text-sm text-white">Password & Security</div>
+          <div className="text-xs text-muted-foreground">Change credentials or setup MFA</div>
         </div>
-      )}
-
-      <div className="rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur">
-        <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Security</div>
         <Link to="/reset-password">
-          <Button variant="outline" size="sm"><KeyRound className="mr-1 h-3.5 w-3.5" /> Change password</Button>
+          <Button variant="outline" size="sm" className="text-xs border-white/10">
+            <KeyRound className="h-3.5 w-3.5 mr-1" /> Reset Password
+          </Button>
         </Link>
       </div>
 
-      <Button variant="outline" onClick={() => setConfirmOut(true)} className="w-full border-destructive/50 text-destructive hover:bg-destructive/10">
-        <LogOut className="mr-1 h-4 w-4" /> Sign out
+      <Button
+        variant="outline"
+        onClick={() => setConfirmSignout(true)}
+        className="w-full border-destructive/40 text-xs text-destructive hover:bg-destructive/10"
+      >
+        <LogOut className="h-3.5 w-3.5 mr-1.5" /> Sign Out from CoreCade
       </Button>
 
-      <Dialog open={confirmOut} onOpenChange={setConfirmOut}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle>Sign out of CoreCade?</DialogTitle>
-          <p className="text-sm text-muted-foreground">You'll need to sign in again to see your bookings and wallet.</p>
+      <Dialog open={confirmSignout} onOpenChange={setConfirmSignout}>
+        <DialogContent className="max-w-sm border-white/15 bg-[#0e0c1a] text-foreground">
+          <DialogTitle className="font-display text-lg font-bold text-white">Sign Out?</DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            You will need to sign in again to view your bookings and access your cyber wallet.
+          </p>
           <div className="mt-4 flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setConfirmOut(false)}>Stay</Button>
-            <Button className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={signOut}>Sign out</Button>
+            <Button variant="outline" className="flex-1 text-xs" onClick={() => setConfirmSignout(false)}>
+              Stay Signed In
+            </Button>
+            <Button
+              className="flex-1 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleSignOut}
+            >
+              Sign Out
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

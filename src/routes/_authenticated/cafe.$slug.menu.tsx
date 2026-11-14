@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
+import { ConfirmModal } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { CsvImporter } from "@/components/CsvImporter";
 
@@ -70,6 +71,7 @@ function MenuPage() {
 
   const [edit, setEdit] = useState<Partial<MItem> | null>(null);
   const [catOpen, setCatOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ kind: "category" | "item"; id: string; name: string } | null>(null);
 
   if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
 
@@ -151,7 +153,7 @@ function MenuPage() {
           {cats.map((c: { id: string; name: string }) => (
             <span key={c.id} className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1 text-xs">
               {c.name}
-              <button onClick={() => { if (confirm("Delete category?")) rmCat.mutate({ data: { id: c.id } }); }} className="text-muted-foreground hover:text-destructive">×</button>
+              <button type="button" onClick={() => setDeleteTarget({ kind: "category", id: c.id, name: c.name })} className="text-muted-foreground hover:text-destructive">×</button>
             </span>
           ))}
         </div>
@@ -181,7 +183,7 @@ function MenuPage() {
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <Button size="sm" variant="outline" onClick={() => setEdit(it)}>Edit</Button>
-                <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete item?")) rmItem.mutate({ data: { id: it.id } }); }}>
+                <Button size="icon" variant="ghost" onClick={() => setDeleteTarget({ kind: "item", id: it.id, name: it.name })}>
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               </div>
@@ -237,6 +239,19 @@ function MenuPage() {
           )}
         </DialogContent>
       </Dialog>
+      <ConfirmModal
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={`Delete ${deleteTarget?.kind === "category" ? "category" : "menu item"} "${deleteTarget?.name ?? ""}"?`}
+        description="This removes it from POS and your public menu."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          return deleteTarget.kind === "category"
+            ? rmCat.mutateAsync({ data: { id: deleteTarget.id } })
+            : rmItem.mutateAsync({ data: { id: deleteTarget.id } });
+        }}
+      />
     </div>
   );
 }

@@ -20,7 +20,13 @@ export function OwnerInbox() {
     queryFn: () => fn(),
     refetchInterval: 60_000,
   });
-  const rows = (q.data ?? []) as Array<{ id: string; subject: string; body: string; sent_at: string; read_at: string | null }>;
+  const rows = (q.data ?? []) as Array<{
+    id: string;
+    subject: string;
+    body: string;
+    sent_at: string;
+    read_at: string | null;
+  }>;
   const unread = useMemo(() => rows.filter((r) => !r.read_at).length, [rows]);
   const m = useMutation({
     mutationFn: (id: string) => mark({ data: { id } }),
@@ -42,12 +48,16 @@ export function OwnerInbox() {
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2"><Mail className="h-4 w-4" /> Messages from CoreCade</SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
+            <Mail className="h-4 w-4" /> Messages from CoreCade
+          </SheetTitle>
         </SheetHeader>
         <ScrollArea className="mt-4 h-[calc(100vh-120px)] pr-3">
           {q.isLoading ? (
             <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-card/60" />)}
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-20 animate-pulse rounded-xl bg-card/60" />
+              ))}
             </div>
           ) : rows.length === 0 ? (
             <div className="mt-16 flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
@@ -62,10 +72,14 @@ export function OwnerInbox() {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  onClick={() => { if (!r.read_at) m.mutate(r.id); }}
+                  onClick={() => {
+                    if (!r.read_at) m.mutate(r.id);
+                  }}
                   className={cn(
                     "mb-2 block w-full rounded-xl border p-3 text-left transition hover:border-primary/40",
-                    r.read_at ? "border-border/60 bg-card/30" : "border-magenta/40 bg-magenta/5 shadow-[0_0_0_1px_rgba(233,78,160,0.12)]",
+                    r.read_at
+                      ? "border-border/60 bg-card/30"
+                      : "border-magenta/40 bg-magenta/5 shadow-[0_0_0_1px_rgba(233,78,160,0.12)]",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -76,7 +90,9 @@ export function OwnerInbox() {
                       <CheckCheck className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
                   </div>
-                  <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-foreground/80">{r.body}</p>
+                  <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-foreground/80">
+                    {r.body}
+                  </p>
                   <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                     {new Date(r.sent_at).toLocaleString()}
                   </div>

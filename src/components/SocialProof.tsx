@@ -36,7 +36,15 @@ const TESTIMONIALS = [
   },
 ];
 
-const LOGOS = ["NeoArcade", "LagFree", "GG Cafés", "PixelPit", "Frag Lounge", "Respawn Co.", "Aurora LAN"];
+const LOGOS = [
+  "NeoArcade",
+  "LagFree",
+  "GG Cafés",
+  "PixelPit",
+  "Frag Lounge",
+  "Respawn Co.",
+  "Aurora LAN",
+];
 
 export function SocialProof() {
   const ref = useRef<HTMLDivElement>(null);
@@ -51,15 +59,20 @@ export function SocialProof() {
         style={{ opacity: glow }}
         className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
       >
-        <div className="absolute inset-0 rounded-full" style={{ background: "var(--gradient-brand-hot)" }} />
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{ background: "var(--gradient-brand-hot)" }}
+        />
       </motion.div>
       <div className="pointer-events-none absolute inset-0 -z-10 grid-arcade opacity-20" />
 
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="text-center"
         >
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/5 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-emerald-300">
@@ -74,14 +87,25 @@ export function SocialProof() {
         </motion.div>
 
         {/* Live counters */}
-        <motion.div
-          style={{ y: yA }}
-          className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-4"
-        >
+        <motion.div style={{ y: yA }} className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { icon: TrendingUp, v: 137, suffix: "+", l: "cafés onboarded", c: "text-violet-300" },
-            { icon: Zap, v: 4.2, suffix: "M", l: "minutes billed", c: "text-fuchsia-300", format: (n: number) => n.toFixed(1) },
-            { icon: Star, v: 4.9, suffix: "/5", l: "owner rating", c: "text-amber-300", format: (n: number) => n.toFixed(1) },
+            {
+              icon: Zap,
+              v: 4.2,
+              suffix: "M",
+              l: "minutes billed",
+              c: "text-fuchsia-300",
+              format: (n: number) => n.toFixed(1),
+            },
+            {
+              icon: Star,
+              v: 4.9,
+              suffix: "/5",
+              l: "owner rating",
+              c: "text-amber-300",
+              format: (n: number) => n.toFixed(1),
+            },
             { icon: Trophy, v: 24, suffix: "h", l: "avg go-live", c: "text-emerald-300" },
           ].map((s) => (
             <motion.div
@@ -94,7 +118,9 @@ export function SocialProof() {
               <div className="mt-3 font-display text-4xl font-extrabold tracking-tight text-gradient">
                 <AnimatedNumber value={s.v} suffix={s.suffix} format={s.format} />
               </div>
-              <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{s.l}</div>
+              <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                {s.l}
+              </div>
             </motion.div>
           ))}
         </motion.div>
@@ -145,7 +171,9 @@ export function SocialProof() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-display text-lg font-extrabold text-gradient">{t.metric.v}</div>
+                    <div className="font-display text-lg font-extrabold text-gradient">
+                      {t.metric.v}
+                    </div>
                     <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
                       {t.metric.l}
                     </div>

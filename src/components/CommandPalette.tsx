@@ -1,7 +1,36 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Activity, Building2, Users, Receipt, ScrollText, Settings, TrendingUp, Cpu, CalendarRange, UtensilsCrossed, Crown, Trophy, LayoutGrid, Shield, Wallet, LineChart, BarChart3, Megaphone, FileText, Home } from "lucide-react";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Activity,
+  Building2,
+  Users,
+  Receipt,
+  ScrollText,
+  Settings,
+  TrendingUp,
+  Cpu,
+  CalendarRange,
+  UtensilsCrossed,
+  Crown,
+  Trophy,
+  LayoutGrid,
+  Shield,
+  Wallet,
+  LineChart,
+  BarChart3,
+  Megaphone,
+  FileText,
+  Home,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
 type Cafe = { id: string; name: string; slug: string };
@@ -24,14 +53,21 @@ export function CommandPalette() {
 
   useEffect(() => {
     if (!open || cafes.length) return;
-    supabase.from("cafes").select("id, name, slug").limit(50).then(({ data }) => {
-      if (data) setCafes(data as Cafe[]);
-    });
+    supabase
+      .from("cafes")
+      .select("id, name, slug")
+      .limit(50)
+      .then(({ data }) => {
+        if (data) setCafes(data as Cafe[]);
+      });
   }, [open, cafes.length]);
 
   const go = (to: string, params?: Record<string, string>) => {
     setOpen(false);
-    (navigate as unknown as (o: { to: string; params?: Record<string, string> }) => void)({ to, params });
+    (navigate as unknown as (o: { to: string; params?: Record<string, string> }) => void)({
+      to,
+      params,
+    });
   };
 
   return (
@@ -43,7 +79,11 @@ export function CommandPalette() {
         {cafes.length > 0 && (
           <CommandGroup heading="Cafés">
             {cafes.map((c) => (
-              <CommandItem key={c.id} value={`cafe ${c.name} ${c.slug}`} onSelect={() => go("/cafe/$slug", { slug: c.slug })}>
+              <CommandItem
+                key={c.id}
+                value={`cafe ${c.name} ${c.slug}`}
+                onSelect={() => go("/cafe/$slug", { slug: c.slug })}
+              >
                 <Building2 className="mr-2 h-4 w-4" />
                 <span>{c.name}</span>
                 <span className="ml-2 text-xs text-muted-foreground">/{c.slug}</span>
@@ -60,7 +100,11 @@ export function CommandPalette() {
           <Item icon={Building2} label="Cafés" onSelect={() => go("/admin/cafes")} />
           <Item icon={Users} label="Users & roles" onSelect={() => go("/admin/users")} />
           <Item icon={ScrollText} label="Audit log" onSelect={() => go("/admin/audit")} />
-          <Item icon={Megaphone} label="Announcements" onSelect={() => go("/admin/announcements")} />
+          <Item
+            icon={Megaphone}
+            label="Announcements"
+            onSelect={() => go("/admin/announcements")}
+          />
           <Item icon={FileText} label="Leads" onSelect={() => go("/admin/leads")} />
         </CommandGroup>
 

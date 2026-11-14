@@ -31,8 +31,18 @@ export function PrintableReceipt({ order, onClose }: { order: ReceiptOrder; onCl
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-ink/80 p-6 print:static print:bg-white print:p-0">
       <div className="no-print fixed right-4 top-4 z-[101] flex gap-2">
-        <button onClick={() => window.print()} className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">Print</button>
-        <button onClick={onClose} className="rounded-md border border-border bg-card px-3 py-1.5 text-sm">Close</button>
+        <button
+          onClick={() => window.print()}
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+        >
+          Print
+        </button>
+        <button
+          onClick={onClose}
+          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+        >
+          Close
+        </button>
       </div>
       <div
         id="receipt-print"
@@ -40,15 +50,33 @@ export function PrintableReceipt({ order, onClose }: { order: ReceiptOrder; onCl
         style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}
       >
         <div className="text-center">
-          <div className="text-base font-extrabold uppercase tracking-wider">{cafe.name ?? "Café"}</div>
-          {cafe.address && <div>{cafe.address}{cafe.city ? `, ${cafe.city}` : ""}</div>}
+          <div className="text-base font-extrabold uppercase tracking-wider">
+            {cafe.name ?? "Café"}
+          </div>
+          {cafe.address && (
+            <div>
+              {cafe.address}
+              {cafe.city ? `, ${cafe.city}` : ""}
+            </div>
+          )}
           {cafe.phone && <div>Ph: {cafe.phone}</div>}
           {cafe.gst_no && <div>GSTIN: {cafe.gst_no}</div>}
         </div>
         <div className="my-2 border-t border-dashed border-black/60" />
-        <div className="flex justify-between"><span>Receipt</span><span className="font-bold">{order.receipt_no ?? order.id.slice(0, 8)}</span></div>
-        <div className="flex justify-between"><span>Date</span><span>{dt.toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</span></div>
-        {cust.full_name && <div className="flex justify-between"><span>Customer</span><span>{cust.full_name}</span></div>}
+        <div className="flex justify-between">
+          <span>Receipt</span>
+          <span className="font-bold">{order.receipt_no ?? order.id.slice(0, 8)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Date</span>
+          <span>{dt.toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</span>
+        </div>
+        {cust.full_name && (
+          <div className="flex justify-between">
+            <span>Customer</span>
+            <span>{cust.full_name}</span>
+          </div>
+        )}
         <div className="my-2 border-t border-dashed border-black/60" />
         <table className="w-full">
           <thead>
@@ -100,5 +128,10 @@ export function PrintableReceipt({ order, onClose }: { order: ReceiptOrder; onCl
 }
 
 function Row({ k, v }: { k: string; v: string }) {
-  return <div className="flex justify-between"><span>{k}</span><span>{v}</span></div>;
+  return (
+    <div className="flex justify-between">
+      <span>{k}</span>
+      <span>{v}</span>
+    </div>
+  );
 }

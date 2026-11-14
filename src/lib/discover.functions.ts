@@ -2,14 +2,51 @@ import { createServerFn } from "@tanstack/react-start";
 
 export const listPublicCafes = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-  const { data, error } = await supabaseAdmin
+  const { data: cafes, error } = await supabaseAdmin
     .from("cafes")
-    .select("id, slug, name, city, state, description, cover_url")
+    .select("id, slug, name, city, state, address, description, cover_url, open_time, close_time")
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  if (!cafes || cafes.length === 0) return [];
+
+  const cafeIds = cafes.map((c) => c.id);
+
+  const [devicesRes, sessionsRes] = await Promise.all([
+    supabaseAdmin.from("devices").select("cafe_id, type, hourly_rate, status").in("cafe_id", cafeIds),
+    supabaseAdmin.from("sessions").select("cafe_id, device_id, status").in("cafe_id", cafeIds).eq("status", "active"),
+  ]);
+
+  const devicesByCafe = new Map<string, { total: number; min_rate: number; types: Set<string> }>();
+  for (const d of devicesRes.data ?? []) {
+    const curr = devicesByCafe.get(d.cafe_id) ?? { total: 0, min_rate: 999999, types: new Set<string>() };
+    curr.total += 1;
+    if (d.hourly_rate && d.hourly_rate > 0) {
+      curr.min_rate = Math.min(curr.min_rate, d.hourly_rate);
+    }
+    if (d.type) curr.types.add(d.type);
+    devicesByCafe.set(d.cafe_id, curr);
+  }
+
+  const activeSessionsByCafe = new Map<string, number>();
+  for (const s of sessionsRes.data ?? []) {
+    activeSessionsByCafe.set(s.cafe_id, (activeSessionsByCafe.get(s.cafe_id) ?? 0) + 1);
+  }
+
+  return cafes.map((c) => {
+    const dev = devicesByCafe.get(c.id);
+    const active = activeSessionsByCafe.get(c.id) ?? 0;
+    const total = dev?.total ?? 0;
+    return {
+      ...c,
+      min_rate: dev && dev.min_rate < 999999 ? dev.min_rate : 80,
+      device_count: total,
+      active_sessions: active,
+      free_count: Math.max(0, total - active),
+      device_types: dev && dev.types.size > 0 ? Array.from(dev.types) : ["PC", "PS5"],
+    };
+  });
 });
 
 export const cafeDeviceTypes = createServerFn({ method: "GET" })

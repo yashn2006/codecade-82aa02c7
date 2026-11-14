@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { Cpu, Gamepad2, Headset, Car, MonitorPlay, Lock, Pause, Wrench, Sparkles } from "lucide-react";
+import {
+  Cpu,
+  Gamepad2,
+  Headset,
+  Car,
+  MonitorPlay,
+  Lock,
+  Pause,
+  Wrench,
+  Sparkles,
+} from "lucide-react";
 import type { DeviceStatus } from "@/lib/devices.functions";
 
 type DeviceType = "pc" | "console" | "vr" | "racing" | "other";
@@ -13,12 +23,45 @@ const TYPE_ICON: Record<DeviceType, typeof Cpu> = {
   other: Cpu,
 };
 
-const STATUS_THEME: Record<DeviceStatus, { ring: string; glow: string; chip: string; label: string; pulse: boolean }> = {
-  available:   { ring: "#22d3a8", glow: "rgba(34,211,168,0.55)",  chip: "EMPTY · READY",   label: "available",   pulse: false },
-  in_use:      { ring: "#ef4fb6", glow: "rgba(239,79,182,0.7)",   chip: "● LIVE SESSION",  label: "in use",      pulse: true  },
-  reserved:    { ring: "#f5b042", glow: "rgba(245,176,66,0.6)",   chip: "✦ RESERVED",      label: "reserved",    pulse: false },
-  suspended:   { ring: "#94a3b8", glow: "rgba(148,163,184,0.45)", chip: "⏸ SUSPENDED",     label: "suspended",   pulse: false },
-  maintenance: { ring: "#f87171", glow: "rgba(248,113,113,0.55)", chip: "✖ MAINTENANCE",  label: "maintenance", pulse: false },
+const STATUS_THEME: Record<
+  DeviceStatus,
+  { ring: string; glow: string; chip: string; label: string; pulse: boolean }
+> = {
+  available: {
+    ring: "#22d3a8",
+    glow: "rgba(34,211,168,0.55)",
+    chip: "EMPTY · READY",
+    label: "available",
+    pulse: false,
+  },
+  in_use: {
+    ring: "#ef4fb6",
+    glow: "rgba(239,79,182,0.7)",
+    chip: "● LIVE SESSION",
+    label: "in use",
+    pulse: true,
+  },
+  reserved: {
+    ring: "#f5b042",
+    glow: "rgba(245,176,66,0.6)",
+    chip: "✦ RESERVED",
+    label: "reserved",
+    pulse: false,
+  },
+  suspended: {
+    ring: "#94a3b8",
+    glow: "rgba(148,163,184,0.45)",
+    chip: "⏸ SUSPENDED",
+    label: "suspended",
+    pulse: false,
+  },
+  maintenance: {
+    ring: "#f87171",
+    glow: "rgba(248,113,113,0.55)",
+    chip: "✖ MAINTENANCE",
+    label: "maintenance",
+    pulse: false,
+  },
 };
 
 const STATUS_GLYPH: Record<DeviceStatus, typeof Cpu> = {
@@ -33,12 +76,17 @@ const STATUS_GLYPH: Record<DeviceStatus, typeof Cpu> = {
 function hexToRgba(hex: string, alpha = 1): string {
   if (!hex.startsWith("#")) return hex;
   let h = hex.slice(1);
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length === 3)
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
   const num = parseInt(h, 16);
-  const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  const r = (num >> 16) & 255,
+    g = (num >> 8) & 255,
+    b = num & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
-
 
 export type StationPodProps = {
   name: string;
@@ -49,6 +97,9 @@ export type StationPodProps = {
   caption?: React.ReactNode; // small line under chip
   index?: number;
   onClick?: () => void;
+  onContextMenu?: React.MouseEventHandler<HTMLButtonElement>;
+  title?: string;
+  className?: string;
   /** Optional zone color — re-tints decorative chrome (halo, grid floor, icon tile, base shadow). */
   accent?: string | null;
 };
@@ -58,7 +109,18 @@ export type StationPodProps = {
  * scanlines, animated status ring, pointer-tilt parallax, ambient glow.
  */
 export function StationPod({
-  name, type, status, hourlyRate, overlay, caption, index = 0, onClick, accent,
+  name,
+  type,
+  status,
+  hourlyRate,
+  overlay,
+  caption,
+  index = 0,
+  onClick,
+  onContextMenu,
+  title,
+  className,
+  accent,
 }: StationPodProps) {
   const Icon = TYPE_ICON[type] ?? Cpu;
   const Glyph = STATUS_GLYPH[status];
@@ -66,16 +128,17 @@ export function StationPod({
 
   // Zone color overrides the decorative chrome; the screen still reflects status.
   const chromeRing = accent || statusTheme.ring;
-  const chromeGlow = accent
-    ? hexToRgba(accent, 0.55)
-    : statusTheme.glow;
+  const chromeGlow = accent ? hexToRgba(accent, 0.55) : statusTheme.glow;
   const theme = { ...statusTheme, ring: chromeRing, glow: chromeGlow };
 
   const rotateX = useMotionValue(0);
   const rotateY = useMotionValue(0);
   const rx = useSpring(rotateX, { stiffness: 200, damping: 18 });
   const ry = useSpring(rotateY, { stiffness: 200, damping: 18 });
-  const liftZ = useTransform([rx, ry], ([x, y]) => 1 - (Math.abs(x as number) + Math.abs(y as number)) / 60);
+  const liftZ = useTransform(
+    [rx, ry],
+    ([x, y]) => 1 - (Math.abs(x as number) + Math.abs(y as number)) / 60,
+  );
 
   const ref = useRef<HTMLButtonElement>(null);
   const [hover, setHover] = useState(false);
@@ -89,13 +152,19 @@ export function StationPod({
     rotateY.set(px * 14);
     rotateX.set(-py * 12);
   };
-  const reset = () => { rotateX.set(0); rotateY.set(0); setHover(false); };
+  const reset = () => {
+    rotateX.set(0);
+    rotateY.set(0);
+    setHover(false);
+  };
 
   return (
     <motion.button
       ref={ref}
       type="button"
       onClick={onClick}
+      onContextMenu={onContextMenu}
+      title={title}
       onPointerMove={onMove}
       onPointerEnter={() => setHover(true)}
       onPointerLeave={reset}
@@ -103,7 +172,7 @@ export function StationPod({
       animate={{ opacity: 1, y: 0, rotateX: 0 }}
       transition={{ delay: index * 0.04, type: "spring", stiffness: 160, damping: 18 }}
       style={{ perspective: 900 }}
-      className="group relative block text-left focus:outline-none"
+      className={`group relative block text-left focus:outline-none ${className ?? ""}`}
       aria-label={`${name} — ${theme.label}`}
     >
       <motion.div
@@ -131,7 +200,7 @@ export function StationPod({
           style={{
             borderColor: accent ? `${accent}55` : "var(--color-border)",
             backgroundImage: accent
-              ? `linear-gradient(180deg, ${hexToRgba(accent, 0.10)} 0%, var(--color-card) 65%)`
+              ? `linear-gradient(180deg, ${hexToRgba(accent, 0.1)} 0%, var(--color-card) 65%)`
               : `linear-gradient(180deg, var(--color-card) 0%, color-mix(in oklab, var(--color-card) 85%, black) 100%)`,
           }}
         >
@@ -139,8 +208,7 @@ export function StationPod({
           <div
             className="pointer-events-none absolute inset-0 opacity-50"
             style={{
-              backgroundImage:
-                `linear-gradient(${theme.ring}22 1px, transparent 1px), linear-gradient(90deg, ${theme.ring}22 1px, transparent 1px)`,
+              backgroundImage: `linear-gradient(${theme.ring}22 1px, transparent 1px), linear-gradient(90deg, ${theme.ring}22 1px, transparent 1px)`,
               backgroundSize: "22px 22px",
               maskImage: "linear-gradient(180deg, transparent 30%, black 100%)",
               WebkitMaskImage: "linear-gradient(180deg, transparent 30%, black 100%)",
@@ -159,7 +227,9 @@ export function StationPod({
                 <Icon className="h-4 w-4" style={{ color: theme.ring }} />
               </div>
               <div className="min-w-0">
-                <div className="truncate font-display text-sm font-bold leading-none text-foreground">{name}</div>
+                <div className="truncate font-display text-sm font-bold leading-none text-foreground">
+                  {name}
+                </div>
                 <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
                   {type} · ₹{hourlyRate}/hr
                 </div>
@@ -177,12 +247,12 @@ export function StationPod({
                   status === "in_use"
                     ? `radial-gradient(120% 80% at 50% 0%, ${theme.ring}88 0%, #0a0a16 70%)`
                     : status === "available"
-                    ? `radial-gradient(120% 80% at 50% 100%, ${theme.ring}55 0%, #0a0a16 80%)`
-                    : status === "reserved"
-                    ? `linear-gradient(135deg, ${theme.ring}33, #0a0a16)`
-                    : status === "suspended"
-                    ? "linear-gradient(135deg, #1a1a24, #0a0a16)"
-                    : "repeating-linear-gradient(45deg, #1a0d12 0 8px, #0a0a16 8px 16px)",
+                      ? `radial-gradient(120% 80% at 50% 100%, ${theme.ring}55 0%, #0a0a16 80%)`
+                      : status === "reserved"
+                        ? `linear-gradient(135deg, ${theme.ring}33, #0a0a16)`
+                        : status === "suspended"
+                          ? "linear-gradient(135deg, #1a1a24, #0a0a16)"
+                          : "repeating-linear-gradient(45deg, #1a0d12 0 8px, #0a0a16 8px 16px)",
                 boxShadow: `inset 0 0 30px ${theme.ring}33`,
               }}
             >
@@ -200,8 +270,7 @@ export function StationPod({
                 <div
                   className="pointer-events-none absolute -inset-y-2 left-0 w-1/3 opacity-50"
                   style={{
-                    background:
-                      `linear-gradient(90deg, transparent, ${theme.ring}66, transparent)`,
+                    background: `linear-gradient(90deg, transparent, ${theme.ring}66, transparent)`,
                     animation: "sweep-x 2.6s linear infinite",
                   }}
                   aria-hidden
@@ -214,10 +283,16 @@ export function StationPod({
                     animate={{ scale: [1, 1.18, 1], opacity: [0.7, 1, 0.7] }}
                     transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
                   >
-                    <Glyph className="h-7 w-7" style={{ color: theme.ring, filter: `drop-shadow(0 0 14px ${theme.glow})` }} />
+                    <Glyph
+                      className="h-7 w-7"
+                      style={{ color: theme.ring, filter: `drop-shadow(0 0 14px ${theme.glow})` }}
+                    />
                   </motion.div>
                 ) : (
-                  <Glyph className="h-7 w-7 opacity-90" style={{ color: theme.ring, filter: `drop-shadow(0 0 10px ${theme.glow})` }} />
+                  <Glyph
+                    className="h-7 w-7 opacity-90"
+                    style={{ color: theme.ring, filter: `drop-shadow(0 0 10px ${theme.glow})` }}
+                  />
                 )}
               </div>
             </div>
@@ -231,7 +306,11 @@ export function StationPod({
           <div className="relative mt-3 flex items-center justify-between">
             <span
               className="rounded-md border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em]"
-              style={{ borderColor: `${theme.ring}55`, color: theme.ring, background: `${theme.ring}11` }}
+              style={{
+                borderColor: `${theme.ring}55`,
+                color: theme.ring,
+                background: `${theme.ring}11`,
+              }}
             >
               {theme.chip}
             </span>

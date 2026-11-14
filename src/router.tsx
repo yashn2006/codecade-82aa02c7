@@ -7,14 +7,12 @@ export const getRouter = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        // Keep data fresh for 30s so navigating back to a page is instant
-        staleTime: 30_000,
-        gcTime: 5 * 60_000,
+        // Keep data fresh for 60s so navigating between pages/tabs is instant
+        staleTime: 60_000,
+        gcTime: 10 * 60_000,
         refetchOnWindowFocus: false,
-        // ALWAYS refetch on mount — fixes "dashboard empty until I navigate away"
-        // bug where the first fetch happens before the Supabase bearer token is
-        // attached and silently errors, then the cached error/empty state sticks.
-        refetchOnMount: "always",
+        // Render cached data immediately while stale queries refresh silently in background
+        refetchOnMount: true,
         refetchOnReconnect: true,
         // Retry transient auth races (bearer not yet attached on first paint)
         retry: 2,
@@ -32,10 +30,9 @@ export const getRouter = () => {
     defaultPreloadDelay: 30,
     // Let TanStack Query own freshness
     defaultPreloadStaleTime: 0,
-    // Keep the current page up for quick loads; show a skeleton (held long
-    // enough not to flicker) only when the next page takes a moment.
-    defaultPendingMs: 180,
-    defaultPendingMinMs: 320,
+    // Keep current page visible for normal transitions; only show pending component on slow loads
+    defaultPendingMs: 750,
+    defaultPendingMinMs: 200,
     defaultPendingComponent: RoutePending,
   });
 

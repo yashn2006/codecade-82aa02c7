@@ -15,7 +15,14 @@ type Props = {
 
 const BUCKET = "cafe-gallery";
 
-export function ImageUploader({ cafeId, folder = "misc", onUploaded, label = "Upload image", className, accept = "image/*" }: Props) {
+export function ImageUploader({
+  cafeId,
+  folder = "misc",
+  onUploaded,
+  label = "Upload image",
+  className,
+  accept = "image/*",
+}: Props) {
   const ref = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -50,7 +57,10 @@ export function ImageUploader({ cafeId, folder = "misc", onUploaded, label = "Up
         type="file"
         accept={accept}
         className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+        }}
       />
       <Button
         type="button"

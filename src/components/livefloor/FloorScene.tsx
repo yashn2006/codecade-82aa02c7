@@ -100,10 +100,25 @@ export const FloorScene = memo(function FloorScene({
   onSelect: (id: string) => void;
 }) {
   return (
-    <section className="lf-scene" aria-label="Floor map">
+    <section className="lf-scene relative" aria-label="Floor map">
       <img src={roomImg} alt="" width={1920} height={1152} className="lf-scene-bg" aria-hidden />
       <div className="lf-scene-shade" aria-hidden />
-      <div className="lf-scene-grid">
+
+      {/* Cyber-Tactical HUD Header */}
+      <div className="absolute top-3 inset-x-4 z-10 flex items-center justify-between pointer-events-none">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/60 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-emerald-300 backdrop-blur-xl shadow-lg">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          </span>
+          <span>Tactical Floor Matrix · Active Link</span>
+        </div>
+        <div className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/90 backdrop-blur-xl">
+          Click any rig to open command drawer
+        </div>
+      </div>
+
+      <div className="lf-scene-grid pt-14">
         {devices.map((d, i) => (
           <FloorStation
             key={d.id}

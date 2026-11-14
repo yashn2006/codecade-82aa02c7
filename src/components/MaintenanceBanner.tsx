@@ -1,6 +1,10 @@
 import { Wrench } from "lucide-react";
 import { motion } from "framer-motion";
-import { isMaintenanceActive, maintenanceCountdown, type MaintenanceWindow } from "@/lib/maintenance";
+import {
+  isMaintenanceActive,
+  maintenanceCountdown,
+  type MaintenanceWindow,
+} from "@/lib/maintenance";
 
 export function MaintenanceBanner({
   window,

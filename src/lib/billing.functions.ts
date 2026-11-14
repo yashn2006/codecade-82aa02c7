@@ -370,3 +370,58 @@ export const submitInvoiceProof = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+export const ownerCreateUpgradePayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      cafe_id: z.string().uuid(),
+      plan_name: z.string().min(1).max(100),
+      duration_days: z.number().int().min(1).max(3650),
+      amount_rupees: z.number().min(1).max(1_000_000),
+      txn_ref: z.string().min(3).max(120),
+      proof_url: z.string().max(600).nullable().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: cafe } = await supabaseAdmin
+      .from("cafes")
+      .select("id, name, owner_id")
+      .eq("id", data.cafe_id)
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (!cafe) throw new Error("Café not found or unauthorized");
+
+    const { data: inv, error } = await supabaseAdmin
+      .from("cafe_invoices")
+      .insert({
+        cafe_id: data.cafe_id,
+        amount_paise: Math.round(data.amount_rupees * 100),
+        days: data.duration_days,
+        note: `Upgrade: ${data.plan_name}`,
+        status: "submitted",
+        txn_ref: data.txn_ref,
+        proof_url: data.proof_url ?? null,
+        submitted_at: new Date().toISOString(),
+        created_by: context.userId,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "super_admin");
+    if (admins?.length) {
+      await supabaseAdmin.from("notifications").insert(
+        admins.map((a: { user_id: string }) => ({
+          user_id: a.user_id,
+          kind: "billing",
+          title: `Upgrade submitted — ${cafe.name} (${data.plan_name})`,
+          body: `₹${data.amount_rupees.toLocaleString("en-IN")} · UTR: ${data.txn_ref}. Review to activate.`,
+          link: "/admin/billing",
+        })),
+      );
+    }
+    return { ok: true, invoice_id: inv?.id };
+  });
+

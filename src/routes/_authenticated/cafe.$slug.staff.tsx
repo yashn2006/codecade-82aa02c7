@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/EmptyState";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { ConfirmModal } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/staff")({
@@ -68,6 +69,7 @@ function StaffPage() {
   const [open, setOpen] = useState(false);
   const [perms, setPerms] = useState<PermKey[]>(["sessions", "bookings"]);
   const [email, setEmail] = useState("");
+  const [removeTarget, setRemoveTarget] = useState<{ staffUserId: string; label: string } | null>(null);
 
   if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
 
@@ -240,7 +242,7 @@ function StaffPage() {
                     {sPerms.length === 0 ? (
                       <Badge variant="secondary">view-only</Badge>
                     ) : sPerms.map((p) => <Badge key={p} variant="outline">{p}</Badge>)}
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Remove this staff member?")) removeM.mutate({ data: { cafe_id: cafeId, staff_user_id: s.staff_user_id } }); }}>
+                    <Button size="icon" variant="ghost" onClick={() => setRemoveTarget({ staffUserId: s.staff_user_id, label: prof?.full_name || prof?.email || "this staff member" })}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
@@ -310,6 +312,18 @@ function StaffPage() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        open={!!removeTarget}
+        onOpenChange={(o) => !o && setRemoveTarget(null)}
+        title="Remove staff member?"
+        description={`Revoke café console permissions for ${removeTarget?.label ?? "this staff member"}?`}
+        confirmLabel="Remove Staff"
+        onConfirm={() =>
+          removeTarget
+            ? removeM.mutateAsync({ data: { cafe_id: cafeId, staff_user_id: removeTarget.staffUserId } })
+            : Promise.resolve()
+        }
+      />
     </div>
   );
 }

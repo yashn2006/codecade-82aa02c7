@@ -1,0 +1,6 @@
+{
+  "name": "CoreCade",
+  "description": "The Operating System for Gaming Cafés — live sessions, bookings, memberships, and device management.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

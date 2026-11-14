@@ -3,7 +3,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { IndianRupee, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,32 +49,59 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><ReceiptText className="h-4 w-4" /> Log a manual payment</DialogTitle>
-          <DialogDescription>Cash, UPI QR, card swipe — anything that didn't go through checkout.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <ReceiptText className="h-4 w-4" /> Log a manual payment
+          </DialogTitle>
+          <DialogDescription>
+            Cash, UPI QR, card swipe — anything that didn't go through checkout.
+          </DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             const amt = parseFloat(String(fd.get("amount") || "0"));
-            if (!amt || amt <= 0) { toast.error("Enter an amount"); return; }
-            m.mutate({ data: {
-              cafe_id: cafeId, amount_rupees: amt, kind, source,
-              note: String(fd.get("note") || "") || null,
-            } });
+            if (!amt || amt <= 0) {
+              toast.error("Enter an amount");
+              return;
+            }
+            m.mutate({
+              data: {
+                cafe_id: cafeId,
+                amount_rupees: amt,
+                kind,
+                source,
+                note: String(fd.get("note") || "") || null,
+              },
+            });
           }}
           className="space-y-3"
         >
           <div className="space-y-1.5">
             <Label>Amount (₹)</Label>
-            <Input name="amount" type="number" step="0.01" min="1" required autoFocus placeholder="500" />
+            <Input
+              name="amount"
+              type="number"
+              step="0.01"
+              min="1"
+              required
+              autoFocus
+              placeholder="500"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Method</Label>
               <div className="flex flex-wrap gap-1">
                 {KINDS.map((k) => (
-                  <Button key={k} type="button" size="sm" variant={kind === k ? "default" : "outline"} onClick={() => setKind(k)} className="capitalize">
+                  <Button
+                    key={k}
+                    type="button"
+                    size="sm"
+                    variant={kind === k ? "default" : "outline"}
+                    onClick={() => setKind(k)}
+                    className="capitalize"
+                  >
                     {k}
                   </Button>
                 ))}
@@ -76,7 +111,14 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
               <Label>Source</Label>
               <div className="flex flex-wrap gap-1">
                 {SOURCES.map((s) => (
-                  <Button key={s} type="button" size="sm" variant={source === s ? "default" : "outline"} onClick={() => setSource(s)} className="capitalize">
+                  <Button
+                    key={s}
+                    type="button"
+                    size="sm"
+                    variant={source === s ? "default" : "outline"}
+                    onClick={() => setSource(s)}
+                    className="capitalize"
+                  >
                     {s}
                   </Button>
                 ))}
@@ -88,7 +130,11 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
             <Textarea name="note" rows={2} placeholder="Table 4 — 2 hrs PS5" />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={m.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
+            <Button
+              type="submit"
+              disabled={m.isPending}
+              style={{ background: "var(--gradient-brand-hot)" }}
+            >
               {m.isPending ? "Logging…" : "Log payment"}
             </Button>
           </DialogFooter>

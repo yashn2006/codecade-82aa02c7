@@ -22,7 +22,9 @@ export function ErrorState({
         <AlertTriangle className="h-5 w-5" />
       </div>
       <h3 className="mt-4 font-display text-lg font-bold">{title}</h3>
-      {description && <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>}
+      {description && (
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+      )}
       {onRetry && (
         <Button size="sm" variant="outline" className="mt-4 gap-1.5" onClick={onRetry}>
           <RotateCw className="h-3.5 w-3.5" /> Try again

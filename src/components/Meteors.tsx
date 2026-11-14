@@ -26,9 +26,11 @@ export function Meteors({ count = 18, className = "" }: { count?: number; classN
     [effectiveCount],
   );
 
-
   return (
-    <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`} aria-hidden>
+    <div
+      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
+      aria-hidden
+    >
       {meteors.map((m) => (
         <span
           key={m.id}

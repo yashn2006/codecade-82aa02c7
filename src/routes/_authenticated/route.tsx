@@ -29,17 +29,24 @@ function AuthenticatedLayout() {
 /** Full-screen session-check veil — prevents auth-page or empty-dashboard flash. */
 function AuthPending() {
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-[#0a0018]">
-      <div className="flex flex-col items-center gap-4">
-        <div className="animate-pulse">
-          <BrandLockup size={44} />
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-[#07050f]">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-primary/20 blur-[100px]" />
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center gap-5">
+        <div className="transition-transform animate-pulse">
+          <BrandLockup size={46} />
         </div>
-        <div className="h-1 w-32 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-1/3 rounded-full bg-[linear-gradient(90deg,#ff006e,#7000ff)] animate-pulse" />
+
+        <div className="relative h-1.5 w-48 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/15">
+          <div className="absolute inset-0 w-full animate-pulse bg-gradient-to-r from-primary via-accent to-emerald-400" />
         </div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-          securing session
-        </p>
+
+        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-white/60">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+          <span>Synchronizing Arena…</span>
+        </div>
       </div>
     </div>
   );

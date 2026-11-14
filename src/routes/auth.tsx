@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Mail, Lock, User, ArrowRight, ArrowLeft, Eye, EyeOff, ShieldCheck, Zap, Sparkles, Phone, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { directSignUp } from "@/lib/auth.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuroraBackground } from "@/components/AuroraBackground";
@@ -12,6 +14,9 @@ import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routin
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>): { mode?: "signin" | "signup" } => ({
+    mode: search.mode === "signup" ? "signup" : "signin",
+  }),
   head: () => ({
     meta: [
       { title: "Sign in — CoreCade" },
@@ -24,16 +29,23 @@ export const Route = createFileRoute("/auth")({
 type Mode = "signin" | "signup" | "forgot";
 
 function AuthPage() {
-  const [mode, setMode] = useState<Mode>("signin");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<Mode>(search.mode === "signup" ? "signup" : "signin");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [shake, setShake] = useState(false);
+  const [activeSession, setActiveSession] = useState<{ email: string; dest: string } | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
   const redirectingRef = useRef(false);
   const navigate = useNavigate();
-  
+  const directSignUpFn = useServerFn(directSignUp);
 
+  useEffect(() => {
+    if (search.mode === "signup") setMode("signup");
+    else if (search.mode === "signin") setMode("signin");
+  }, [search.mode]);
 
   const routeOnce = async () => {
     if (redirectingRef.current) return;
@@ -41,15 +53,35 @@ function AuthPage() {
     await routeByRole(navigate);
   };
 
-  // After Google OAuth redirect (or when an existing session lands on /auth),
-  // route the user straight to their dashboard.
+  // Check for active session. If session exists and user is not logging in via OAuth redirect,
+  // show the "Go to Dashboard" button instead of abruptly auto-redirecting.
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled && data.session) routeOnce();
+    const isOAuthCallback =
+      typeof window !== "undefined" &&
+      (window.location.hash.includes("access_token") || window.location.search.includes("code="));
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (cancelled) return;
+      if (data.session?.user) {
+        if (isOAuthCallback) {
+          await routeOnce();
+          return;
+        }
+        try {
+          const dest = await getDashboardPathForUser(data.session.user);
+          setActiveSession({ email: data.session.user.email ?? "your account", dest });
+        } catch {
+          setActiveSession({ email: data.session.user.email ?? "your account", dest: "/portal" });
+        }
+      }
+      setCheckingSession(false);
     });
+
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) routeOnce();
+      if (event === "SIGNED_IN" && session?.user && isOAuthCallback) {
+        routeOnce();
+      }
     });
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
   }, [navigate]);
@@ -59,18 +91,15 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(true);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  // Keep it simple: 8+ characters for both sign-in and sign-up. The strength
-  // meter nudges toward stronger passwords without blocking the submit.
-  const pwValid = password.length >= 8;
-  const nameValid = mode !== "signup" || fullName.trim().length >= 2;
+  const pwValid = password.length >= 6;
   const formValid =
     mode === "forgot"
       ? emailValid
       : mode === "signup"
-        ? emailValid && pwValid && nameValid && agreed
+        ? emailValid && pwValid
         : emailValid && pwValid;
 
   const triggerShake = () => {
@@ -87,13 +116,9 @@ function AuthPage() {
           ? "Enter a valid email."
           : !emailValid
             ? "Enter a valid email."
-            : !nameValid
-              ? "Tell us your name."
-              : !pwValid
-                ? "Password must be at least 8 characters."
-                : mode === "signup" && !agreed
-                  ? "Please accept the Terms and Privacy Policy."
-                  : "Password must be 8+ characters.";
+            : !pwValid
+              ? "Password must be at least 6 characters."
+              : "Please check your credentials.";
       toast.error(why);
       return;
     }
@@ -103,30 +128,51 @@ function AuthPage() {
         const digits = phone.replace(/\D/g, "").slice(-10);
         const e164 = digits.length === 10 ? `+91${digits}` : undefined;
         const cleanEmail = email.trim().toLowerCase();
-        const { error } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: { data: { full_name: fullName.trim(), phone: e164 ?? null } },
+
+        // 1. Direct admin registration — immediately confirms email with no verification code
+        // and automatically assigns the 'customer' role.
+        await directSignUpFn({
+          data: {
+            email: cleanEmail,
+            password,
+            fullName: fullName.trim() || undefined,
+            phone: e164,
+          },
         });
-        if (error) throw error;
-        // Sign straight in — no email verification step.
+
+        // 2. Sign straight into session
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
         if (signInError) throw signInError;
-        toast.success("Account created.");
+
+        toast.success("Customer account created! Entering portal…");
         setSuccess(true);
         await new Promise((r) => setTimeout(r, 400));
         await routeOnce();
         return;
 
       } else if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const cleanEmail = email.trim().toLowerCase();
+        let { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+
+        // If user was previously unconfirmed, auto-confirm via admin function and retry
+        if (error && error.message.toLowerCase().includes("email not confirmed")) {
+          await directSignUpFn({
+            data: {
+              email: cleanEmail,
+              password,
+            },
+          });
+          const retry = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+          error = retry.error;
+        }
+
         if (error) throw error;
         toast.success("Welcome back.");
         setSuccess(true);
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 400));
         await routeOnce();
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -153,26 +199,15 @@ function AuthPage() {
            style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,0.6) 2px 3px)" }} />
 
       {/* Top nav */}
-      <div className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-5 sm:px-8">
+      <div className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-8 sm:py-5">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
-              else window.location.assign("/");
-            }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/70 bg-background/60 px-3 text-xs font-medium text-muted-foreground backdrop-blur transition hover:text-foreground"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back
-          </button>
-          <BrandLockup size={32} />
+          <BrandLockup size={30} />
         </div>
         <Link
           to="/"
-          className="hidden font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground sm:inline"
+          className="inline-flex min-h-[40px] items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition hover:text-foreground"
         >
-          ← corecade.com
+          ← Home
         </Link>
       </div>
 
@@ -183,22 +218,98 @@ function AuthPage() {
 
         {/* RIGHT — 3D tilt form card */}
         <TiltCard shake={shake}>
-          <motion.div
-            key={mode}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="relative"
-          >
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-primary">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-              </span>
-              {mode === "signin" && "Secure access · TLS 1.3"}
-              {mode === "signup" && "New player · customer access"}
-              {mode === "forgot" && "Recovery channel"}
+          {checkingSession ? (
+            <div className="py-12 flex flex-col items-center justify-center gap-4 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Checking active session…</div>
             </div>
+          ) : activeSession ? (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="relative space-y-6"
+            >
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                Session Active · Ready
+              </div>
+
+              <div>
+                <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+                  Welcome <span className="text-gradient-hot">Back</span>
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  You are already signed in. Launch straight into your dashboard.
+                </p>
+              </div>
+
+              {/* User identity card */}
+              <div className="flex items-center gap-3.5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-base font-bold text-white shadow-lg">
+                  {(activeSession.email[0] ?? "U").toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold text-foreground text-sm">{activeSession.email}</div>
+                  <div className="font-mono text-[10px] uppercase tracking-wider text-emerald-400/90 flex items-center gap-1.5 mt-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    Session Valid & Online
+                  </div>
+                </div>
+              </div>
+
+              {/* Prominent Go to Dashboard CTA button */}
+              <Link
+                to={activeSession.dest as any}
+                className="group relative flex h-13 w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl font-bold text-white shadow-xl transition hover:scale-[1.01] active:scale-[0.99]"
+                style={{ background: "var(--gradient-brand-hot)" }}
+              >
+                <span className="relative z-10 text-sm">Go to Dashboard</span>
+                <ArrowRight className="relative z-10 h-4 w-4 transition group-hover:translate-x-1" />
+              </Link>
+
+              {/* Secondary action: Sign out / Switch account */}
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    setActiveSession(null);
+                    setMode("signin");
+                    toast.success("Signed out. Please enter credentials to sign in.");
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition underline underline-offset-4"
+                >
+                  Sign in to a different account or sign up
+                </button>
+              </div>
+
+              <div className="mt-6 flex items-center justify-center gap-4 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground pt-2">
+                <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3 w-3 text-primary" /> SOC-2 ready</span>
+                <span className="h-3 w-px bg-border/60" />
+                <span className="inline-flex items-center gap-1.5"><Zap className="h-3 w-3 text-primary" /> 60ms p95</span>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key={mode}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="relative"
+            >
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-primary">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                </span>
+                {mode === "signin" && "Secure access · TLS 1.3"}
+                {mode === "signup" && "New player · customer access"}
+                {mode === "forgot" && "Recovery channel"}
+              </div>
             <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
               {mode === "signin" && (<>Welcome <span className="text-gradient-hot">back</span></>)}
               {mode === "signup" && (<>Create customer <span className="text-gradient-hot">account</span></>)}
@@ -218,7 +329,7 @@ function AuthPage() {
                     key={m}
                     type="button"
                     onClick={() => setMode(m)}
-                    className={`relative px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
+                    className={`relative min-h-[40px] px-4 py-2 text-xs font-semibold uppercase tracking-wider transition ${
                       mode === m ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -296,13 +407,13 @@ function AuthPage() {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-2"
                   >
-                    <Label htmlFor="fullName">Full name</Label>
+                    <Label htmlFor="fullName">Full name <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
                     <FieldShell icon={<User className="h-4 w-4" />}>
                       <Input
                         id="fullName"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Your name"
+                        placeholder="Your name (optional)"
                         className="h-12 border-0 bg-transparent pl-10 focus-visible:ring-0"
                       />
                     </FieldShell>
@@ -383,7 +494,7 @@ function AuthPage() {
                       type="button"
                       onClick={() => setShowPw((s) => !s)}
                       onTouchEnd={(e) => { e.preventDefault(); setShowPw((s) => !s); }}
-                      className="absolute right-2 top-1/2 z-10 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:text-foreground active:bg-white/5"
+                      className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition hover:text-foreground active:bg-white/5"
                       aria-label={showPw ? "Hide password" : "Show password"}
                     >
                       {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -457,7 +568,8 @@ function AuthPage() {
               <span className="inline-flex items-center gap-1.5"><Zap className="h-3 w-3 text-primary" /> 60ms p95</span>
             </div>
           </motion.div>
-        </TiltCard>
+        )}
+      </TiltCard>
       </div>
     </div>
   );

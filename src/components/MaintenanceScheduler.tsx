@@ -8,11 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { setCafeMaintenance } from "@/lib/cafes.functions";
 import { setPlatformMaintenance } from "@/lib/platform.functions";
-import { isMaintenanceActive, maintenanceCountdown, type MaintenanceWindow } from "@/lib/maintenance";
+import {
+  isMaintenanceActive,
+  maintenanceCountdown,
+  type MaintenanceWindow,
+} from "@/lib/maintenance";
 
 function toLocalInput(iso: string | null) {
   if (!iso) return "";
@@ -26,9 +35,7 @@ function fromLocalInput(v: string): string | null {
   return new Date(v).toISOString();
 }
 
-type Scope =
-  | { kind: "cafe"; cafeId: string; cafeName: string }
-  | { kind: "platform" };
+type Scope = { kind: "cafe"; cafeId: string; cafeName: string } | { kind: "platform" };
 
 export function MaintenanceScheduler({
   scope,
@@ -53,12 +60,14 @@ export function MaintenanceScheduler({
       message: string | null;
     }) => {
       if (scope.kind === "cafe") {
-        return saveCafe({ data: {
-          id: scope.cafeId,
-          starts_at: payload.starts_at,
-          ends_at: payload.ends_at,
-          message: payload.message,
-        } });
+        return saveCafe({
+          data: {
+            id: scope.cafeId,
+            starts_at: payload.starts_at,
+            ends_at: payload.ends_at,
+            message: payload.message,
+          },
+        });
       }
       return savePlatform({ data: payload });
     },
@@ -72,7 +81,8 @@ export function MaintenanceScheduler({
 
   const active = isMaintenanceActive(current);
   const countdown = maintenanceCountdown(current);
-  const title = scope.kind === "platform" ? "Platform maintenance" : `Maintenance · ${scope.cafeName}`;
+  const title =
+    scope.kind === "platform" ? "Platform maintenance" : `Maintenance · ${scope.cafeName}`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -102,7 +112,8 @@ export function MaintenanceScheduler({
             const starts = fromLocalInput(String(fd.get("starts") || ""));
             const ends = fromLocalInput(String(fd.get("ends") || ""));
             const msg = String(fd.get("message") || "").trim() || null;
-            const ttl = scope.kind === "platform" ? (String(fd.get("title") || "").trim() || null) : null;
+            const ttl =
+              scope.kind === "platform" ? String(fd.get("title") || "").trim() || null : null;
             if (starts && ends && new Date(ends) <= new Date(starts)) {
               toast.error("End time must be after start time");
               return;
@@ -125,11 +136,21 @@ export function MaintenanceScheduler({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>Starts at</Label>
-              <Input type="datetime-local" name="starts" defaultValue={toLocalInput(current?.starts_at ?? null)} />
+              <Input
+                type="datetime-local"
+                name="starts"
+                defaultValue={toLocalInput(current?.starts_at ?? null)}
+              />
             </div>
             <div className="space-y-1">
-              <Label>Ends at <span className="text-muted-foreground">(optional)</span></Label>
-              <Input type="datetime-local" name="ends" defaultValue={toLocalInput(current?.ends_at ?? null)} />
+              <Label>
+                Ends at <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                type="datetime-local"
+                name="ends"
+                defaultValue={toLocalInput(current?.ends_at ?? null)}
+              />
             </div>
           </div>
           <div className="space-y-1">
@@ -138,9 +159,11 @@ export function MaintenanceScheduler({
               name="message"
               rows={3}
               maxLength={500}
-              placeholder={scope.kind === "platform"
-                ? "We'll be back shortly — upgrading the booking engine."
-                : "Air-con repair · stations are offline until tonight."}
+              placeholder={
+                scope.kind === "platform"
+                  ? "We'll be back shortly — upgrading the booking engine."
+                  : "Air-con repair · stations are offline until tonight."
+              }
               defaultValue={current?.message ?? ""}
             />
           </div>
@@ -151,7 +174,9 @@ export function MaintenanceScheduler({
             <Button
               type="button"
               variant="ghost"
-              onClick={() => m.mutate({ starts_at: null, ends_at: null, title: null, message: null })}
+              onClick={() =>
+                m.mutate({ starts_at: null, ends_at: null, title: null, message: null })
+              }
               disabled={m.isPending}
             >
               Clear schedule

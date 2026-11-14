@@ -59,13 +59,13 @@ export async function getSupabaseUserReady(timeoutMs = 1600): Promise<User | nul
 
   return new Promise((resolve) => {
     let settled = false;
-    let subscription: { unsubscribe: () => void } | undefined;
+    const subRef: { current?: { unsubscribe: () => void } } = {};
 
     const finish = (user: User | null) => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timer);
-      subscription?.unsubscribe();
+      subRef.current?.unsubscribe();
       resolve(user);
     };
 
@@ -78,7 +78,7 @@ export async function getSupabaseUserReady(timeoutMs = 1600): Promise<User | nul
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.access_token && session.user) finish(session.user);
     });
-    subscription = data.subscription;
+    subRef.current = data.subscription;
   });
 }
 
@@ -94,7 +94,11 @@ export async function getDashboardPathForUser(user: User): Promise<DashboardPath
 }
 
 export function isSuperAdmin(user: User, roles: Set<string>) {
-  return !!user.email && SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase()) && roles.has("super_admin");
+  return (
+    !!user.email &&
+    SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase()) &&
+    roles.has("super_admin")
+  );
 }
 
 type GuardTarget = "/auth" | "/portal" | null;
@@ -104,7 +108,9 @@ type GuardTarget = "/auth" | "/portal" | null;
  * flicker) when the user and roles are already known in this tab; falls back
  * to an async check on a cold load.
  */
-export function guardRoute(check: (user: User, roles: Set<string>) => GuardTarget): void | Promise<void> {
+export function guardRoute(
+  check: (user: User, roles: Set<string>) => GuardTarget,
+): void | Promise<void> {
   const user = getCachedUser();
   const roles = user ? getCachedRoles(user.id) : null;
   if (user && roles) {

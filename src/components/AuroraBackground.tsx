@@ -15,7 +15,9 @@ export function AuroraBackground({
     <div className="pointer-events-none fixed inset-0 overflow-hidden grain -z-10" aria-hidden>
       <div
         className="absolute -top-40 -left-40 h-[640px] w-[640px] rounded-full blur-[120px] opacity-60 animate-blob"
-        style={{ background: "radial-gradient(circle, oklch(0.7 0.26 335 / 0.55), transparent 65%)" }}
+        style={{
+          background: "radial-gradient(circle, oklch(0.7 0.26 335 / 0.55), transparent 65%)",
+        }}
       />
       <div
         className="absolute -top-32 right-[-12rem] h-[560px] w-[560px] rounded-full blur-[120px] opacity-55 animate-blob"
@@ -34,7 +36,9 @@ export function AuroraBackground({
       {(hero || immersive) && (
         <div
           className="absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px] opacity-40 animate-pulse-soft"
-          style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.55), transparent 70%)" }}
+          style={{
+            background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.55), transparent 70%)",
+          }}
         />
       )}
       {immersive && (

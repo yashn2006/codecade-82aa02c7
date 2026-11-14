@@ -520,9 +520,9 @@
 
   /* Filter pills */
   .pill-off {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.78);
     backdrop-filter: blur(8px);
     transition: all 150ms ease;
   }
@@ -597,9 +597,17 @@
    - opt-out hooks: .mobile-keep-blur, .mobile-keep-anim
 =================================================================== */
 @media (max-width: 767px) {
-  *:not(.mobile-keep-blur) {
+  *:not(.mobile-keep-blur):not(.mobile-header):not(.mobile-dock):not(.mobile-sheet):not(.liquid-glass-header):not(.liquid-glass-dock) {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+  }
+  .glass,
+  .glass-strong,
+  .liquid-glass,
+  .liquid-glass-card,
+  .hub-card {
+    background: linear-gradient(155deg, rgba(28, 20, 52, 0.92), rgba(13, 10, 26, 0.96)) !important;
+    box-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.14) !important;
   }
   .animate-blob,
   .animate-marquee,
@@ -608,6 +616,25 @@
   }
   /* opt-out marker for components that need to stay animated */
   .mobile-hide { display: none !important; }
+}
+
+/* User display & motion preference hooks (set via ConsoleShell sheet preferences) */
+:root[data-effects="crisp"] .mobile-header,
+:root[data-effects="crisp"] .mobile-dock,
+:root[data-effects="crisp"] .mobile-sheet,
+:root[data-effects="crisp"] .mobile-keep-blur,
+:root[data-effects="crisp"] .liquid-glass-header,
+:root[data-effects="crisp"] .liquid-glass-dock {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(14, 10, 26, 0.96) !important;
+}
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 80ms !important;
 }
 
 /* ---------- Auth door-walk micro-animation ---------- */
@@ -773,9 +800,12 @@ input, textarea, select { font-size: 16px; } /* prevents iOS zoom-on-focus */
   color: var(--lf-text);
 }
 .lf-panel {
-  background: linear-gradient(180deg, var(--lf-elevated) 0%, var(--lf-panel) 100%);
-  border: 1px solid var(--lf-line);
-  border-radius: 18px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, rgba(13, 10, 25, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 }
 .lf-stat {
   position: relative;
@@ -1163,38 +1193,48 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
 
 /* ===== Mobile app chrome: header, floating dock, "More" sheet ===== */
 .mobile-header {
-  background: color-mix(in oklab, var(--background) 88%, transparent);
-  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
-  box-shadow: 0 10px 30px -18px oklch(0 0 0 / 0.8);
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(255, 255, 255, 0.06) 0%, transparent 65%),
+    color-mix(in oklab, var(--background) 74%, transparent);
+  backdrop-filter: blur(22px) saturate(165%);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
+  box-shadow:
+    0 10px 30px -18px oklch(0 0 0 / 0.85),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
 }
 @media (min-width: 768px) {
   .mobile-header {
     background: color-mix(in oklab, var(--background) 62%, transparent);
-    backdrop-filter: blur(20px) saturate(1.3);
-    -webkit-backdrop-filter: blur(20px) saturate(1.3);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
   }
 }
 .mobile-header::after {
   content: ""; position: absolute; inset-inline: 0; bottom: -1px; height: 1px;
   background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--primary) 55%, transparent), transparent);
-  opacity: 0.6; pointer-events: none;
+  opacity: 0.65; pointer-events: none;
 }
 .mobile-dock {
   background:
-    radial-gradient(120% 140% at 50% 0%, color-mix(in oklab, var(--primary) 12%, transparent) 0%, transparent 60%),
-    linear-gradient(180deg, color-mix(in oklab, var(--card) 96%, transparent), color-mix(in oklab, var(--background) 98%, transparent));
-  border: 1px solid color-mix(in oklab, var(--primary) 24%, color-mix(in oklab, var(--foreground) 6%, transparent));
+    radial-gradient(120% 140% at 50% 0%, rgba(255, 255, 255, 0.11) 0%, color-mix(in oklab, var(--primary) 10%, transparent) 38%, transparent 72%),
+    linear-gradient(180deg, rgba(22, 16, 42, 0.84), rgba(11, 8, 22, 0.92));
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid color-mix(in oklab, var(--primary) 26%, rgba(255, 255, 255, 0.14));
   box-shadow:
-    0 22px 44px -14px oklch(0 0 0 / 0.85),
-    0 0 34px -12px color-mix(in oklab, var(--primary) 55%, transparent),
-    inset 0 1px 0 0 color-mix(in oklab, var(--foreground) 9%, transparent);
+    0 22px 44px -14px oklch(0 0 0 / 0.9),
+    0 0 34px -12px color-mix(in oklab, var(--primary) 50%, transparent),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.45);
 }
 .dock-active {
   background:
-    radial-gradient(90% 120% at 50% 0%, color-mix(in oklab, var(--primary) 34%, transparent) 0%, transparent 75%),
-    color-mix(in oklab, var(--primary) 10%, transparent);
+    radial-gradient(95% 120% at 50% 0%, color-mix(in oklab, var(--primary) 36%, transparent) 0%, transparent 78%),
+    color-mix(in oklab, var(--primary) 12%, transparent);
   box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--primary) 42%, transparent),
+    inset 0 0 0 1px color-mix(in oklab, var(--primary) 45%, transparent),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
     0 0 22px -6px color-mix(in oklab, var(--primary) 75%, transparent);
 }
 .dock-active::after {
@@ -1208,25 +1248,32 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
 }
 .mobile-sheet {
   background:
-    radial-gradient(120% 60% at 50% 0%, color-mix(in oklab, var(--primary) 14%, transparent) 0%, transparent 60%),
-    color-mix(in oklab, var(--card) 98%, transparent);
-  border-top: 1px solid color-mix(in oklab, var(--primary) 30%, transparent);
-  box-shadow: 0 -24px 60px -20px oklch(0 0 0 / 0.9), 0 -1px 30px -14px color-mix(in oklab, var(--primary) 60%, transparent);
+    radial-gradient(120% 60% at 50% 0%, rgba(255, 255, 255, 0.1) 0%, color-mix(in oklab, var(--primary) 12%, transparent) 42%, transparent 72%),
+    linear-gradient(180deg, rgba(20, 14, 38, 0.9), rgba(10, 7, 20, 0.96));
+  backdrop-filter: blur(30px) saturate(185%);
+  -webkit-backdrop-filter: blur(30px) saturate(185%);
+  border-top: 1px solid color-mix(in oklab, var(--primary) 34%, rgba(255, 255, 255, 0.16));
+  box-shadow:
+    0 -24px 60px -20px oklch(0 0 0 / 0.92),
+    0 -1px 30px -14px color-mix(in oklab, var(--primary) 60%, transparent),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.26);
 }
 .sheet-tile {
   color: var(--foreground);
-  background: linear-gradient(180deg, color-mix(in oklab, var(--foreground) 5%, transparent), color-mix(in oklab, var(--foreground) 2%, transparent));
-  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--foreground) 6%, transparent), color-mix(in oklab, var(--foreground) 2%, transparent));
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
 }
 .sheet-tile-icon {
   color: var(--muted-foreground);
-  background: color-mix(in oklab, var(--foreground) 6%, transparent);
-  transition: color 200ms ease, background 200ms ease, box-shadow 200ms ease;
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
+  transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease;
 }
 .sheet-tile[data-active] {
   color: var(--primary);
-  border-color: color-mix(in oklab, var(--primary) 50%, transparent);
-  background: linear-gradient(180deg, color-mix(in oklab, var(--primary) 16%, transparent), color-mix(in oklab, var(--primary) 5%, transparent));
+  border-color: color-mix(in oklab, var(--primary) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--primary) 18%, transparent), color-mix(in oklab, var(--primary) 6%, transparent));
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.16), 0 8px 20px -12px color-mix(in oklab, var(--primary) 70%, transparent);
 }
 .sheet-tile[data-active] .sheet-tile-icon {
   color: var(--primary-foreground);
@@ -1247,8 +1294,62 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
   .lf-chip { min-height: 40px; }
   .lf-input { min-height: 44px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  .dashboard-content *, .mobile-dock *, .mobile-sheet * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+/* ============================================================================
+   LIQUID GLASS SYSTEM (Apple VisionOS / iPhone-grade Acrylic & Specular Sheen)
+   ============================================================================ */
+
+.liquid-glass {
+  background: radial-gradient(135% 100% at 0% 0%, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), rgba(14, 10, 28, 0.75);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4);
 }
+
+.liquid-glass-sidebar {
+  background: radial-gradient(120% 80% at 20% 0%, rgba(255, 255, 255, 0.06) 0%, rgba(10, 7, 22, 0.88) 100%);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.45), inset -1px 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.liquid-glass-header {
+  background: radial-gradient(120% 120% at 50% 0%, rgba(255, 255, 255, 0.06) 0%, rgba(12, 8, 24, 0.82) 100%);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.liquid-glass-dock {
+  background: radial-gradient(120% 120% at 50% 0%, rgba(255, 255, 255, 0.1) 0%, rgba(15, 10, 30, 0.88) 100%);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.65), inset 0 1px 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.liquid-glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%), rgba(18, 13, 36, 0.68);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.liquid-specular {
+  position: relative;
+}
+.liquid-specular::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+  pointer-events: none;
+}
+
 

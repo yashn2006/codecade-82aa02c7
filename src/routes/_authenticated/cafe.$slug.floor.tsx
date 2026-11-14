@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid, Plus, Trash2, Save, Minus, MoreHorizontal, MapPin, Sparkles, Move,
-  MonitorPlay, Gamepad2, Headset, Car, Cpu,
+  MonitorPlay, Gamepad2, Headset, Car, Cpu, Wand2, RotateCcw, Search,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { updateCafe } from "@/lib/cafes.functions";
@@ -30,6 +30,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { ConfirmModal } from "@/components/ConfirmDialog";
 
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/floor")({
@@ -202,52 +203,206 @@ function FloorBuilder() {
 
   const sendToTray = (id: string) => placeM.mutate({ data: { id, pos_x: null, pos_y: null } });
 
+  const [scale, setScale] = useState<"compact" | "normal" | "spacious">("normal");
+  const [trayQuery, setTrayQuery] = useState("");
+  const [isAutoPlacing, setIsAutoPlacing] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    onConfirm: () => Promise<unknown> | void;
+  } | null>(null);
+
+  const filteredTray = useMemo(() => {
+    if (!trayQuery.trim()) return tray;
+    const q = trayQuery.toLowerCase();
+    return tray.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.type.toLowerCase().includes(q) ||
+        (d.zone && d.zone.toLowerCase().includes(q)),
+    );
+  }, [tray, trayQuery]);
+
+  const autoPlaceAll = async () => {
+    if (tray.length === 0) {
+      toast.info("All stations are already placed on the floor matrix.");
+      return;
+    }
+    const openCells: { x: number; y: number }[] = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!cellMap.has(`${c},${r}`)) {
+          openCells.push({ x: c, y: r });
+        }
+      }
+    }
+    if (openCells.length === 0) {
+      toast.error("Grid is full! Increase columns or rows to fit more rigs.");
+      return;
+    }
+    setIsAutoPlacing(true);
+    try {
+      const toPlace = tray.slice(0, openCells.length);
+      for (let i = 0; i < toPlace.length; i++) {
+        await place({ data: { id: toPlace[i].id, pos_x: openCells[i].x, pos_y: openCells[i].y } });
+      }
+      toast.success(`Arranged ${toPlace.length} rigs onto the floor matrix!`);
+      refresh();
+    } catch {
+      toast.error("Failed to auto-arrange stations");
+    } finally {
+      setIsAutoPlacing(false);
+    }
+  };
+
+  const clearAllToTray = () => {
+    if (placed.length === 0) {
+      toast.info("No placed rigs on the floor.");
+      return;
+    }
+    setConfirmAction({
+      title: "Unplace all stations?",
+      description: `Send all ${placed.length} placed stations back to the staging tray?`,
+      confirmLabel: "Unplace All",
+      onConfirm: async () => {
+        try {
+          for (const d of placed) {
+            await place({ data: { id: d.id, pos_x: null, pos_y: null } });
+          }
+          toast.success("Sent all rigs to staging tray.");
+          refresh();
+        } catch {
+          toast.error("Failed to unplace stations");
+        }
+      },
+    });
+  };
+
   if (cafeQ.isLoading) return <Skeleton className="h-96" />;
   if (cafeQ.isError || !cafe) return <ErrorState description="Could not load this café." onRetry={() => cafeQ.refetch()} />;
 
   return (
     <div className="space-y-5">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/40 p-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-xl border border-border/60 bg-background/50">
-            <LayoutGrid className="h-4 w-4 text-primary" />
+      {/* Tactical Floor Studio Toolbar */}
+      <div className="liquid-glass-card rounded-2xl border border-white/10 p-4 shadow-xl flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-white shadow-[0_0_15px_rgba(255,43,206,0.4)]">
+            <LayoutGrid className="h-5 w-5" />
           </div>
           <div>
-            <div className="font-display text-sm font-bold">Floor builder</div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-              Drag · drop · place · paint your café
+            <div className="flex items-center gap-2">
+              <span className="font-display text-base font-extrabold tracking-tight">Tactical Floor Studio</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary">
+                Grid CAD
+              </span>
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-0.5">
+              Arena Matrix: {cols}×{rows} · {devices.length} Rigs ({tray.length} In Staging)
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-background/40 px-2 py-1">
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Quick grid size presets */}
+          <div className="hidden sm:inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1 text-[11px] font-mono">
+            {[
+              { l: "6×4", c: 6, r: 4 },
+              { l: "8×6", c: 8, r: 6 },
+              { l: "12×8", c: 12, r: 8 },
+            ].map((p) => (
+              <button
+                key={p.l}
+                type="button"
+                onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_cols: p.c, floor_rows: p.r } } })}
+                className={`px-2 py-1 rounded-lg transition ${
+                  cols === p.c && rows === p.r
+                    ? "bg-primary text-white font-bold shadow-sm"
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                {p.l}
+              </button>
+            ))}
+          </div>
+
+          {/* Steppers */}
+          <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Cols</span>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_cols: Math.max(4, cols - 1) } } })}><Minus className="h-3 w-3" /></Button>
-            <span className="w-5 text-center font-mono text-xs">{cols}</span>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_cols: Math.min(40, cols + 1) } } })}><Plus className="h-3 w-3" /></Button>
+            <Button size="icon" variant="ghost" className="h-6 w-6 rounded-md hover:bg-white/10 text-white" onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_cols: Math.max(4, cols - 1) } } })}><Minus className="h-3 w-3" /></Button>
+            <span className="w-5 text-center font-mono text-xs font-bold text-white">{cols}</span>
+            <Button size="icon" variant="ghost" className="h-6 w-6 rounded-md hover:bg-white/10 text-white" onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_cols: Math.min(40, cols + 1) } } })}><Plus className="h-3 w-3" /></Button>
           </div>
-          <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-background/40 px-2 py-1">
+          <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Rows</span>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_rows: Math.max(3, rows - 1) } } })}><Minus className="h-3 w-3" /></Button>
-            <span className="w-5 text-center font-mono text-xs">{rows}</span>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_rows: Math.min(30, rows + 1) } } })}><Plus className="h-3 w-3" /></Button>
+            <Button size="icon" variant="ghost" className="h-6 w-6 rounded-md hover:bg-white/10 text-white" onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_rows: Math.max(3, rows - 1) } } })}><Minus className="h-3 w-3" /></Button>
+            <span className="w-5 text-center font-mono text-xs font-bold text-white">{rows}</span>
+            <Button size="icon" variant="ghost" className="h-6 w-6 rounded-md hover:bg-white/10 text-white" onClick={() => sizeM.mutate({ data: { id: cafe.id, patch: { floor_rows: Math.min(30, rows + 1) } } })}><Plus className="h-3 w-3" /></Button>
           </div>
-          <Button size="sm" className="gap-1.5" style={{ background: "var(--gradient-brand-hot)" }} onClick={() => setAdding({ x: 0, y: 0 })}>
-            <Plus className="h-3.5 w-3.5" /> New station
+
+          <Button
+            size="sm"
+            className="gap-1.5 text-xs font-bold text-white shadow-lg shadow-pink-500/20 hover:scale-[1.02] active:scale-[0.98] transition"
+            style={{ background: "var(--gradient-brand-hot)" }}
+            onClick={() => setAdding({ x: 0, y: 0 })}
+          >
+            <Plus className="h-3.5 w-3.5" /> Deploy New Rig
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
+      {/* Smart Floor Automation & Scale Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isAutoPlacing || tray.length === 0}
+            onClick={() => void autoPlaceAll()}
+            className="h-8 gap-1.5 text-xs font-medium rounded-xl border-white/10 bg-white/[0.03] hover:bg-white/10 text-foreground"
+          >
+            <Wand2 className="h-3.5 w-3.5 text-primary" />
+            {isAutoPlacing ? "Positioning Rigs…" : `Auto-Place Rigs (${tray.length})`}
+          </Button>
+          {placed.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => void clearAllToTray()}
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Unplace All
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-1 font-mono text-[10px]">
+          <span className="px-2 text-muted-foreground uppercase tracking-widest text-[9px]">Pod Scale:</span>
+          {(["compact", "normal", "spacious"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setScale(s)}
+              className={`px-2.5 py-1 rounded-lg uppercase transition ${
+                scale === s ? "bg-primary text-white font-bold shadow-sm" : "text-muted-foreground hover:text-white"
+              }`}
+            >
+              {s === "compact" ? "S" : s === "normal" ? "M" : "L"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
         {/* Floor canvas */}
-        <div className="relative overflow-auto rounded-3xl border border-border/60 bg-[radial-gradient(120%_80%_at_50%_-10%,oklch(0.18_0.05_285)_0%,oklch(0.07_0.02_285)_60%)] p-4">
+        <div className="relative overflow-auto rounded-3xl border border-border/60 bg-[radial-gradient(120%_80%_at_50%_-10%,oklch(0.18_0.05_285)_0%,oklch(0.07_0.02_285)_60%)] p-4 shadow-2xl">
           <div
             className="grid"
             style={{
               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-              gridTemplateRows: `repeat(${rows}, minmax(112px, auto))`,
-              gap: 12,
+              gridTemplateRows: `repeat(${rows}, minmax(${scale === "compact" ? "92px" : scale === "spacious" ? "134px" : "112px"}, auto))`,
+              gap: scale === "compact" ? 8 : 12,
             }}
           >
             {Array.from({ length: cols * rows }).map((_, idx) => {
@@ -275,11 +430,11 @@ function FloorBuilder() {
                   {!dev && (
                     <button
                       onClick={() => setAdding({ x, y })}
-                      className="absolute inset-0 grid place-items-center text-muted-foreground/40 transition group-hover:text-primary"
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-2xl text-muted-foreground/30 transition-all duration-200 group-hover:text-primary group-hover:bg-primary/10 group-hover:border-primary/40"
                       aria-label={`Add station at ${x},${y}`}
                     >
-                      <Plus className="h-4 w-4" />
-                      <span className="absolute bottom-1 right-2 font-mono text-[9px] opacity-50">{x},{y}</span>
+                      <Plus className="h-4 w-4 transition-transform duration-200 group-hover:scale-125" />
+                      <span className="font-mono text-[9px] tracking-wider opacity-60">R{y + 1}:C{x + 1}</span>
                     </button>
                   )}
                   {dev && (() => {
@@ -326,21 +481,18 @@ function FloorBuilder() {
                           {active.state === "live" ? "● LIVE" : "✦ RESERVED"} · {cust}
                         </div>
                       )}
-                      <button
+                      <StationPod
+                        name={dev.name}
+                        type={dev.type as "pc" | "console" | "vr" | "racing" | "other"}
+                        status={effectiveStatus}
+                        hourlyRate={dev.hourly_rate}
+                        accent={dev.zone_color}
+                        caption={caption}
+                        className="w-full"
+                        title="Click for station details · Right-click to unplace"
                         onClick={() => setSelectedStation(dev as unknown as StationInfo)}
                         onContextMenu={(e) => { e.preventDefault(); sendToTray(dev.id); }}
-                        className="block w-full text-left"
-                        title="Click for station details · Right-click to unplace"
-                      >
-                        <StationPod
-                          name={dev.name}
-                          type={dev.type as "pc" | "console" | "vr" | "racing" | "other"}
-                          status={effectiveStatus}
-                          hourlyRate={dev.hourly_rate}
-                          accent={dev.zone_color}
-                          caption={caption}
-                        />
-                      </button>
+                      />
                     </div>
                     );
                   })()}
@@ -353,38 +505,75 @@ function FloorBuilder() {
 
         {/* Right tray */}
         <aside className="space-y-3">
-          <div className="rounded-2xl border border-border/60 bg-card/40 p-3 backdrop-blur">
-            <div className="flex items-center gap-2">
-              <Move className="h-3.5 w-3.5 text-azure" />
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Unplaced ({tray.length})</div>
+          <div className="rounded-2xl border border-border/60 bg-card/40 p-3.5 backdrop-blur shadow-xl">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Move className="h-3.5 w-3.5 text-azure" />
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                  Staging ({tray.length})
+                </div>
+              </div>
+              {tray.length > 0 && (
+                <span className="rounded-full bg-azure/10 border border-azure/20 px-2 py-0.5 font-mono text-[9px] text-azure">
+                  Drag to Floor
+                </span>
+              )}
             </div>
-            <div className="mt-2 space-y-2">
+
+            {tray.length > 3 && (
+              <div className="relative mt-2.5">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
+                <input
+                  value={trayQuery}
+                  onChange={(e) => setTrayQuery(e.target.value)}
+                  placeholder="Filter staging…"
+                  className="h-8 w-full rounded-xl border border-white/10 bg-background/50 pl-8 pr-3 text-xs placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none"
+                />
+              </div>
+            )}
+
+            <div className="mt-3 space-y-2 max-h-[380px] overflow-y-auto pr-1">
               {tray.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border/40 p-4 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Everything is on the floor
+                <div className="rounded-xl border border-dashed border-border/40 p-5 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Everything is deployed on the floor
                 </div>
-              ) : tray.map((d) => (
-                <div
-                  key={d.id}
-                  draggable
-                  onDragStart={(e) => { e.dataTransfer.setData("text/plain", d.id); setDraggingId(d.id); }}
-                  onDragEnd={() => setDraggingId(null)}
-                  className={`flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-background/40 px-2.5 py-2 transition hover:border-primary/40 hover:bg-background/60 ${
-                    draggingId === d.id ? "opacity-50" : "cursor-grab active:cursor-grabbing"
-                  }`}
-                  title="Drag onto a floor cell"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold">{d.name}</div>
-                    <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-                      {d.type} · ₹{d.hourly_rate}
+              ) : filteredTray.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/40 p-4 text-center font-mono text-[10px] text-muted-foreground">
+                  No matching staging stations
+                </div>
+              ) : (
+                filteredTray.map((d) => (
+                  <div
+                    key={d.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", d.id);
+                      setDraggingId(d.id);
+                    }}
+                    onDragEnd={() => setDraggingId(null)}
+                    className={`flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-background/40 px-3 py-2.5 transition hover:border-primary/40 hover:bg-background/60 shadow-sm ${
+                      draggingId === d.id ? "opacity-50" : "cursor-grab active:cursor-grabbing"
+                    }`}
+                    title="Drag onto any floor cell"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold">{d.name}</div>
+                      <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+                        {d.type} · ₹{d.hourly_rate}
+                        {d.zone && ` · ${d.zone}`}
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(d)}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground transition"
+                      aria-label={`Edit ${d.name}`}
+                    >
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <button onClick={() => setEditing(d)} className="rounded-md p-1 text-muted-foreground hover:bg-background/60 hover:text-foreground">
-                    <MoreHorizontal className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -515,7 +704,14 @@ function FloorBuilder() {
               <SheetFooter className="flex-row justify-between gap-2 pt-2">
                 <Button
                   type="button" variant="ghost" className="gap-1.5 text-destructive hover:text-destructive"
-                  onClick={() => { if (confirm(`Delete ${editing.name}?`)) delM.mutate({ data: { id: editing.id } }); }}
+                  onClick={() =>
+                    setConfirmAction({
+                      title: `Delete ${editing.name}?`,
+                      description: "This permanently removes the station from your floor plan.",
+                      confirmLabel: "Delete Station",
+                      onConfirm: () => delM.mutateAsync({ data: { id: editing.id } }),
+                    })
+                  }
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Delete
                 </Button>
@@ -566,6 +762,15 @@ function FloorBuilder() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        open={!!confirmAction}
+        onOpenChange={(o) => !o && setConfirmAction(null)}
+        title={confirmAction?.title ?? ""}
+        description={confirmAction?.description}
+        confirmLabel={confirmAction?.confirmLabel ?? "Confirm"}
+        onConfirm={() => confirmAction?.onConfirm()}
+      />
     </div>
   );
 }

@@ -16,7 +16,11 @@ export function useIdleLogout(timeoutMs = 30 * 60 * 1000) {
     let timer: number | undefined;
 
     const signOut = async () => {
-      try { await supabase.auth.signOut(); } catch {}
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        /* ignore signout error */
+      }
       toast.message("Signed out for inactivity", {
         description: "You were idle for 30 minutes.",
       });
@@ -29,7 +33,11 @@ export function useIdleLogout(timeoutMs = 30 * 60 * 1000) {
     };
 
     const bump = () => {
-      try { localStorage.setItem(STORAGE_KEY, String(Date.now())); } catch {}
+      try {
+        localStorage.setItem(STORAGE_KEY, String(Date.now()));
+      } catch {
+        /* ignore storage error */
+      }
       schedule();
     };
 
@@ -38,7 +46,12 @@ export function useIdleLogout(timeoutMs = 30 * 60 * 1000) {
     };
 
     const events = [
-      "mousemove", "mousedown", "keydown", "touchstart", "scroll", "visibilitychange",
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "touchstart",
+      "scroll",
+      "visibilitychange",
     ] as const;
     events.forEach((ev) => window.addEventListener(ev, bump, { passive: true }));
     window.addEventListener("storage", onStorage);

@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/EmptyState";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
+import { ConfirmModal } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/devices")({
@@ -53,6 +54,7 @@ function DevicesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<null | { id: string; name: string; type: string; hourly_rate: number; status: string }>(null);
   const [controlling, setControlling] = useState<null | { id: string; name: string }>(null);
+  const [deleteTarget, setDeleteTarget] = useState<null | { id: string; name: string }>(null);
 
   const createM = useMutation({
     mutationFn: create,
@@ -140,7 +142,7 @@ function DevicesPage() {
                       <Button size="icon" variant="ghost" onClick={() => setEditing({ id: d.id, name: d.name, type: d.type, hourly_rate: d.hourly_rate, status: d.status })}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete device?")) delM.mutate({ data: { id: d.id } }); }}>
+                      <Button size="icon" variant="ghost" onClick={() => setDeleteTarget({ id: d.id, name: d.name })}>
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>
                     </td>
@@ -202,6 +204,15 @@ function DevicesPage() {
         device={controlling}
         onClose={() => setControlling(null)}
       />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={`Delete ${deleteTarget?.name ?? "device"}?`}
+        description="This removes the device from your floor and cannot be undone."
+        confirmLabel="Delete Device"
+        onConfirm={() => deleteTarget ? delM.mutateAsync({ data: { id: deleteTarget.id } }) : Promise.resolve()}
+      />
     </div>
   );
 }
@@ -212,6 +223,7 @@ function DeviceControlDialog({ cafeId, device, onClose }: { cafeId: string; devi
   const cx = useServerFn(cancelDeviceCommand);
   const qc = useQueryClient();
   const [message, setMessage] = useState("");
+  const [confirmCmd, setConfirmCmd] = useState<{ cmd: DeviceCommand; label: string } | null>(null);
 
   const cmdQ = useQuery({
     queryKey: ["devcmds", device?.id],
@@ -259,7 +271,10 @@ function DeviceControlDialog({ cafeId, device, onClose }: { cafeId: string; devi
               variant={a.tone === "destructive" ? "destructive" : "outline"}
               className="h-16 flex-col gap-1"
               onClick={() => {
-                if (a.tone === "destructive" && !confirm(`${a.label}?`)) return;
+                if (a.tone === "destructive") {
+                  setConfirmCmd({ cmd: a.cmd, label: a.label });
+                  return;
+                }
                 send(a.cmd);
               }}
               disabled={createM.isPending}
@@ -307,6 +322,17 @@ function DeviceControlDialog({ cafeId, device, onClose }: { cafeId: string; devi
         </div>
 
         <DialogFooter><Button variant="ghost" onClick={onClose}>Close</Button></DialogFooter>
+
+        <ConfirmModal
+          open={!!confirmCmd}
+          onOpenChange={(o) => !o && setConfirmCmd(null)}
+          title={`${confirmCmd?.label ?? "Run command"} on ${device?.name ?? "station"}?`}
+          description="This queues an immediate remote power/session command for the device agent."
+          confirmLabel={confirmCmd?.label ?? "Confirm"}
+          onConfirm={() => {
+            if (confirmCmd) send(confirmCmd.cmd);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

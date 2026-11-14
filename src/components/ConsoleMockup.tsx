@@ -23,7 +23,10 @@ export function ConsoleMockup() {
     mx.set(((e.clientX - r.left) / r.width - 0.5) * 2);
     my.set(((e.clientY - r.top) / r.height - 0.5) * 2);
   }
-  function onLeave() { mx.set(0); my.set(0); }
+  function onLeave() {
+    mx.set(0);
+    my.set(0);
+  }
 
   // Animate the "Today's revenue" counter to feel live
   const [rev, setRev] = useState(18420);
@@ -73,7 +76,9 @@ export function ConsoleMockup() {
           <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] lg:grid-cols-[140px_1fr] min-h-[300px] sm:min-h-[360px]">
             {/* Sidebar — hidden on mobile */}
             <div className="hidden sm:block border-r border-white/5 bg-white/[0.02] p-3 text-[11px] text-white/70">
-              <div className="mb-2 px-2 font-mono text-[9px] uppercase tracking-[0.25em] text-white/30">Console</div>
+              <div className="mb-2 px-2 font-mono text-[9px] uppercase tracking-[0.25em] text-white/30">
+                Console
+              </div>
               {[
                 { l: "Overview", a: true },
                 { l: "Devices", a: false },
@@ -101,16 +106,22 @@ export function ConsoleMockup() {
             <div className="p-3 sm:p-4 min-w-0">
               {/* KPI row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-
                 {[
                   { l: "Active", v: "24", i: Cpu, c: "text-violet-300" },
-                  { l: "Revenue", v: `₹${rev.toLocaleString("en-IN")}`, i: IndianRupee, c: "text-rose-300" },
+                  {
+                    l: "Revenue",
+                    v: `₹${rev.toLocaleString("en-IN")}`,
+                    i: IndianRupee,
+                    c: "text-rose-300",
+                  },
                   { l: "Devices", v: "30/30", i: Wifi, c: "text-sky-300" },
                   { l: "Members", v: "612", i: Users, c: "text-amber-300" },
                 ].map((k) => (
                   <div key={k.l} className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-white/40">{k.l}</span>
+                      <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-white/40">
+                        {k.l}
+                      </span>
                       <k.i className={`h-3 w-3 ${k.c}`} />
                     </div>
                     <div className={`mt-1 font-mono text-sm font-bold ${k.c}`}>{k.v}</div>
@@ -122,7 +133,9 @@ export function ConsoleMockup() {
               <div className="mt-3 grid grid-cols-[1.6fr_1fr] gap-2">
                 <div className="rounded-lg border border-white/5 bg-white/[0.03] p-3">
                   <div className="flex items-center justify-between">
-                    <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/40">Revenue · 7d</div>
+                    <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/40">
+                      Revenue · 7d
+                    </div>
                     <div className="flex items-center gap-1 font-mono text-[10px] text-emerald-300">
                       <ArrowUpRight className="h-3 w-3" /> +18.2%
                     </div>
@@ -151,10 +164,17 @@ export function ConsoleMockup() {
                   </svg>
                 </div>
                 <div className="rounded-lg border border-white/5 bg-white/[0.03] p-3">
-                  <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/40">Floor map</div>
+                  <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/40">
+                    Floor map
+                  </div>
                   <div className="mt-2 grid grid-cols-6 gap-1">
                     {Array.from({ length: 30 }).map((_, i) => {
-                      const states = ["bg-emerald-400/70", "bg-rose-400/70", "bg-sky-400/70", "bg-white/10"];
+                      const states = [
+                        "bg-emerald-400/70",
+                        "bg-rose-400/70",
+                        "bg-sky-400/70",
+                        "bg-white/10",
+                      ];
                       const s = states[(i * 7) % states.length];
                       return (
                         <motion.div

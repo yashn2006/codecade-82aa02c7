@@ -1,12 +1,34 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Clock, IndianRupee, Phone, User, Cpu, Plus, StopCircle, UserX, Undo2, X, Check, Wallet } from "lucide-react";
+import {
+  Clock,
+  IndianRupee,
+  Phone,
+  User,
+  Cpu,
+  Plus,
+  StopCircle,
+  UserX,
+  Undo2,
+  X,
+  Check,
+  Wallet,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmModal, DepositModal } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { updateBookingStatus, cancelBookingWithRefund, refundBookingDeposit, extendBooking, endBookingEarly, payBookingDeposit, markBookingDeposit } from "@/lib/bookings.functions";
+import {
+  updateBookingStatus,
+  cancelBookingWithRefund,
+  refundBookingDeposit,
+  extendBooking,
+  endBookingEarly,
+  payBookingDeposit,
+  markBookingDeposit,
+} from "@/lib/bookings.functions";
 
 export type BookingRow = {
   id: string;
@@ -32,7 +54,17 @@ function useCountdown(endMs: number) {
   return { label: `${mins}:${String(secs).padStart(2, "0")}`, past, diffMs: endMs - now };
 }
 
-export function BookingDetailDialog({ booking, open, onOpenChange, cafeId }: { booking: BookingRow | null; open: boolean; onOpenChange: (o: boolean) => void; cafeId?: string }) {
+export function BookingDetailDialog({
+  booking,
+  open,
+  onOpenChange,
+  cafeId,
+}: {
+  booking: BookingRow | null;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  cafeId?: string;
+}) {
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: ["bookings", cafeId] });
 
@@ -44,15 +76,75 @@ export function BookingDetailDialog({ booking, open, onOpenChange, cafeId }: { b
   const payDep = useServerFn(payBookingDeposit);
   const markDep = useServerFn(markBookingDeposit);
 
-  const setM = useMutation({ mutationFn: setStatus, onSuccess: () => { refresh(); toast.success("Updated"); } });
-  const cxlM = useMutation({ mutationFn: cxlRef, onSuccess: () => { refresh(); toast.success("Cancelled + refunded"); onOpenChange(false); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
-  const refM = useMutation({ mutationFn: refDep, onSuccess: () => { refresh(); toast.success("Deposit refunded"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
-  const extM = useMutation({ mutationFn: extend, onSuccess: (r) => { refresh(); toast.success(`Extended to ${r.duration_minutes}m`); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
-  const endM = useMutation({ mutationFn: endEarly, onSuccess: () => { refresh(); toast.success("Ended"); onOpenChange(false); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
-  const payM = useMutation({ mutationFn: payDep, onSuccess: () => { refresh(); toast.success("Paid from wallet"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
-  const depM = useMutation({ mutationFn: markDep, onSuccess: () => { refresh(); toast.success("Deposit updated"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
+  const setM = useMutation({
+    mutationFn: setStatus,
+    onSuccess: () => {
+      refresh();
+      toast.success("Updated");
+    },
+  });
+  const cxlM = useMutation({
+    mutationFn: cxlRef,
+    onSuccess: () => {
+      refresh();
+      toast.success("Cancelled + refunded");
+      onOpenChange(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const refM = useMutation({
+    mutationFn: refDep,
+    onSuccess: () => {
+      refresh();
+      toast.success("Deposit refunded");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const extM = useMutation({
+    mutationFn: extend,
+    onSuccess: (r) => {
+      refresh();
+      toast.success(`Extended to ${r.duration_minutes}m`);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const endM = useMutation({
+    mutationFn: endEarly,
+    onSuccess: () => {
+      refresh();
+      toast.success("Ended");
+      onOpenChange(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const payM = useMutation({
+    mutationFn: payDep,
+    onSuccess: () => {
+      refresh();
+      toast.success("Paid from wallet");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const depM = useMutation({
+    mutationFn: markDep,
+    onSuccess: () => {
+      refresh();
+      toast.success("Deposit updated");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
 
-  const endMs = booking ? new Date(booking.scheduled_at).getTime() + booking.duration_minutes * 60000 : 0;
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    onConfirm: () => Promise<unknown> | void;
+  } | null>(null);
+
+  const endMs = booking
+    ? new Date(booking.scheduled_at).getTime() + booking.duration_minutes * 60000
+    : 0;
   const cd = useCountdown(endMs);
 
   // 5-min-to-end toast
@@ -78,75 +170,244 @@ export function BookingDetailDialog({ booking, open, onOpenChange, cafeId }: { b
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-2">
             <span>Booking detail</span>
-            <Badge variant={b.status === "confirmed" ? "default" : b.status === "cancelled" || b.status === "no_show" ? "destructive" : b.status === "completed" ? "secondary" : "outline"}>{b.status}</Badge>
+            <Badge
+              variant={
+                b.status === "confirmed"
+                  ? "default"
+                  : b.status === "cancelled" || b.status === "no_show"
+                    ? "destructive"
+                    : b.status === "completed"
+                      ? "secondary"
+                      : "outline"
+              }
+            >
+              {b.status}
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
           <div className="rounded-xl border border-border/60 bg-card/40 p-3">
-            <div className="flex items-center gap-2 text-sm"><User className="h-4 w-4 text-azure" /> <span className="font-medium">{b.customers?.full_name ?? "—"}</span></div>
+            <div className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4 text-azure" />{" "}
+              <span className="font-medium">{b.customers?.full_name ?? "—"}</span>
+            </div>
             {b.customers?.phone && (
-              <a href={`tel:${b.customers.phone}`} className="mt-1 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"><Phone className="h-3 w-3" /> {b.customers.phone}</a>
+              <a
+                href={`tel:${b.customers.phone}`}
+                className="mt-1 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Phone className="h-3 w-3" /> {b.customers.phone}
+              </a>
             )}
-            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Cpu className="h-3 w-3" /> {b.devices?.name ?? "—"} · {b.devices?.type ?? ""}</div>
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <Cpu className="h-3 w-3" /> {b.devices?.name ?? "—"} · {b.devices?.type ?? ""}
+            </div>
           </div>
 
           <div className="rounded-xl border border-border/60 bg-card/40 p-3">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Session</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Session
+            </div>
             <div className="mt-1 text-sm">
-              {new Date(b.scheduled_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {b.duration_minutes} min
+              {new Date(b.scheduled_at).toLocaleString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              · {b.duration_minutes} min
             </div>
             {active && (
               <div className="mt-2 flex items-center gap-2">
-                <Clock className={`h-4 w-4 ${cd.past ? "text-rose-400" : cd.diffMs < 5 * 60000 ? "text-amber-400" : "text-emerald-400"}`} />
-                <span className={`font-mono text-lg font-bold ${cd.past ? "text-rose-400" : cd.diffMs < 5 * 60000 ? "text-amber-400" : "text-emerald-400"}`}>
+                <Clock
+                  className={`h-4 w-4 ${cd.past ? "text-rose-400" : cd.diffMs < 5 * 60000 ? "text-amber-400" : "text-emerald-400"}`}
+                />
+                <span
+                  className={`font-mono text-lg font-bold ${cd.past ? "text-rose-400" : cd.diffMs < 5 * 60000 ? "text-amber-400" : "text-emerald-400"}`}
+                >
                   {cd.past ? `−${cd.label}` : cd.label}
                 </span>
-                <span className="text-xs text-muted-foreground">{cd.past ? "past end" : "remaining"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {cd.past ? "past end" : "remaining"}
+                </span>
               </div>
             )}
           </div>
 
           <div className="rounded-xl border border-border/60 bg-card/40 p-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-1.5"><IndianRupee className="h-3.5 w-3.5" /> Deposit</span>
-              <span className="font-mono">₹{dep.amount} · {dep.paid ? <span className="text-emerald-400">paid</span> : <span className="text-amber-400">pending</span>}</span>
+              <span className="flex items-center gap-1.5">
+                <IndianRupee className="h-3.5 w-3.5" /> Deposit
+              </span>
+              <span className="font-mono">
+                ₹{dep.amount} ·{" "}
+                {dep.paid ? (
+                  <span className="text-emerald-400">paid</span>
+                ) : (
+                  <span className="text-amber-400">pending</span>
+                )}
+              </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => {
-                const v = prompt("Deposit amount (₹):", String(dep.amount));
-                if (v === null) return;
-                const amt = Math.max(0, Number(v) || 0);
-                const paid = amt > 0 && confirm("Mark already paid (cash)? Cancel = deduct from wallet.");
-                if (amt > 0 && !paid) payM.mutate({ data: { id: b.id, amount: amt } });
-                else depM.mutate({ data: { id: b.id, deposit_amount: amt, deposit_paid: paid } });
-              }}>Set deposit</Button>
-              {dep.paid && <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs text-emerald-400" onClick={() => { if (confirm("Refund deposit to wallet?")) refM.mutate({ data: { id: b.id } }); }}><Wallet className="h-3 w-3" /> Refund</Button>}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => setDepositOpen(true)}
+              >
+                Set deposit
+              </Button>
+              {dep.paid && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 gap-1 text-xs text-emerald-400"
+                  onClick={() =>
+                    setConfirmAction({
+                      title: "Refund deposit to wallet?",
+                      description: `Return ₹${dep.amount} back to ${b.customers?.full_name ?? "the customer"}'s wallet.`,
+                      confirmLabel: "Refund Deposit",
+                      onConfirm: () => refM.mutateAsync({ data: { id: b.id } }),
+                    })
+                  }
+                >
+                  <Wallet className="h-3 w-3" /> Refund
+                </Button>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             {b.status === "pending" && (
               <>
-                <Button size="sm" className="gap-1" onClick={() => setM.mutate({ data: { id: b.id, status: "confirmed" } })}><Check className="h-4 w-4" /> Confirm</Button>
-                <Button size="sm" variant="destructive" className="gap-1" onClick={() => setM.mutate({ data: { id: b.id, status: "cancelled" } })}><X className="h-4 w-4" /> Reject</Button>
+                <Button
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => setM.mutate({ data: { id: b.id, status: "confirmed" } })}
+                >
+                  <Check className="h-4 w-4" /> Confirm
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="gap-1"
+                  onClick={() => setM.mutate({ data: { id: b.id, status: "cancelled" } })}
+                >
+                  <X className="h-4 w-4" /> Reject
+                </Button>
               </>
             )}
             {active && (
               <>
-                <Button size="sm" variant="outline" className="gap-1" onClick={() => extM.mutate({ data: { id: b.id, add_minutes: 15 } })}><Plus className="h-4 w-4" /> +15 min</Button>
-                <Button size="sm" variant="outline" className="gap-1" onClick={() => extM.mutate({ data: { id: b.id, add_minutes: 30 } })}><Plus className="h-4 w-4" /> +30 min</Button>
-                <Button size="sm" variant="outline" className="gap-1" onClick={() => { if (confirm("End session now?")) endM.mutate({ data: { id: b.id } }); }}><StopCircle className="h-4 w-4" /> End early</Button>
-                <Button size="sm" variant="outline" className="gap-1 text-amber-400" onClick={() => { if (confirm("Mark as no-show?")) setM.mutate({ data: { id: b.id, status: "no_show" } }); }}><UserX className="h-4 w-4" /> No-show</Button>
-                <Button size="sm" variant="destructive" className="col-span-2 gap-1" onClick={() => { if (confirm("Cancel & refund deposit?")) cxlM.mutate({ data: { id: b.id } }); }}><Undo2 className="h-4 w-4" /> Cancel & refund</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => extM.mutate({ data: { id: b.id, add_minutes: 15 } })}
+                >
+                  <Plus className="h-4 w-4" /> +15 min
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => extM.mutate({ data: { id: b.id, add_minutes: 30 } })}
+                >
+                  <Plus className="h-4 w-4" /> +30 min
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() =>
+                    setConfirmAction({
+                      title: "End session early?",
+                      description: "This will mark the booking as completed right now.",
+                      confirmLabel: "End Session",
+                      onConfirm: () => endM.mutateAsync({ data: { id: b.id } }),
+                    })
+                  }
+                >
+                  <StopCircle className="h-4 w-4" /> End early
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 text-amber-400"
+                  onClick={() =>
+                    setConfirmAction({
+                      title: "Mark booking as no-show?",
+                      description: `Flag ${b.customers?.full_name ?? "customer"} as a no-show for this reservation.`,
+                      confirmLabel: "Mark No-Show",
+                      onConfirm: () => setM.mutateAsync({ data: { id: b.id, status: "no_show" } }),
+                    })
+                  }
+                >
+                  <UserX className="h-4 w-4" /> No-show
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="col-span-2 gap-1"
+                  onClick={() =>
+                    setConfirmAction({
+                      title: "Cancel & refund deposit?",
+                      description: "Cancels this booking and refunds any paid deposit to the customer's wallet.",
+                      confirmLabel: "Cancel & Refund",
+                      onConfirm: () => cxlM.mutateAsync({ data: { id: b.id } }),
+                    })
+                  }
+                >
+                  <Undo2 className="h-4 w-4" /> Cancel & refund
+                </Button>
               </>
             )}
             {b.status === "no_show" && (
-              <Button size="sm" variant="destructive" className="col-span-2 gap-1" onClick={() => { if (confirm("Delete this no-show?")) setM.mutate({ data: { id: b.id, status: "cancelled" } }); }}><X className="h-4 w-4" /> Delete no-show</Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="col-span-2 gap-1"
+                onClick={() =>
+                  setConfirmAction({
+                    title: "Clear this no-show?",
+                    description: "Marks this reservation as cancelled and clears the active no-show state.",
+                    confirmLabel: "Clear No-Show",
+                    onConfirm: () => setM.mutateAsync({ data: { id: b.id, status: "cancelled" } }),
+                  })
+                }
+              >
+                <X className="h-4 w-4" /> Delete no-show
+              </Button>
             )}
           </div>
         </div>
       </DialogContent>
+
+      <DepositModal
+        open={depositOpen}
+        onOpenChange={setDepositOpen}
+        initialAmount={dep.amount}
+        customerName={b.customers?.full_name ?? null}
+        onSubmit={async ({ amount, mode }) => {
+          if (amount > 0 && mode === "wallet") {
+            await payM.mutateAsync({ data: { id: b.id, amount } });
+          } else {
+            await depM.mutateAsync({
+              data: { id: b.id, deposit_amount: amount, deposit_paid: amount > 0 },
+            });
+          }
+        }}
+      />
+
+      <ConfirmModal
+        open={!!confirmAction}
+        onOpenChange={(o) => !o && setConfirmAction(null)}
+        title={confirmAction?.title ?? ""}
+        description={confirmAction?.description}
+        confirmLabel={confirmAction?.confirmLabel ?? "Confirm"}
+        onConfirm={() => confirmAction?.onConfirm()}
+      />
     </Dialog>
   );
 }

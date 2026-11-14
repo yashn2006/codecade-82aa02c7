@@ -290,3 +290,35 @@ export const getMyTournaments = createServerFn({ method: "GET" })
 
     return { mine, upcoming: upcoming ?? [] };
   });
+
+export const customerSubmitTopupProof = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      cafe_id: z.string().uuid(),
+      customer_id: z.string().uuid(),
+      amount: z.number().int().min(1),
+      utr_number: z.string().min(4).max(60),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: customer } = await supabaseAdmin
+      .from("customers")
+      .select("id, user_id, cafe_id")
+      .eq("id", data.customer_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (!customer) throw new Error("Customer record not found");
+
+    const { error } = await supabaseAdmin.rpc("apply_wallet_tx", {
+      _customer_id: data.customer_id,
+      _cafe_id: data.cafe_id,
+      _amount: data.amount,
+      _kind: "topup",
+      _note: `UPI Top-up (UTR: ${data.utr_number.trim()})`,
+    });
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });

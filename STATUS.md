@@ -13,19 +13,19 @@
 
 ## 0. TL;DR — What must happen before launch
 
-| Priority | Item | Effort |
-|----------|------|--------|
-| 🔴 P0 | Fix "dashboard empty until I click another section and come back" | 2h |
-| 🔴 P0 | Fix "click a nav item — nothing happens, need to click again" | 1h |
-| 🔴 P0 | Admin → Café Owner direct messaging (inbox both sides) | 4h |
-| 🔴 P0 | Admin manual subscription extend (calendar picker + audit log) | 2h |
-| 🔴 P0 | Café Owner uploads UPI QR — customers see QR at checkout, owner marks paid | 3h |
-| 🔴 P0 | Booking detail view (PC/console/customer/time-left/paid?) for owner | 4h |
-| 🟡 P1 | Booking-end reminders for owner + staff (5 min before + on expiry) | 2h |
-| 🟡 P1 | Owner can delete no-show bookings | 30m |
-| 🟡 P1 | Admin "create café owner" that actually logs in (email + password + role in one txn) | 2h |
-| 🟢 P2 | Realtime toasts on new booking / payment / message | 2h |
-| 🟢 P2 | Email via Resend for credentials + trial reminders | 3h |
+| Priority | Item                                                                                 | Effort |
+| -------- | ------------------------------------------------------------------------------------ | ------ |
+| 🔴 P0    | Fix "dashboard empty until I click another section and come back"                    | 2h     |
+| 🔴 P0    | Fix "click a nav item — nothing happens, need to click again"                        | 1h     |
+| 🔴 P0    | Admin → Café Owner direct messaging (inbox both sides)                               | 4h     |
+| 🔴 P0    | Admin manual subscription extend (calendar picker + audit log)                       | 2h     |
+| 🔴 P0    | Café Owner uploads UPI QR — customers see QR at checkout, owner marks paid           | 3h     |
+| 🔴 P0    | Booking detail view (PC/console/customer/time-left/paid?) for owner                  | 4h     |
+| 🟡 P1    | Booking-end reminders for owner + staff (5 min before + on expiry)                   | 2h     |
+| 🟡 P1    | Owner can delete no-show bookings                                                    | 30m    |
+| 🟡 P1    | Admin "create café owner" that actually logs in (email + password + role in one txn) | 2h     |
+| 🟢 P2    | Realtime toasts on new booking / payment / message                                   | 2h     |
+| 🟢 P2    | Email via Resend for credentials + trial reminders                                   | 3h     |
 
 Total ~26 hours of focused work. Achievable in one long day + one polish morning.
 
@@ -57,6 +57,7 @@ Total ~26 hours of focused work. Achievable in one long day + one polish morning
 ```
 
 **Three portals, one codebase:**
+
 1. `/admin` — super admin (platform owner: you)
 2. `/owner` and `/cafe/$slug/*` — café owners (paying customers)
 3. `/portal` — end customers (gamers who book PCs/consoles)
@@ -83,46 +84,46 @@ Plus public marketing: `/`, `/discover`, `/c/$slug` (public café page), `/auth`
 
 All routes live under `src/routes/_authenticated/admin.*.tsx`:
 
-| Route | Status | Notes |
-|-------|--------|-------|
-| `admin.index` | ✅ | Overview: total cafés, active trials, MRR-lite, tickets |
-| `admin.cafes` | ✅ | List + edit any café, view owner, force-suspend |
-| `admin.users` | ✅ | List, create, ban, generate recovery link, `UserDetailDialog` shows auth details + roles + audit |
-| `admin.leads` | ✅ | Formspree/website leads inbox |
-| `admin.support` | ✅ | All support tickets across all cafés |
-| `admin.revenue` | ✅ | Manual + observed revenue view |
-| `admin.reports` | ✅ | CSV export by table |
-| `admin.audit` | ✅ | Full audit log with filters |
-| `admin.announcements` | ✅ | Broadcast to owners |
-| `admin.health` | ✅ | Realtime channel + DB latency probes |
-| `admin.backups` | ✅ | Per-table JSON export + full snapshot |
-| `admin.api-keys` | ✅ | Rotate Supabase / Razorpay / Lovable creds |
-| `admin.config` | ✅ | Feature flags + platform config |
-| `admin.settings` | ✅ | Wiring into the above |
+| Route                 | Status | Notes                                                                                            |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------------ |
+| `admin.index`         | ✅     | Overview: total cafés, active trials, MRR-lite, tickets                                          |
+| `admin.cafes`         | ✅     | List + edit any café, view owner, force-suspend                                                  |
+| `admin.users`         | ✅     | List, create, ban, generate recovery link, `UserDetailDialog` shows auth details + roles + audit |
+| `admin.leads`         | ✅     | Formspree/website leads inbox                                                                    |
+| `admin.support`       | ✅     | All support tickets across all cafés                                                             |
+| `admin.revenue`       | ✅     | Manual + observed revenue view                                                                   |
+| `admin.reports`       | ✅     | CSV export by table                                                                              |
+| `admin.audit`         | ✅     | Full audit log with filters                                                                      |
+| `admin.announcements` | ✅     | Broadcast to owners                                                                              |
+| `admin.health`        | ✅     | Realtime channel + DB latency probes                                                             |
+| `admin.backups`       | ✅     | Per-table JSON export + full snapshot                                                            |
+| `admin.api-keys`      | ✅     | Rotate Supabase / Razorpay / Lovable creds                                                       |
+| `admin.config`        | ✅     | Feature flags + platform config                                                                  |
+| `admin.settings`      | ✅     | Wiring into the above                                                                            |
 
 ### 2.3 Café Owner Portal (`/owner`, `/cafe/$slug/*`)
 
-| Route | Status | Notes |
-|-------|--------|-------|
-| `owner` | ✅ | Multi-café switcher, per-café KPIs |
-| `owner_.help` | ✅ | Getting-started + FAQ |
-| `cafe.$slug.index` | ✅ | Dashboard: today's sessions, revenue, occupancy |
-| `cafe.$slug.floor` | ✅ | Station pods with live status |
-| `cafe.$slug.devices` | ✅ | Register PCs / consoles / VR rigs |
-| `cafe.$slug.bookings` | ⚠️ | List works. **Booking detail view is thin — see §4** |
-| `cafe.$slug.pos` | ✅ | Cash / UPI / card entries |
-| `cafe.$slug.menu` | ✅ | Items + CSV bulk import |
-| `cafe.$slug.customers` | ✅ | CRM view |
-| `cafe.$slug.memberships` | ✅ | Membership tiers |
-| `cafe.$slug.tournaments` + `$id` | ✅ | Create + bracket view |
-| `cafe.$slug.wallet` | ✅ | Store credit balances |
-| `cafe.$slug.ledger` | ✅ | Immutable financial ledger |
-| `cafe.$slug.staff` | ✅ | Staff invites + roles |
-| `cafe.$slug.support` | ✅ | Per-café tickets to platform admin |
-| `cafe.$slug.page` | ⚠️ | Public page editor. Theme change persists (v20 fixed the Zod schema). UPI ID + QR fields present. |
-| `cafe.$slug.reports` | ✅ | Sales + session CSVs |
-| `cafe.$slug.audit` | ✅ | Per-café audit trail |
-| `cafe.$slug.analytics` | ✅ | Charts (Recharts) |
+| Route                            | Status | Notes                                                                                             |
+| -------------------------------- | ------ | ------------------------------------------------------------------------------------------------- |
+| `owner`                          | ✅     | Multi-café switcher, per-café KPIs                                                                |
+| `owner_.help`                    | ✅     | Getting-started + FAQ                                                                             |
+| `cafe.$slug.index`               | ✅     | Dashboard: today's sessions, revenue, occupancy                                                   |
+| `cafe.$slug.floor`               | ✅     | Station pods with live status                                                                     |
+| `cafe.$slug.devices`             | ✅     | Register PCs / consoles / VR rigs                                                                 |
+| `cafe.$slug.bookings`            | ⚠️     | List works. **Booking detail view is thin — see §4**                                              |
+| `cafe.$slug.pos`                 | ✅     | Cash / UPI / card entries                                                                         |
+| `cafe.$slug.menu`                | ✅     | Items + CSV bulk import                                                                           |
+| `cafe.$slug.customers`           | ✅     | CRM view                                                                                          |
+| `cafe.$slug.memberships`         | ✅     | Membership tiers                                                                                  |
+| `cafe.$slug.tournaments` + `$id` | ✅     | Create + bracket view                                                                             |
+| `cafe.$slug.wallet`              | ✅     | Store credit balances                                                                             |
+| `cafe.$slug.ledger`              | ✅     | Immutable financial ledger                                                                        |
+| `cafe.$slug.staff`               | ✅     | Staff invites + roles                                                                             |
+| `cafe.$slug.support`             | ✅     | Per-café tickets to platform admin                                                                |
+| `cafe.$slug.page`                | ⚠️     | Public page editor. Theme change persists (v20 fixed the Zod schema). UPI ID + QR fields present. |
+| `cafe.$slug.reports`             | ✅     | Sales + session CSVs                                                                              |
+| `cafe.$slug.audit`               | ✅     | Per-café audit trail                                                                              |
+| `cafe.$slug.analytics`           | ✅     | Charts (Recharts)                                                                                 |
 
 ### 2.4 Customer Portal (`/portal`) + Public
 
@@ -169,9 +170,9 @@ All routes live under `src/routes/_authenticated/admin.*.tsx`:
 #### Bug: "Dashboard is empty until I click another section and come back"
 
 - **Symptom:** After sign-in the first render of any dashboard route shows zero rows. Navigate to another tab and back → data appears.
-- **Root cause:** The Supabase bearer token attach middleware reads `supabase.auth.getSession()` per server-fn call. On the very first paint after login, `getSession()` sometimes resolves *after* the intent-preload has already fired the queries → those queries hit the server without an Authorization header → server returns 401 → TanStack Query caches the failure → the second navigation triggers `refetchOnMount: "always"` and it recovers.
+- **Root cause:** The Supabase bearer token attach middleware reads `supabase.auth.getSession()` per server-fn call. On the very first paint after login, `getSession()` sometimes resolves _after_ the intent-preload has already fired the queries → those queries hit the server without an Authorization header → server returns 401 → TanStack Query caches the failure → the second navigation triggers `refetchOnMount: "always"` and it recovers.
 - **What's already in place:** `refetchOnMount: "always"`, `retry: 2`, `getSupabaseUserReady()` waits for `access_token`, and `_authenticated/route.tsx` force-invalidates on mount with a 50ms timeout.
-- **Still needed:** replace `attachSupabaseAuth` with a version that awaits a cached in-memory session promise (populated once at bootstrap) instead of calling `getSession()` per request. Also change router `defaultPreloadStaleTime` handling so intent-preloads *don't* fire until the token promise resolves. Concrete plan:
+- **Still needed:** replace `attachSupabaseAuth` with a version that awaits a cached in-memory session promise (populated once at bootstrap) instead of calling `getSession()` per request. Also change router `defaultPreloadStaleTime` handling so intent-preloads _don't_ fire until the token promise resolves. Concrete plan:
   1. In `src/lib/supabase/auth-attacher.ts`, cache `supabase.auth.getSession()` in a module-level `Promise` and `await` it (instead of calling per invocation).
   2. On `SIGNED_IN` / `TOKEN_REFRESHED`, replace the cached promise.
   3. Add `await sessionReady()` inside the `attachSupabaseAuth` client middleware before returning headers.
@@ -205,6 +206,7 @@ All routes live under `src/routes/_authenticated/admin.*.tsx`:
 #### Missing: Rich booking detail view for owner
 
 Show per booking:
+
 - Customer name + phone
 - Device (which PC / console / VR)
 - Start → End time, minutes remaining (live countdown)
@@ -232,15 +234,15 @@ Show per booking:
 
 ### 4.4 Known glitches / paper cuts
 
-| # | Where | Symptom | Suggested fix |
-|---|-------|---------|---------------|
-| G1 | All dashboards | Empty on first paint | See §4.1 auth-attacher rewrite |
-| G2 | Mobile nav | Double-tap required | AnimatePresence mode change |
-| G3 | Café public page editor | Theme save sometimes needs refresh to show on `/c/$slug` | Emit a Supabase realtime `cafe_pages:UPDATE` and the public page will already re-render (broadcast trigger present, verify `REPLICA IDENTITY FULL` on `cafe_pages`) |
-| G4 | Discover | Search filter debounces at 300ms — feels slow on desktop | Drop to 120ms on desktop, keep 300ms on mobile |
-| G5 | NotificationBell | Occasional duplicate on Fast Refresh | Already fixed with channel-id randomisation; watch for regressions |
-| G6 | Sign-out | Rare 401 storm as cached queries refetch | Ensure `queryClient.cancelQueries()` runs *before* `signOut()` (already done in `ConsoleShell`, mirror in idle logout) |
-| G7 | Cloudflare | Env vars must be **Plaintext**, not Secrets, for build-time `VITE_*` | Documented in `DEPLOY.md`; re-verify before launch |
+| #   | Where                   | Symptom                                                              | Suggested fix                                                                                                                                                       |
+| --- | ----------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1  | All dashboards          | Empty on first paint                                                 | See §4.1 auth-attacher rewrite                                                                                                                                      |
+| G2  | Mobile nav              | Double-tap required                                                  | AnimatePresence mode change                                                                                                                                         |
+| G3  | Café public page editor | Theme save sometimes needs refresh to show on `/c/$slug`             | Emit a Supabase realtime `cafe_pages:UPDATE` and the public page will already re-render (broadcast trigger present, verify `REPLICA IDENTITY FULL` on `cafe_pages`) |
+| G4  | Discover                | Search filter debounces at 300ms — feels slow on desktop             | Drop to 120ms on desktop, keep 300ms on mobile                                                                                                                      |
+| G5  | NotificationBell        | Occasional duplicate on Fast Refresh                                 | Already fixed with channel-id randomisation; watch for regressions                                                                                                  |
+| G6  | Sign-out                | Rare 401 storm as cached queries refetch                             | Ensure `queryClient.cancelQueries()` runs _before_ `signOut()` (already done in `ConsoleShell`, mirror in idle logout)                                              |
+| G7  | Cloudflare              | Env vars must be **Plaintext**, not Secrets, for build-time `VITE_*` | Documented in `DEPLOY.md`; re-verify before launch                                                                                                                  |
 
 ---
 
@@ -452,23 +454,27 @@ Follow-up server functions to add (mirroring the RPCs): `src/lib/messages.functi
 ## 6. Launch checklist (24 hours)
 
 **T-24h**
+
 - [ ] Run `supabase-migration-v23.sql`
 - [ ] Ship auth-attacher rewrite (§4.1 first bug)
 - [ ] Ship AnimatePresence fix (§4.1 second bug)
 - [ ] Ship messaging tables + minimal UI (admin inbox, owner single thread)
 
 **T-12h**
+
 - [ ] Ship admin "Extend subscription" calendar modal
 - [ ] Ship UPI QR at checkout + owner "Mark paid" queue
 - [ ] Ship booking detail drawer + no-show delete
 - [ ] Mount `TrialBanner` in owner layout
 
 **T-6h**
+
 - [ ] Cloudflare env vars verified (Plaintext for VITE_*, Secret for service role)
 - [ ] Supabase Auth → Site URL and Redirect URLs include prod domain
 - [ ] Manual smoke: sign up → sign in → book → pay → owner marks paid → session ends → reminder fires
 
 **T-2h**
+
 - [ ] Publish
 - [ ] Announce
 - [ ] Watch `admin.health` for 15 min
@@ -501,4 +507,4 @@ Follow-up server functions to add (mirroring the RPCs): `src/lib/messages.functi
 
 ---
 
-*End of report. If anything is unclear, grep the file paths — every claim above maps to a concrete file.*
+_End of report. If anything is unclear, grep the file paths — every claim above maps to a concrete file._

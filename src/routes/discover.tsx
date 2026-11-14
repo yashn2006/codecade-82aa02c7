@@ -3,630 +3,797 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Star, Map as MapIcon, LayoutGrid, X, Filter, Gamepad2, Clock, Monitor } from "lucide-react";
+import {
+  Search,
+  MapPin,
+  Star,
+  Map as MapIcon,
+  LayoutGrid,
+  Filter,
+  Gamepad2,
+  Clock,
+  Monitor,
+  Zap,
+  ArrowRight,
+  ShieldCheck,
+  Compass,
+  Cpu,
+  Trophy,
+  X,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { BrandLockup } from "@/components/Brand";
-
+import { BookingFlow } from "@/components/BookingFlow";
+import discoverBg from "@/assets/images/discover_cyber_arena_1794330285407.jpg";
+import stationHeroImg from "@/assets/livefloor/station-hero.jpg";
 
 export const Route = createFileRoute("/discover")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Find Your Arena — CoreCade" },
-      { name: "description", content: "Book PCs, consoles and VR rigs at premium gaming cafés near you." },
-      { property: "og:title", content: "Find Your Arena — CoreCade" },
-      { property: "og:description", content: "Book PCs, consoles and VR rigs at premium gaming cafés near you." },
+      { title: "Find Your Perfect Arena — CoreCade" },
+      {
+        name: "description",
+        content: "Discover and book high-refresh RTX 40-series rigs, PS5 Pro setups and immersive VR bays across India's premier esports cafés.",
+      },
+      { property: "og:title", content: "Find Your Perfect Arena — CoreCade" },
+      {
+        property: "og:description",
+        content: "Discover and book high-refresh RTX 40-series rigs, PS5 Pro setups and immersive VR bays across India's premier esports cafés.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: DiscoverPage,
 });
 
 type Cafe = {
-  id: string; slug: string; name: string;
-  city: string | null; state: string | null;
-  description: string | null; cover_url: string | null;
+  id: string;
+  slug: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  address?: string | null;
+  description: string | null;
+  cover_url: string | null;
+  open_time?: string | null;
+  close_time?: string | null;
+  min_rate?: number;
+  device_count?: number;
+  active_sessions?: number;
+  free_count?: number;
+  device_types?: string[];
 };
 
-const POPULAR_CITIES = ["Mumbai", "Delhi", "Bangalore", "Pune", "Hyderabad"];
+const POPULAR_CITIES = ["All Cities", "Mumbai", "Bengaluru", "Delhi NCR", "Pune", "Hyderabad", "Chennai"];
 
-const MAGENTA = "#ff2e93";
-const BG = "#0a0a0f";
+const HARDWARE_FILTERS = [
+  { id: "all", label: "All Stations", icon: Gamepad2 },
+  { id: "pc", label: "RTX Rigs", icon: Monitor },
+  { id: "console", label: "PS5 & Consoles", icon: Cpu },
+  { id: "vr", label: "VR & Racing", icon: Zap },
+];
 
 function DiscoverPage() {
-  const fn = useServerFn(listPublicCafes);
-  const { data: cafes = [], isLoading } = useQuery<Cafe[]>({ queryKey: ["public-cafes"], queryFn: () => fn() });
+  const fetchCafes = useServerFn(listPublicCafes);
+  const { data: cafes = [], isLoading } = useQuery<Cafe[]>({
+    queryKey: ["public-cafes"],
+    queryFn: () => fetchCafes(),
+    refetchInterval: 30_000,
+  });
 
   const [query, setQuery] = useState("");
-  const [city, setCity] = useState<string>("all");
-  const [amenities, setAmenities] = useState<string[]>([]);
-  const [openNow, setOpenNow] = useState(false);
+  const [selectedCity, setSelectedCity] = useState("All Cities");
+  const [selectedHardware, setSelectedHardware] = useState("all");
   const [liveOnly, setLiveOnly] = useState(false);
-  const [minRating, setMinRating] = useState(0);
   const [view, setView] = useState<"grid" | "map">("grid");
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
+  const [selectedCafeForBooking, setSelectedCafeForBooking] = useState<Cafe | null>(null);
+  const [quickPeekCafe, setQuickPeekCafe] = useState<Cafe | null>(null);
+
   const [signedIn, setSignedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setSignedIn(!!data.user);
-      setEmail(data.user?.email ?? null);
+      setUserEmail(data.user?.email ?? null);
     });
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "/" && document.activeElement !== searchInputRef.current) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const cityList = useMemo(() => {
-    const s = new Set<string>();
-    cafes.forEach((c) => c.city && s.add(c.city));
-    return Array.from(s).sort();
+  const cities = useMemo(() => {
+    const list = new Set<string>();
+    cafes.forEach((c) => {
+      if (c.city) list.add(c.city.trim());
+    });
+    return Array.from(list).sort();
   }, [cafes]);
 
-  // Cafés with active sessions (only shown when the data actually reports them)
-  const liveCafes = useMemo(
-    () =>
-      cafes
-        .map((c) => ({ cafe: c, sessions: (c as Cafe & { active_sessions?: number }).active_sessions ?? 0 }))
-        .filter((x) => x.sessions > 0),
-    [cafes],
-  );
-  const liveIds = useMemo(() => new Set(liveCafes.map((x) => x.cafe.id)), [liveCafes]);
-
-  const filtered = useMemo(() => {
+  const filteredCafes = useMemo(() => {
     const q = query.trim().toLowerCase();
     return cafes.filter((c) => {
-      if (city !== "all" && c.city?.toLowerCase() !== city.toLowerCase()) return false;
-      if (liveOnly && !liveIds.has(c.id)) return false;
-      if (q && ![c.name, c.city, c.state, c.description].some((v) => v?.toLowerCase().includes(q))) return false;
+      if (selectedCity !== "All Cities") {
+        const cityMatch = c.city?.toLowerCase() === selectedCity.toLowerCase() ||
+          (selectedCity === "Delhi NCR" && (c.city?.toLowerCase().includes("delhi") || c.city?.toLowerCase().includes("noida") || c.city?.toLowerCase().includes("gurgaon")));
+        if (!cityMatch) return false;
+      }
+      if (selectedHardware !== "all") {
+        const types = (c.device_types ?? []).map((t) => t.toLowerCase());
+        if (selectedHardware === "pc" && !types.some((t) => t.includes("pc") || t.includes("rig"))) return false;
+        if (selectedHardware === "console" && !types.some((t) => t.includes("ps") || t.includes("xbox") || t.includes("console"))) return false;
+        if (selectedHardware === "vr" && !types.some((t) => t.includes("vr") || t.includes("sim") || t.includes("racing"))) return false;
+      }
+      if (liveOnly && (c.active_sessions ?? 0) === 0) return false;
+      if (q) {
+        const match = [c.name, c.city, c.state, c.description, c.address].some((v) =>
+          v?.toLowerCase().includes(q)
+        );
+        if (!match) return false;
+      }
       return true;
     });
-  }, [cafes, query, city, liveOnly, liveIds]);
+  }, [cafes, query, selectedCity, selectedHardware, liveOnly]);
+
+  const totalRigs = useMemo(() => cafes.reduce((sum, c) => sum + (c.device_count ?? 16), 0), [cafes]);
+  const activeSessionsCount = useMemo(() => cafes.reduce((sum, c) => sum + (c.active_sessions ?? 0), 0), [cafes]);
 
   return (
-    <div className="discover-bg relative min-h-screen antialiased text-white">
-      <div className="grid-pulse pointer-events-none fixed inset-0 z-0" aria-hidden />
-      <div className="relative z-10">
-      <Navbar signedIn={signedIn} email={email} />
-      <Hero
-        query={query} setQuery={setQuery}
-        city={city} setCity={setCity}
-        cityList={cityList}
-        liveOnly={liveOnly} setLiveOnly={setLiveOnly}
+    <div className="relative min-h-screen bg-[#07060d] text-foreground antialiased selection:bg-primary selection:text-white">
+      {/* Background Cyber Atmosphere */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center opacity-30 mix-blend-screen filter blur-[2px]"
+        style={{
+          backgroundImage: `url(${discoverBg})`,
+          maskImage: "radial-gradient(circle at 50% 25%, black 40%, transparent 90%)",
+        }}
+        aria-hidden
       />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(244,63,94,0.18),rgba(255,255,255,0))]" />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-grid-pattern opacity-[0.03]" />
 
+      <div className="relative z-10 flex min-h-screen flex-col">
+        {/* Top Navbar */}
+        <header className="mobile-keep-blur sticky top-0 z-40 border-b border-white/[0.08] bg-[#07060d]/80 backdrop-blur-xl transition-all">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 sm:py-3.5 lg:px-8">
+            <div className="flex items-center gap-6">
+              <BrandLockup size={28} to="/" />
+              <div className="hidden items-center gap-2 border-l border-white/10 pl-6 text-xs text-muted-foreground md:flex">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                <span>{cafes.length} Arenas Online</span>
+                <span className="text-white/20">·</span>
+                <span className="font-mono text-emerald-400">{activeSessionsCount} Active Gamers</span>
+              </div>
+            </div>
 
-      <section className="mx-auto max-w-[1200px] px-5 pb-24 sm:px-8">
-        {liveCafes.length > 0 && (
-          <div className="mb-10">
-            <h2 className="font-display text-lg font-bold sm:text-xl">🔴 Live Right Now</h2>
-            <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
-              {liveCafes.map(({ cafe, sessions }) => (
-                <Link
-                  key={cafe.id}
-                  to="/c/$slug" params={{ slug: cafe.slug }}
-                  className="glass-card flex shrink-0 items-center gap-2.5 rounded-full px-4 py-2 text-sm font-medium text-white"
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-                  </span>
-                  {cafe.name}
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white/80">{sessions} live</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                to="/features"
+                className="hidden text-xs font-semibold text-muted-foreground transition hover:text-white sm:block"
+              >
+                Features
+              </Link>
+              {signedIn ? (
+                <Link to="/portal">
+                  <Button
+                    size="sm"
+                    className="min-h-[40px] gap-2 text-xs font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+                    style={{ background: "var(--gradient-brand-hot)" }}
+                  >
+                    <Compass className="h-3.5 w-3.5" />
+                    <span>Gamer Portal</span>
+                  </Button>
                 </Link>
-              ))}
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link to="/auth">
+                    <Button variant="ghost" size="sm" className="min-h-[40px] text-xs text-white/80 hover:bg-white/10 hover:text-white">
+                      Sign in
+                    </Button>
+                  </Link>
+                  <Link to="/auth">
+                    <Button
+                      size="sm"
+                      className="min-h-[40px] text-xs font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5"
+                      style={{ background: "var(--gradient-brand-hot)" }}
+                    >
+                      Join Free
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </header>
 
-
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <h2 className="font-display text-2xl font-bold sm:text-3xl">Featured Arenas</h2>
-            <p className="mt-1 text-sm text-white/50">{filtered.length} {filtered.length === 1 ? "arena" : "arenas"} available</p>
-          </div>
-          <div className="flex items-center justify-between gap-2 sm:justify-end">
-            <button
-              onClick={() => setFiltersOpen(true)}
-              className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium backdrop-blur transition hover:border-white/25 hover:bg-white/10"
+        {/* HERO SECTION */}
+        <section className="relative overflow-hidden px-4 pt-12 pb-10 sm:px-6 sm:pt-20 lg:px-8">
+          <div className="mx-auto max-w-5xl text-center">
+            {/* Cyber Kicker */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-semibold text-primary backdrop-blur"
             >
-              <Filter className="h-4 w-4" /> Filters
-            </button>
-            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Real-Time Esports & Gaming Café Locator</span>
+            </motion.div>
+
+            {/* Giant Display Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="mt-4 font-display text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl"
+            >
+              FIND YOUR <span className="text-gradient-hot">PERFECT ARENA</span>.
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg"
+            >
+              Book 240Hz RTX 40-series rigs, 4K PS5 consoles and high-octane racing simulators with guaranteed seat locks in under 30 seconds.
+            </motion.p>
+
+            {/* HUD Telemetry Banner */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 }}
+              className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2 backdrop-blur-xl sm:grid-cols-4"
+            >
+              <div className="rounded-xl border border-white/5 bg-black/30 p-2.5 text-center">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Total Stations</div>
+                <div className="mt-0.5 font-display text-xl font-extrabold text-white">{totalRigs}+</div>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-black/30 p-2.5 text-center">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Starting Rate</div>
+                <div className="mt-0.5 font-display text-xl font-extrabold text-emerald-400">₹60 / hr</div>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-black/30 p-2.5 text-center">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Verified Cafés</div>
+                <div className="mt-0.5 font-display text-xl font-extrabold text-primary">{cafes.length}</div>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-black/30 p-2.5 text-center">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Seat Lock</div>
+                <div className="mt-0.5 font-display text-xl font-extrabold text-amber-300">Instant</div>
+              </div>
+            </motion.div>
+
+            {/* Next-Gen Interactive Search Deck */}
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="relative mx-auto mt-8 max-w-3xl"
+            >
+              <div className="group relative flex items-center rounded-2xl border border-white/15 bg-black/60 p-2 shadow-[0_0_50px_-15px_oklch(0.7_0.26_335/0.4)] backdrop-blur-2xl transition-all focus-within:border-primary/60 focus-within:shadow-[0_0_60px_-10px_oklch(0.7_0.26_335/0.6)]">
+                <Search className="ml-3 h-5 w-5 text-muted-foreground transition group-focus-within:text-primary" />
+                <Input
+                  ref={searchInputRef}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search arena name, locality, or gaming hardware (press '/' to focus)..."
+                  className="h-12 border-0 bg-transparent text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0 sm:text-base"
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    className="mr-2 rounded-lg p-1.5 text-muted-foreground hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                <Button
+                  type="button"
+                  onClick={() => searchInputRef.current?.focus()}
+                  className="hidden h-10 px-5 text-xs font-bold text-white shadow-md sm:flex"
+                  style={{ background: "var(--gradient-brand-hot)" }}
+                >
+                  Locate Rigs
+                </Button>
+              </div>
+
+              {/* City quick filter pills — swipeable rail on mobile */}
+              <div className="-mx-4 mt-4 flex flex-nowrap items-center justify-start gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:px-0">
+                {POPULAR_CITIES.map((c) => {
+                  const isSelected = selectedCity === c;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setSelectedCity(c)}
+                      className={`min-h-[40px] shrink-0 snap-start rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                        isSelected
+                          ? "border-primary bg-primary/20 text-white shadow-[0_0_15px_-3px_oklch(0.7_0.26_335/0.7)]"
+                          : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-white/20 hover:text-white"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* MAIN BODY: FILTERS & ARENA SHOWCASE */}
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 sm:px-6 lg:px-8">
+          {/* Controls Bar */}
+          <div className="mb-6 flex flex-col gap-3.5 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-center sm:justify-between">
+            {/* Hardware category filters — swipeable rail on mobile */}
+            <div className="-mx-4 flex flex-nowrap items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
+              {HARDWARE_FILTERS.map((h) => {
+                const Icon = h.icon;
+                const isSelected = selectedHardware === h.id;
+                return (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => setSelectedHardware(h.id)}
+                    className={`flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition ${
+                      isSelected
+                        ? "border-primary bg-primary/15 text-white shadow-[0_0_20px_-4px_oklch(0.7_0.26_335/0.8)]"
+                        : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-white/20 hover:text-white"
+                    }`}
+                  >
+                    <Icon className={`h-3.5 w-3.5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    <span>{h.label}</span>
+                  </button>
+                );
+              })}
+
               <button
-                onClick={() => setView("grid")}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${view === "grid" ? "text-white" : "text-white/50 hover:text-white/80"}`}
-                style={view === "grid" ? { background: MAGENTA } : undefined}
+                type="button"
+                onClick={() => setLiveOnly(!liveOnly)}
+                className={`flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition ${
+                  liveOnly
+                    ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300 shadow-[0_0_20px_-4px_rgba(16,185,129,0.7)]"
+                    : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-white/20 hover:text-white"
+                }`}
               >
-                <LayoutGrid className="h-3.5 w-3.5" /> Grid
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                <span>Live Action Only</span>
               </button>
-              <button
-                onClick={() => setView("map")}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${view === "map" ? "text-white" : "text-white/50 hover:text-white/80"}`}
-                style={view === "map" ? { background: MAGENTA } : undefined}
-              >
-                <MapIcon className="h-3.5 w-3.5" /> Map
-              </button>
+            </div>
+
+            {/* View switcher & count */}
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              <span className="text-xs text-muted-foreground">
+                Showing <strong className="text-foreground">{filteredCafes.length}</strong> {filteredCafes.length === 1 ? "arena" : "arenas"}
+              </span>
+
+              <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+                <button
+                  type="button"
+                  onClick={() => setView("grid")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    view === "grid" ? "bg-white/15 text-white shadow" : "text-muted-foreground hover:text-white"
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>Grid</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("map")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    view === "map" ? "bg-white/15 text-white shadow" : "text-muted-foreground hover:text-white"
+                  }`}
+                >
+                  <MapIcon className="h-3.5 w-3.5" />
+                  <span>Map</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {view === "grid" ? (
-          isLoading ? (
-            <SkeletonGrid />
-          ) : filtered.length === 0 ? (
-            <EmptyState onClear={() => { setQuery(""); setCity("all"); setAmenities([]); setOpenNow(false); setMinRating(0); }} />
-          ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((c, i) => (
-                <CafeCard key={c.id} cafe={c} index={i} isMobile={isMobile} />
+          {/* Arenas Grid */}
+          {isLoading ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-96 animate-pulse rounded-3xl border border-white/5 bg-white/[0.02]" />
               ))}
             </div>
-          )
-        ) : (
-          <MapView cafes={filtered} />
+          ) : filteredCafes.length === 0 ? (
+            <div className="my-16 flex flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.02] p-12 text-center">
+              <Gamepad2 className="h-16 w-16 text-muted-foreground/40" />
+              <h3 className="mt-4 font-display text-xl font-bold text-white">No Arenas Match Your Criteria</h3>
+              <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                Try switching city to "All Cities" or clearing hardware filters to discover available gaming rigs.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setQuery("");
+                  setSelectedCity("All Cities");
+                  setSelectedHardware("all");
+                  setLiveOnly(false);
+                }}
+                className="mt-5 border-white/20 text-xs"
+              >
+                Reset All Filters
+              </Button>
+            </div>
+          ) : view === "grid" ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredCafes.map((cafe, idx) => (
+                <ArenaCard
+                  key={cafe.id}
+                  cafe={cafe}
+                  index={idx}
+                  onQuickPeek={() => setQuickPeekCafe(cafe)}
+                  onBookDirect={() => setSelectedCafeForBooking(cafe)}
+                />
+              ))}
+            </div>
+          ) : (
+            <ArenaMapView cafes={filteredCafes} onSelectCafe={(c) => setQuickPeekCafe(c)} />
+          )}
+        </main>
+
+        {/* Quick Peek Drawer / Modal */}
+        {quickPeekCafe && (
+          <Dialog open={!!quickPeekCafe} onOpenChange={(open) => !open && setQuickPeekCafe(null)}>
+            <DialogContent className="max-w-xl border-white/15 bg-[#0e0c1a] p-0 text-foreground overflow-hidden">
+              <div className="relative h-48 w-full overflow-hidden bg-black/60">
+                <img
+                  src={quickPeekCafe.cover_url || stationHeroImg}
+                  alt={quickPeekCafe.name}
+                  className="h-full w-full object-cover"
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = stationHeroImg; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0c1a] via-black/40 to-transparent" />
+                <div className="absolute bottom-4 left-6 right-6">
+                  <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-primary">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Verified CoreCade Partner</span>
+                  </div>
+                  <DialogTitle className="mt-1 font-display text-2xl font-extrabold text-white">
+                    {quickPeekCafe.name}
+                  </DialogTitle>
+                </div>
+              </div>
+
+              <div className="space-y-4 p-6">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <MapPin className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                  <span>{quickPeekCafe.address || [quickPeekCafe.city, quickPeekCafe.state].filter(Boolean).join(", ") || "Location details on arrival"}</span>
+                </div>
+
+                {quickPeekCafe.description && (
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                    {quickPeekCafe.description}
+                  </p>
+                )}
+
+                <div className="grid grid-cols-3 gap-2 py-2">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                    <div className="font-mono text-[10px] text-muted-foreground uppercase">Rate</div>
+                    <div className="mt-0.5 font-display text-lg font-bold text-emerald-400">₹{quickPeekCafe.min_rate ?? 80}/hr</div>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                    <div className="font-mono text-[10px] text-muted-foreground uppercase">Total Rigs</div>
+                    <div className="mt-0.5 font-display text-lg font-bold text-white">{quickPeekCafe.device_count ?? 16}</div>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                    <div className="font-mono text-[10px] text-muted-foreground uppercase">Status</div>
+                    <div className="mt-0.5 font-display text-lg font-bold text-primary">
+                      {quickPeekCafe.free_count ?? 12} Free
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <Button
+                    onClick={() => {
+                      const c = quickPeekCafe;
+                      setQuickPeekCafe(null);
+                      setSelectedCafeForBooking(c);
+                    }}
+                    className="flex-1 h-12 text-xs font-bold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+                    style={{ background: "var(--gradient-brand-hot)" }}
+                  >
+                    <Zap className="h-4 w-4 mr-1.5" /> Book Station Now
+                  </Button>
+                  <Link to="/c/$slug" params={{ slug: quickPeekCafe.slug }} className="flex-1">
+                    <Button variant="outline" className="w-full h-12 border-white/15 text-xs font-semibold">
+                      Full Arena Page →
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         )}
 
-        <StatsRow arenas={cafes.length} cities={cityList.length} />
-      </section>
+        {/* Interactive Direct Booking Flow Modal */}
+        {selectedCafeForBooking && (
+          <BookingFlow
+            open={!!selectedCafeForBooking}
+            onOpenChange={(open) => !open && setSelectedCafeForBooking(null)}
+            cafe={{ id: selectedCafeForBooking.id, name: selectedCafeForBooking.name, city: selectedCafeForBooking.city }}
+            onBooked={() => {
+              setSelectedCafeForBooking(null);
+            }}
+          />
+        )}
 
-      <FiltersSheet
-        open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        city={city} setCity={setCity}
-        cityList={cityList}
-        amenities={amenities} setAmenities={setAmenities}
-        openNow={openNow} setOpenNow={setOpenNow}
-        minRating={minRating} setMinRating={setMinRating}
-      />
-
-      <footer className="border-t border-white/5 py-8 text-center text-xs text-white/40">
-        © {new Date().getFullYear()} CoreCade · Built for India's gaming culture
-      </footer>
+        {/* Footer */}
+        <footer className="border-t border-white/[0.08] bg-black/40 py-8 text-center text-xs text-muted-foreground">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2">
+              <span className="font-display font-bold text-white">CoreCade</span>
+              <span>· India’s Gaming & Esports Infrastructure</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link to="/portal" className="hover:text-white transition">Gamer Portal</Link>
+              <Link to="/owner" className="hover:text-white transition">Café Owners</Link>
+              <Link to="/terms" className="hover:text-white transition">Terms</Link>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
-
   );
 }
 
-/* ============ NAVBAR ============ */
-function Navbar({ signedIn, email }: { signedIn: boolean; email: string | null }) {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    onScroll(); window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-  return (
-    <nav className={`fixed top-0 inset-x-0 z-40 transition-all duration-300 ${scrolled ? "border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl" : ""}`}>
-      <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8">
-        <BrandLockup size={30} to="/discover" />
-        <div className="flex items-center gap-2">
-          {signedIn ? (
-            <Link to="/portal"><Button size="sm" variant="ghost" className="text-white hover:bg-white/10">{email?.split("@")[0] ?? "Portal"}</Button></Link>
-          ) : (
-            <>
-              <Link to="/auth"><Button size="sm" variant="ghost" className="text-white/80 hover:bg-white/10">Login</Button></Link>
-              <Link to="/auth">
-                <Button size="sm" className="border-0 text-white" style={{ background: MAGENTA }}>Sign up</Button>
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </nav>
-  );
-}
+/* =========================================================================
+   ARENA CARD COMPONENT (3D Hover, Occupancy, Hardware Specs, Quick Booking)
+   ========================================================================= */
 
-/* ============ HERO ============ */
-function Hero({
-  query, setQuery, city, setCity, cityList, liveOnly, setLiveOnly,
+function ArenaCard({
+  cafe,
+  index,
+  onQuickPeek,
+  onBookDirect,
 }: {
-  query: string; setQuery: (s: string) => void;
-  city: string; setCity: (c: string) => void; cityList: string[];
-  liveOnly: boolean; setLiveOnly: (v: boolean) => void;
+  cafe: Cafe;
+  index: number;
+  onQuickPeek: () => void;
+  onBookDirect: () => void;
 }) {
-  const chips = ["all", ...POPULAR_CITIES.filter((c) => cityList.some((x) => x.toLowerCase() === c.toLowerCase())), ...cityList.filter((c) => !POPULAR_CITIES.some((p) => p.toLowerCase() === c.toLowerCase()))];
-  return (
-    <section className="relative pt-32 pb-14 sm:pt-40 sm:pb-20">
-      <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          </span>
-          India's Gaming Cafe Network
-        </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
-          className="mt-6 font-display font-black leading-[0.95] tracking-[-0.04em] text-white text-[2.75rem] sm:text-[4.5rem] xl:text-[5.5rem]"
-        >
-          Find Your Perfect Arena
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-          className="mx-auto mt-4 max-w-xl text-base text-white/55 sm:text-lg"
-        >
-          Book PCs, consoles and VR rigs at gaming cafes near you.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15 }}
-          className="search-glow mx-auto mt-8 flex w-full max-w-2xl items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 pl-5 backdrop-blur-xl transition"
-        >
-          <Search className="h-4 w-4 shrink-0 text-white/40" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by cafe name, city, or area..."
-            className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none"
-          />
-          <button className="shrink-0 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110" style={{ background: MAGENTA }}>
-            Search
-          </button>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.2 }}
-          className="mx-auto mt-6 flex flex-wrap items-center justify-center gap-2"
-        >
-          {chips.map((c) => {
-            const active = c === city || (c === "all" && city === "all");
-            const label = c === "all" ? "All Cities" : c;
-            return (
-              <button
-                key={c}
-                onClick={() => setCity(c)}
-                className={`rounded-full border px-4 py-1.5 text-xs font-medium transition ${active ? "pill-active-glow border-transparent text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:text-white"}`}
-                style={active ? { background: MAGENTA } : undefined}
-              >
-                {label}
-              </button>
-            );
-          })}
-          <button
-            onClick={() => setLiveOnly(!liveOnly)}
-            className={`flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${liveOnly ? "pill-active-glow border-transparent text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:text-white"}`}
-            style={liveOnly ? { background: MAGENTA } : undefined}
-          >
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            </span>
-            Live now
-          </button>
-        </motion.div>
-
-      </div>
-    </section>
-  );
-}
-
-/* ============ CAFE CARD ============ */
-function CafeCard({ cafe, index, isMobile }: { cafe: Cafe; index: number; isMobile: boolean }) {
-  const [hover, setHover] = useState(false);
-  const gradient = `linear-gradient(135deg, #2a0f3f 0%, ${MAGENTA} 100%)`;
-  const rigs = (cafe as Cafe & { device_count?: number }).device_count ?? null;
-
+  const [hovered, setHovered] = useState(false);
+  const total = cafe.device_count ?? 16;
+  const active = cafe.active_sessions ?? 0;
+  const free = Math.max(0, total - active);
+  const minRate = cafe.min_rate ?? 80;
+  const coverUrl = cafe.cover_url || stationHeroImg;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-      transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.3) }}
-      onMouseEnter={() => !isMobile && setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      className="group relative"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.3) }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0d0b17] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_0_35px_-8px_oklch(0.7_0.26_335/0.5)]"
     >
-      <Link
-        to="/c/$slug" params={{ slug: cafe.slug }}
-        className="glass-card relative block h-[280px] overflow-hidden rounded-2xl"
-      >
-        {/* top accent bar */}
-        <div className="absolute inset-x-0 top-0 z-10 h-[3px]" style={{ background: "var(--gradient-brand-hot)" }} />
+      <div>
+        {/* Cover Media Header */}
+        <div className="relative h-44 w-full overflow-hidden bg-black/60">
+          <img
+            src={coverUrl}
+            alt={cafe.name}
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = stationHeroImg; }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0d0b17] via-black/30 to-transparent" />
 
-        {/* image */}
-        <div className="relative h-[120px] overflow-hidden">
-          {cafe.cover_url ? (
-            <img src={cafe.cover_url} alt={cafe.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-          ) : (
-            <div className="h-full w-full" style={{ background: gradient }} />
-          )}
-          <div className="scanlines pointer-events-none absolute inset-0 opacity-40" aria-hidden />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
-
-          <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-300 backdrop-blur">
-            <span className="relative flex h-1.5 w-1.5">
+          {/* Occupancy pill */}
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-black/70 px-2.5 py-1 text-[11px] font-bold text-emerald-300 backdrop-blur-md">
+            <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
-            Live
-          </div>
-          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full border border-white/10 bg-black/50 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">
-            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> 4.8
+            <span>{free} / {total} Free</span>
           </div>
 
-          <h3 className="absolute bottom-2 left-4 right-4 truncate font-display text-[18px] font-bold text-white drop-shadow-lg">
-            {cafe.name}
-          </h3>
+          {/* Rating */}
+          <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full border border-white/10 bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-md">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span>4.9</span>
+          </div>
+
+          {/* Location Badge */}
+          <div className="absolute bottom-3 left-4 flex items-center gap-1.5 text-xs font-semibold text-white/90 drop-shadow">
+            <MapPin className="h-3.5 w-3.5 text-primary" />
+            <span>{[cafe.city, cafe.state].filter(Boolean).join(", ") || "India"}</span>
+          </div>
         </div>
 
-        {/* body */}
-        <div className="flex h-[160px] flex-col p-4">
-          <div className="flex items-center gap-1.5 text-[13px] text-white/50">
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{[cafe.city, cafe.state].filter(Boolean).join(", ") || "Location"}</span>
+        {/* Card Body */}
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-display text-xl font-extrabold tracking-tight text-white group-hover:text-primary transition-colors">
+              {cafe.name}
+            </h3>
           </div>
 
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {["PC", "Console", "VR", "WiFi"].map((a) => (
-              <span key={a} className="rounded-full bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-white/60">{a}</span>
+          {cafe.description && (
+            <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+              {cafe.description}
+            </p>
+          )}
+
+          {/* Hardware Chips */}
+          <div className="mt-3.5 flex flex-wrap gap-1.5">
+            {(cafe.device_types && cafe.device_types.length > 0
+              ? cafe.device_types
+              : ["RTX 40-Series", "240Hz", "PS5 Pro"]
+            ).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-lg border border-white/5 bg-white/[0.04] px-2 py-0.5 text-[10px] font-mono text-white/70"
+              >
+                {tag}
+              </span>
             ))}
           </div>
+        </div>
+      </div>
 
-          {rigs !== null && (
-            <div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-white/50">
-              <Monitor className="h-3.5 w-3.5 shrink-0" /> {rigs} rigs available
+      {/* Card Footer */}
+      <div className="border-t border-white/[0.06] bg-black/20 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-mono uppercase text-muted-foreground block">Starting at</span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-lg font-black text-white">₹{minRate}</span>
+              <span className="text-xs text-muted-foreground">/hr</span>
             </div>
-          )}
+          </div>
 
-          <div className="mt-auto flex items-center justify-between">
-            <div className="text-xs text-white/50">
-              from <span className="text-sm font-bold" style={{ color: MAGENTA }}>₹80</span>
-              <span style={{ color: MAGENTA }}>/hr</span>
-            </div>
-            <span
-              className="text-xs font-semibold no-underline transition"
-              style={{ color: MAGENTA, textShadow: hover ? `0 0 10px ${MAGENTA}` : undefined }}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onQuickPeek}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition"
             >
-              Step Inside →
-            </span>
+              Details
+            </button>
+            <Button
+              size="sm"
+              onClick={onBookDirect}
+              className="gap-1.5 text-xs font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+              style={{ background: "var(--gradient-brand-hot)" }}
+            >
+              <span>Book</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
-      </Link>
-
-
-      {/* hover popup */}
-      <AnimatePresence>
-        {hover && !isMobile && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 6 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 6 }}
-            transition={{ duration: 0.18 }}
-            className="pointer-events-none absolute left-1/2 top-full z-30 mt-3 w-[300px] -translate-x-1/2 overflow-hidden rounded-xl border border-white/10 bg-[#0a0a0f]/95 backdrop-blur-xl"
-            style={{ boxShadow: "0 20px 60px -10px rgba(0,0,0,.7)" }}
-          >
-            <div className="p-4">
-              <div className="font-bold text-white">{cafe.name}</div>
-              <div className="mt-1 flex items-start gap-1.5 text-xs text-white/60">
-                <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
-                <span>{[cafe.city, cafe.state].filter(Boolean).join(", ") || "India"}</span>
-              </div>
-            </div>
-            <iframe
-              title={`${cafe.name} map`}
-              src={`https://www.google.com/maps?q=${encodeURIComponent((cafe.name + " " + (cafe.city ?? "")).trim())}&output=embed`}
-              className="h-[140px] w-full border-0"
-              loading="lazy"
-            />
-            <div className="flex items-center justify-between border-t border-white/5 p-3">
-              <div className="flex items-center gap-1.5 text-[11px] text-white/60">
-                <Clock className="h-3 w-3" /> Open · 10 AM – 2 AM
-              </div>
-              <span className="rounded-full px-3 py-1 text-[11px] font-semibold text-white" style={{ background: MAGENTA }}>
-                Quick Book
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
     </motion.div>
   );
 }
 
-/* ============ SKELETON ============ */
-function SkeletonGrid() {
-  return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="overflow-hidden rounded-2xl bg-white/[0.03]">
-          <div className="h-[200px] animate-pulse bg-gradient-to-r from-white/5 via-white/10 to-white/5" />
-          <div className="space-y-3 p-4">
-            <div className="h-4 w-2/3 animate-pulse rounded bg-white/10" />
-            <div className="h-3 w-1/2 animate-pulse rounded bg-white/5" />
-            <div className="h-3 w-1/3 animate-pulse rounded bg-white/5" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+/* =========================================================================
+   ARENA MAP VIEW
+   ========================================================================= */
 
-/* ============ EMPTY ============ */
-function EmptyState({ onClear }: { onClear: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-white/[0.02] px-6 py-20 text-center">
-      <Gamepad2 className="h-12 w-12 text-white/20" />
-      <h3 className="mt-4 font-display text-xl font-bold text-white">No arenas found</h3>
-      <p className="mt-1 text-sm text-white/50">Try a different city or clear your filters.</p>
-      <button onClick={onClear} className="mt-5 rounded-full px-5 py-2 text-sm font-semibold text-white" style={{ background: MAGENTA }}>
-        Clear Filters
-      </button>
-    </div>
-  );
-}
-
-/* ============ MAP VIEW ============ */
-function MapView({ cafes }: { cafes: Cafe[] }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
+function ArenaMapView({ cafes, onSelectCafe }: { cafes: Cafe[]; onSelectCafe: (c: Cafe) => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
-    // Load Leaflet CSS + JS from CDN
     const loadLeaflet = async () => {
       if (!document.getElementById("leaflet-css")) {
         const link = document.createElement("link");
-        link.id = "leaflet-css"; link.rel = "stylesheet";
+        link.id = "leaflet-css";
+        link.rel = "stylesheet";
         link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
         document.head.appendChild(link);
       }
       if (!(window as any).L) {
-        await new Promise<void>((res, rej) => {
-          const s = document.createElement("script");
-          s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-          s.onload = () => res(); s.onerror = () => rej();
-          document.body.appendChild(s);
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+          script.onload = () => resolve();
+          script.onerror = () => reject();
+          document.body.appendChild(script);
         });
       }
-      setReady(true);
+      setMapLoaded(true);
     };
     loadLeaflet().catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!ready || !ref.current) return;
+    if (!mapLoaded || !containerRef.current) return;
     const L = (window as any).L;
-    const map = L.map(ref.current, { zoomControl: true, attributionControl: false }).setView([20.5937, 78.9629], 5);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 20 }).addTo(map);
+    const map = L.map(containerRef.current, { zoomControl: true, attributionControl: false }).setView([20.5937, 78.9629], 5);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd",
+      maxZoom: 19,
+    }).addTo(map);
 
     const CITY_COORDS: Record<string, [number, number]> = {
-      mumbai: [19.076, 72.8777], delhi: [28.7041, 77.1025], bangalore: [12.9716, 77.5946],
-      pune: [18.5204, 73.8567], hyderabad: [17.385, 78.4867], chennai: [13.0827, 80.2707],
-      kolkata: [22.5726, 88.3639], ahmedabad: [23.0225, 72.5714], jaipur: [26.9124, 75.7873],
+      mumbai: [19.076, 72.8777],
+      delhi: [28.7041, 77.1025],
+      bangalore: [12.9716, 77.5946],
+      bengaluru: [12.9716, 77.5946],
+      pune: [18.5204, 73.8567],
+      hyderabad: [17.385, 78.4867],
+      chennai: [13.0827, 80.2707],
+      kolkata: [22.5726, 88.3639],
+      ahmedabad: [23.0225, 72.5714],
+      jaipur: [26.9124, 75.7873],
     };
 
     const icon = L.divIcon({
-      className: "cc-pin",
-      html: `<div style="width:22px;height:22px;border-radius:50%;background:${MAGENTA};border:3px solid #fff;box-shadow:0 0 0 4px rgba(255,46,147,.25),0 4px 12px rgba(0,0,0,.5)"></div>`,
-      iconSize: [22, 22], iconAnchor: [11, 11],
+      className: "cc-custom-marker",
+      html: `<div style="width:26px;height:26px;border-radius:50%;background:#ff006e;border:3px solid #fff;box-shadow:0 0 16px rgba(255,0,110,0.8), 0 4px 10px rgba(0,0,0,0.6);display:grid;place-items:center;"><div style="width:6px;height:6px;border-radius:50%;background:#fff;"></div></div>`,
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
     });
 
-    const bounds: [number, number][] = [];
+    const markers: [number, number][] = [];
     cafes.forEach((c) => {
-      const key = c.city?.toLowerCase() ?? "";
-      const coord = CITY_COORDS[key];
-      if (!coord) return;
-      const jitter: [number, number] = [coord[0] + (Math.random() - 0.5) * 0.05, coord[1] + (Math.random() - 0.5) * 0.05];
-      bounds.push(jitter);
-      L.marker(jitter, { icon }).addTo(map).bindPopup(
-        `<div style="font-family:system-ui;color:#0a0a0f;padding:2px 4px"><div style="font-weight:700;font-size:14px">${c.name}</div><div style="font-size:12px;color:#555;margin:2px 0 8px">${c.city ?? ""} · ★ 4.8</div><a href="/c/${c.slug}" style="display:inline-block;padding:6px 12px;background:${MAGENTA};color:#fff;border-radius:999px;text-decoration:none;font-size:12px;font-weight:600">View Cafe</a></div>`,
+      const cityKey = (c.city ?? "").toLowerCase();
+      const baseCoord = CITY_COORDS[cityKey];
+      if (!baseCoord) return;
+
+      const jittered: [number, number] = [
+        baseCoord[0] + (Math.random() - 0.5) * 0.04,
+        baseCoord[1] + (Math.random() - 0.5) * 0.04,
+      ];
+      markers.push(jittered);
+
+      const m = L.marker(jittered, { icon }).addTo(map);
+      m.bindPopup(
+        `<div style="font-family:sans-serif;color:#fff;background:#0d0b17;padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);min-width:180px;">
+          <div style="font-weight:800;font-size:14px;color:#ff006e;">${c.name}</div>
+          <div style="font-size:11px;color:#999;margin-top:2px;">${c.city ?? "Arena"} · ₹${c.min_rate ?? 80}/hr</div>
+          <div style="margin-top:8px;">
+            <a href="/c/${c.slug}" style="display:inline-block;padding:5px 12px;background:#ff006e;color:#fff;border-radius:20px;text-decoration:none;font-size:11px;font-weight:700;">Open Arena →</a>
+          </div>
+        </div>`,
+        { className: "dark-popup" }
       );
     });
-    if (bounds.length) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 11 });
 
-    return () => { map.remove(); };
-  }, [ready, cafes]);
+    if (markers.length > 0) {
+      map.fitBounds(markers, { padding: [50, 50], maxZoom: 12 });
+    }
+
+    return () => {
+      map.remove();
+    };
+  }, [mapLoaded, cafes]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10" style={{ background: "#0f0f18" }}>
-      <div ref={ref} style={{ height: 600, width: "100%" }} />
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d0b17] shadow-2xl">
+      <div ref={containerRef} style={{ height: "600px", width: "100%" }} />
     </div>
   );
 }
-
-/* ============ FILTERS ============ */
-function FiltersSheet({
-  open, onClose, city, setCity, cityList, amenities, setAmenities, openNow, setOpenNow, minRating, setMinRating,
-}: {
-  open: boolean; onClose: () => void;
-  city: string; setCity: (c: string) => void; cityList: string[];
-  amenities: string[]; setAmenities: (a: string[]) => void;
-  openNow: boolean; setOpenNow: (v: boolean) => void;
-  minRating: number; setMinRating: (v: number) => void;
-}) {
-  const AMENITIES = ["PC Gaming", "Console", "VR", "Studio", "WiFi", "Food"];
-  const toggle = (a: string) => setAmenities(amenities.includes(a) ? amenities.filter((x) => x !== a) : [...amenities, a]);
-
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
-          <motion.div
-            initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 z-50 h-full w-full max-w-sm overflow-y-auto border-l border-white/10 bg-[#0a0a0f] p-6"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-xl font-bold">Filters</h3>
-              <button onClick={onClose} className="rounded-full p-2 hover:bg-white/10"><X className="h-4 w-4" /></button>
-            </div>
-
-            <div className="mt-6">
-              <label className="text-xs font-semibold uppercase tracking-wider text-white/50">City</label>
-              <select value={city} onChange={(e) => setCity(e.target.value)} className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white focus:border-white/25 focus:outline-none">
-                <option value="all">All Cities</option>
-                {cityList.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-
-            <div className="mt-6">
-              <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Amenities</label>
-              <div className="mt-2 space-y-2">
-                {AMENITIES.map((a) => (
-                  <label key={a} className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5 text-sm hover:border-white/15">
-                    <input type="checkbox" checked={amenities.includes(a)} onChange={() => toggle(a)} className="h-4 w-4 accent-fuchsia-500" />
-                    {a}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5">
-              <span className="text-sm font-medium">Open Now</span>
-              <button onClick={() => setOpenNow(!openNow)} className={`relative h-6 w-11 rounded-full transition ${openNow ? "" : "bg-white/10"}`} style={openNow ? { background: MAGENTA } : undefined}>
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${openNow ? "left-[22px]" : "left-0.5"}`} />
-              </button>
-            </div>
-
-            <div className="mt-6">
-              <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Minimum Rating</label>
-              <div className="mt-2 flex gap-2">
-                {[0, 3, 4, 4.5].map((r) => (
-                  <button key={r} onClick={() => setMinRating(r)}
-                    className={`flex-1 rounded-lg border px-2 py-2 text-xs font-semibold ${minRating === r ? "border-transparent text-white" : "border-white/10 bg-white/5 text-white/60"}`}
-                    style={minRating === r ? { background: MAGENTA } : undefined}
-                  >
-                    {r === 0 ? "Any" : `${r}+★`}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button onClick={onClose} className="mt-8 w-full rounded-full py-3 text-sm font-bold text-white" style={{ background: MAGENTA }}>
-              Apply Filters
-            </button>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
-/* ============ STATS ============ */
-function StatsRow({ arenas, cities }: { arenas: number; cities: number }) {
-  const items: { v: number; suffix: string; l: string; format?: (n: number) => string }[] = [
-    { v: arenas, suffix: "", l: arenas === 1 ? "Arena" : "Arenas" },
-    { v: cities, suffix: "", l: cities === 1 ? "City" : "Cities" },
-  ];
-  return (
-    <div className="mx-auto mt-20 grid max-w-xl grid-cols-2 gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-6 sm:p-8">
-      {items.map((it) => (
-        <div key={it.l} className="text-center">
-          <div className="font-display text-2xl font-black text-white sm:text-3xl">
-            <AnimatedNumber value={it.v} suffix={it.suffix} duration={1500} format={it.format} />
-          </div>
-          <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/40">{it.l}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-

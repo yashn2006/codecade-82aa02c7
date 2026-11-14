@@ -16,6 +16,7 @@ import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import stationHeroImg from "@/assets/livefloor/station-hero.jpg";
 
 export const Route = createFileRoute("/c/$slug")({
   head: ({ params, loaderData }) => {
@@ -81,7 +82,7 @@ function PublicCafePage() {
     const cafeId = data?.cafe?.id;
     if (!cafeId) return;
     const ch = supabase
-      .channel(`public-cafe:${cafeId}`)
+      .channel(`public-cafe:${cafeId}:${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "cafe_pages", filter: `cafe_id=eq.${cafeId}` },
         () => qc.invalidateQueries({ queryKey: ["public-cafe", slug] }))
       .on("postgres_changes", { event: "*", schema: "public", table: "cafes", filter: `id=eq.${cafeId}` },
@@ -169,17 +170,21 @@ function PublicCafePage() {
 
       {/* Top nav */}
       <header className="sticky top-0 z-40">
-        <div className="mx-auto mt-3 max-w-6xl px-4">
-          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0b0820]/70 px-4 py-2.5 backdrop-blur-2xl">
-            <Link to="/discover" className="flex items-center gap-2.5">
+        <div className="mx-auto mt-2.5 sm:mt-3 max-w-6xl px-3 sm:px-4">
+          <div className="mobile-keep-blur flex items-center justify-between gap-2 rounded-2xl border border-white/12 bg-[#0b0820]/75 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl sm:px-4 sm:py-2.5">
+            <Link to="/discover" className="flex min-h-[40px] items-center gap-2 shrink-0">
               <div className="grid h-8 w-8 place-items-center rounded-lg" style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 0 18px rgba(255,82,224,.5)" }}>
                 <Joystick className="h-4 w-4 text-white" />
               </div>
-              <span className="font-display text-sm font-black tracking-[0.2em]">CORECADE</span>
+              <span className="font-display text-sm font-black tracking-[0.18em]">CORECADE</span>
             </Link>
-            <div className="flex items-center gap-2">
-              <Link to="/discover"><Button size="sm" variant="ghost" className="border border-white/15 bg-transparent text-white hover:bg-white/10">All arenas</Button></Link>
-              <Link to="/auth"><Button size="sm" className="border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 text-white">Sign in</Button></Link>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Link to="/discover"><Button size="sm" variant="ghost" className="min-h-[40px] border border-white/15 bg-transparent px-2.5 text-xs text-white hover:bg-white/10 sm:px-3">Arenas</Button></Link>
+              {signedIn ? (
+                <Link to="/portal"><Button size="sm" className="min-h-[40px] border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-3 text-xs text-white">Portal</Button></Link>
+              ) : (
+                <Link to="/auth"><Button size="sm" className="min-h-[40px] border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-3 text-xs text-white">Sign in</Button></Link>
+              )}
             </div>
           </div>
         </div>
@@ -309,7 +314,13 @@ function PublicCafePage() {
                 whileHover={{ scale: 1.02 }}
                 className="group relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-black/30"
               >
-                <img src={url} alt={`Gallery ${i + 1}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" loading="lazy" />
+                <img
+                  src={url}
+                  alt={`Gallery ${i + 1}`}
+                  className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = stationHeroImg; }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition group-hover:opacity-100" />
               </motion.button>
             ))}
@@ -392,29 +403,31 @@ function PublicCafePage() {
       )}
 
 
-      <footer className="mx-auto mt-16 max-w-6xl px-4 pb-24 pt-10 text-center text-xs text-white/40">
+      <footer className="mx-auto mt-16 max-w-6xl px-4 pb-24 pt-10 text-center text-xs text-white/75">
         Powered by <span className="bg-gradient-to-r from-fuchsia-300 via-violet-300 to-blue-300 bg-clip-text font-semibold text-transparent">CoreCade</span>
       </footer>
 
       {/* STICKY BOOKING BAR */}
       {!inMaintenance && (
         <div
-          className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-between gap-3 px-4"
+          className="mobile-keep-blur safe-b fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-between gap-3 px-4"
           style={{
-            background: "rgba(4,0,14,0.95)",
-            backdropFilter: "blur(20px)",
-            borderTop: "1px solid rgba(255,255,255,0.07)",
+            background: "rgba(8,5,20,0.86)",
+            backdropFilter: "blur(24px) saturate(180%)",
+            WebkitBackdropFilter: "blur(24px) saturate(180%)",
+            borderTop: "1px solid rgba(255,255,255,0.12)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
           }}
         >
-          <div className="text-sm text-white/60">
+          <div className="text-sm text-white/70 tabular-nums">
             {minRate ? <>from <span className="font-semibold text-white">₹{minRate}</span>/hr</> : "Reserve your rig"}
           </div>
           <Button
             onClick={openBooking}
-            className="group/sb relative h-12 overflow-hidden border-0 px-6 text-white"
+            className="group/sb relative min-h-[44px] overflow-hidden border-0 px-6 text-white"
             style={{ background: `linear-gradient(135deg, ${accent}, #7b2fff)`, boxShadow: `0 0 30px ${accent}66` }}
           >
-            <span className="relative z-10 inline-flex items-center">Book a Slot <ArrowRight className="ml-2 h-4 w-4" /></span>
+            <span className="relative z-10 inline-flex items-center font-semibold">Book a Slot <ArrowRight className="ml-2 h-4 w-4" /></span>
             <span aria-hidden className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover/sb:translate-x-full" />
           </Button>
         </div>
@@ -525,6 +538,7 @@ function HeroStage({
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ x: 50, y: 50, active: false });
+  const [heroErr, setHeroErr] = useState(false);
 
   function onMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = stageRef.current; if (!el) return;
@@ -546,8 +560,8 @@ function HeroStage({
     >
       {/* parallax media */}
       <motion.div style={{ y: heroY, scale: heroScale, opacity: heroOpacity }} className="absolute inset-0">
-        {heroUrl ? (
-          <img src={heroUrl} alt={cafe.name} className="h-full w-full object-cover" />
+        {heroUrl && !heroErr ? (
+          <img src={heroUrl} alt={cafe.name} className="h-full w-full object-cover" onError={() => setHeroErr(true)} />
         ) : (
           <div className="h-full w-full bg-[conic-gradient(from_220deg_at_50%_50%,#7b2fff,#ff52e0,#2d8eff,#7b2fff)]" />
         )}
@@ -592,20 +606,21 @@ function HeroStage({
         style={{ background: `radial-gradient(circle at 75% 22%, ${accent}3a, transparent 60%)` }}
       />
 
-      {/* aspect spacer */}
-      <div className="relative aspect-[21/9] w-full">
-        <motion.div style={{ y: titleY }} className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
+      {/* aspect spacer — taller on mobile so logo, title, tagline & CTAs never clip */}
+      <div className="relative min-h-[380px] sm:min-h-0 sm:aspect-[21/9] w-full flex flex-col justify-end">
+        <motion.div style={{ y: titleY }} className="relative sm:absolute sm:inset-x-0 sm:bottom-0 p-5 sm:p-10">
           {logoUrl && (
             <motion.img
               src={logoUrl} alt={`${cafe.name} logo`}
               initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-              className="mb-4 h-14 w-auto rounded-xl border border-white/10 bg-black/30 object-contain p-1.5 backdrop-blur"
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+              className="mb-3 h-12 sm:mb-4 sm:h-14 w-auto rounded-xl border border-white/10 bg-black/30 object-contain p-1.5 backdrop-blur"
             />
           )}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.3em] backdrop-blur"
+            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] backdrop-blur"
             style={{ borderColor: `${accent}66`, backgroundColor: `${accent}1a`, color: accent }}
           >
             <MapPin className="h-3 w-3" />{cafe.city ?? "Gaming Café"}
@@ -614,7 +629,7 @@ function HeroStage({
           {/* shimmering title */}
           <motion.h1
             initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.08 }}
-            className="relative mt-3 font-display text-5xl font-black leading-[1.02] sm:text-7xl"
+            className="relative mt-2.5 font-display text-3xl font-black leading-[1.04] sm:mt-3 sm:text-7xl"
             style={{ textShadow: `0 0 40px ${accent}66` }}
           >
             <span
@@ -632,7 +647,7 @@ function HeroStage({
           {page?.tagline && (
             <motion.p
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
-              className="mt-3 max-w-2xl text-base text-white/75 sm:text-lg"
+              className="mt-2.5 max-w-2xl text-sm text-white/80 sm:mt-3 sm:text-lg"
             >{page.tagline}</motion.p>
           )}
 
