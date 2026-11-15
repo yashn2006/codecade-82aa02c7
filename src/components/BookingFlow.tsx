@@ -445,14 +445,7 @@ export function BookingFlow({
 
           {/* Body Content */}
           <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={step}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-              >
+            <div key={step} className="page-reveal">
                 {/* STEP 0: RIG & SEAT SELECTION */}
                 {step === 0 && (
                   <div className="space-y-4">
@@ -1000,8 +993,7 @@ export function BookingFlow({
                     </div>
                   </div>
                 )}
-              </motion.div>
-            </AnimatePresence>
+            </div>
           </div>
 
           {/* Dialog Footer Actions */}

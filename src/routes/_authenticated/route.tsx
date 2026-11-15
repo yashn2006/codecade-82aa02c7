@@ -18,7 +18,7 @@ function AuthenticatedLayout() {
     if (primed.current) return;
     primed.current = true;
     const t = window.setTimeout(() => {
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries({ predicate: (q) => q.state.status === "error" });
     }, 50);
     return () => window.clearTimeout(t);
   }, [queryClient]);

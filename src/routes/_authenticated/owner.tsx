@@ -95,10 +95,10 @@ function OwnerHub() {
               {cafes.length} café{cafes.length === 1 ? "" : "s"} · {totals.activeSessions} live session{totals.activeSessions === 1 ? "" : "s"}. Everything — floor, bookings, POS and revenue — from one console.
             </p>
           </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex w-full sm:w-auto min-w-0 flex-wrap items-center gap-2.5">
             <Link
               to="/owner/help"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-sm font-semibold backdrop-blur transition hover:border-white/25 hover:bg-white/[0.08]"
+              className="inline-flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold backdrop-blur transition hover:border-white/25 hover:bg-white/[0.08] active:scale-[0.98]"
             >
               <LifeBuoy className="h-4 w-4 text-primary" /> Help
             </Link>
@@ -108,7 +108,7 @@ function OwnerHub() {
       </motion.section>
 
       {/* KPI CARDS */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <KpiCard icon={IndianRupee}   tone="oklch(0.78 0.16 165)" label="Revenue today"    value={`₹${totals.revenueToday.toLocaleString("en-IN")}`} />
         <KpiCard icon={TrendingUp}    tone="oklch(0.7 0.26 335)"  label="Revenue all-time" value={`₹${totals.revenue.toLocaleString("en-IN")}`} />
         <KpiCard icon={CalendarRange} tone="oklch(0.78 0.18 200)" label="Total bookings"   value={String(totals.bookings)} />
@@ -164,12 +164,14 @@ function OwnerHub() {
                 </Link>
               </div>
 
-              <div className="relative mt-4 grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="relative mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
                 <MiniStat label="Today" value={`₹${cafe.revenueToday.toLocaleString("en-IN")}`} />
                 <MiniStat label="All-time" value={`₹${cafe.revenue.toLocaleString("en-IN")}`} />
                 <MiniStat label="Bookings" value={String(cafe.bookings)} />
                 <MiniStat label="Live" value={String(cafe.activeSessions)} />
-                <MiniStat label="Customers" value={String(cafe.customers)} />
+                <div className="col-span-2 sm:col-span-1">
+                  <MiniStat label="Customers" value={String(cafe.customers)} />
+                </div>
               </div>
 
               {/* Quick action grid — 3x3 */}
@@ -179,7 +181,7 @@ function OwnerHub() {
                     key={s.label}
                     to={s.to}
                     params={{ slug: cafe.slug }}
-                    className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_0_24px_-8px_oklch(0.7_0.26_335/0.9)]"
+                    className="group flex min-h-[78px] flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_0_24px_-8px_oklch(0.7_0.26_335/0.9)] active:scale-[0.97]"
                   >
                     <s.icon className="h-[18px] w-[18px] text-foreground/80 transition group-hover:text-primary" />
                     <span className="text-[11px] font-semibold leading-tight">{s.label}</span>
@@ -203,16 +205,16 @@ function KpiCard({ icon: Icon, tone, label, value }: {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 280, damping: 20 }}
-      className="hub-card group relative overflow-hidden rounded-2xl p-5"
+      className="hub-card group relative overflow-hidden rounded-2xl p-4 sm:p-5"
     >
       <span
         className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-40 blur-2xl transition group-hover:opacity-70"
         style={{ background: `radial-gradient(circle, ${tone}, transparent 70%)` }}
         aria-hidden
       />
-      <Icon className="relative h-6 w-6 text-foreground" />
-      <div className="relative mt-3 font-display text-3xl font-extrabold leading-none tabular-nums">{value}</div>
-      <div className="relative mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
+      <Icon className="relative h-5 w-5 sm:h-6 sm:w-6 text-foreground" />
+      <div className="relative mt-2.5 sm:mt-3 font-display text-2xl sm:text-3xl font-extrabold leading-none tabular-nums truncate">{value}</div>
+      <div className="relative mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{label}</div>
     </motion.div>
   );
 }
@@ -271,11 +273,11 @@ function CreateCafeButton() {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); setOpen(v); }}>
       <DialogTrigger asChild>
-        <Button className="gap-2 text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
+        <Button className="min-h-[44px] flex-1 sm:flex-initial gap-2 rounded-xl text-primary-foreground" style={{ background: "var(--gradient-brand-hot)" }}>
           <Plus className="h-4 w-4" /> Create café
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto p-0 sm:max-w-2xl">
         {/* Header with gradient */}
         <div className="relative overflow-hidden rounded-t-lg border-b border-border/40 bg-card/60 px-6 pb-5 pt-6 backdrop-blur">
           <div
@@ -364,7 +366,7 @@ function CreateCafeButton() {
               <div className="space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Public URL *</Label>
                 <div className="flex items-center overflow-hidden rounded-md border border-border bg-background">
-                  <span className="select-none border-r border-border bg-card/60 px-3 py-3 font-mono text-xs text-muted-foreground">corecade.app/c/</span>
+                  <span className="select-none border-r border-border bg-card/60 px-3 py-3 font-mono text-xs text-muted-foreground">corecade.in/c/</span>
                   <Input
                     name="slug" required pattern="[a-z0-9-]+"
                     placeholder="pixel-arcade"
@@ -434,15 +436,15 @@ function CreateCafeButton() {
                 </div>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <button type="button" onClick={() => setOpenDays([1, 2, 3, 4, 5, 6, 0])}
-                    className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                    className="min-h-[36px] rounded-full border border-border/60 bg-background/40 px-3.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
                     All week
                   </button>
                   <button type="button" onClick={() => setOpenDays([1, 2, 3, 4, 5])}
-                    className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                    className="min-h-[36px] rounded-full border border-border/60 bg-background/40 px-3.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
                     Weekdays
                   </button>
                   <button type="button" onClick={() => setOpenDays([6, 0])}
-                    className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                    className="min-h-[36px] rounded-full border border-border/60 bg-background/40 px-3.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
                     Weekends
                   </button>
                 </div>
@@ -455,7 +457,7 @@ function CreateCafeButton() {
 
           {/* Step 2 — Contact */}
           {step === 2 && (
-            <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-2 gap-3">
+            <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">City</Label>
                 <Input name="city" placeholder="Bengaluru" value={form.city} onChange={setField("city")} className="h-11" />
@@ -464,7 +466,7 @@ function CreateCafeButton() {
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">State</Label>
                 <Input name="state" placeholder="Karnataka" value={form.state} onChange={setField("state")} className="h-11" />
               </div>
-              <div className="col-span-2 space-y-1.5">
+              <div className="sm:col-span-2 space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Address *</Label>
                 <Input name="address" required placeholder="Shop 12, MG Road" value={form.address} onChange={setField("address")} className="h-11" />
               </div>

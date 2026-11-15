@@ -1,22 +1,15 @@
 import { type ReactNode } from "react";
-import { motion } from "framer-motion";
 import { Skeleton } from "@/components/LoadingSkeleton";
 
 /**
- * Wraps dashboard page content with a crisp, non-blocking 120ms compositor reveal.
- * Never gates route changes behind a full-page skeleton veil.
+ * Wraps dashboard page content with a crisp, zero-overhead 75ms CSS compositor reveal.
+ * Automatically instant when "Fast" (reduced motion) mode is enabled.
  */
 export function PageTransition({ routeKey, children }: { routeKey: string; children: ReactNode }) {
   return (
-    <motion.div
-      key={routeKey}
-      className="min-w-0"
-      initial={{ opacity: 0.72, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
-    >
+    <div key={routeKey} className="page-reveal min-w-0">
       {children}
-    </motion.div>
+    </div>
   );
 }
 

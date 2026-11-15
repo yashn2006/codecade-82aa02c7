@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import {
@@ -75,6 +75,7 @@ export function ConsoleShell({
   banner?: ReactNode;
 }) {
   const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [open, setOpen] = useState(false);
@@ -82,7 +83,21 @@ export function ConsoleShell({
   const [motionPref, setMotionPref] = useState<"smooth" | "reduced">("smooth");
   const path = useRouterState({ select: (s) => s.location.pathname });
   const hash = useRouterState({ select: (s) => s.location.hash });
-  const safeNav = Array.isArray(nav) ? nav : [];
+  const safeNav = useMemo(() => (Array.isArray(nav) ? nav : []), [nav]);
+
+  const preloadRouteTarget = useCallback(
+    (to?: string, params?: Record<string, string>, targetHash?: string) => {
+      if (!to) return;
+      void router
+        .preloadRoute({
+          to: to as never,
+          params: params as never,
+          hash: targetHash,
+        })
+        .catch(() => {});
+    },
+    [router],
+  );
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
@@ -115,6 +130,31 @@ export function ConsoleShell({
   useEffect(() => {
     setOpen(false);
   }, [path, hash]);
+
+  // Quietly preload sibling route JS chunks while idle so sidebar/dock clicks feel instantaneous.
+  useEffect(() => {
+    if (typeof window === "undefined" || safeNav.length <= 1) return;
+    const seen = new Set<string>();
+    const targets = safeNav.filter((n) => {
+      const resolved = n.params ? n.to.replace(/\$(\w+)/g, (_, k) => n.params?.[k] ?? "") : n.to;
+      if (resolved === path || seen.has(resolved)) return false;
+      seen.add(resolved);
+      return true;
+    });
+    const timers: number[] = [];
+    const startTimer = window.setTimeout(() => {
+      targets.forEach((item, idx) => {
+        const t = window.setTimeout(() => {
+          preloadRouteTarget(item.to, item.params, item.hash);
+        }, idx * 70);
+        timers.push(t);
+      });
+    }, 220);
+    return () => {
+      window.clearTimeout(startTimer);
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, [safeNav, path, preloadRouteTarget]);
 
   const signOut = async () => {
     await queryClient.cancelQueries();
@@ -253,8 +293,11 @@ export function ConsoleShell({
                       to={item.to}
                       params={item.params}
                       hash={item.hash}
+                      onMouseEnter={() => preloadRouteTarget(item.to, item.params, item.hash)}
+                      onTouchStart={() => preloadRouteTarget(item.to, item.params, item.hash)}
+                      onFocus={() => preloadRouteTarget(item.to, item.params, item.hash)}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200",
+                        "group relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors duration-150",
                         active
                           ? "text-primary font-semibold"
                           : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
@@ -347,19 +390,19 @@ export function ConsoleShell({
           </div>
 
           <div className="hidden min-w-0 items-center justify-center lg:flex lg:justify-self-center">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.25)] backdrop-blur-md text-xs font-medium">
+            <div className="inline-flex max-w-[44vw] items-center gap-2 overflow-hidden px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.25)] backdrop-blur-md text-xs font-medium">
               <Link
                 to={(path.startsWith("/admin") ? "/admin" : path.startsWith("/portal") ? "/portal" : "/owner") as never}
-                className="text-muted-foreground hover:text-white transition flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
+                className="text-muted-foreground hover:text-white transition flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap shrink-0"
               >
                 {path.startsWith("/admin") ? "Admin HQ" : path.startsWith("/portal") ? "Gamer Portal" : "Owner Hub"}
               </Link>
               <ChevronRight className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-              <span className="font-bold text-foreground max-w-[200px] truncate">{title}</span>
+              <span className="font-bold text-foreground max-w-[180px] truncate">{title}</span>
               {currentLabel && currentLabel !== title && (
                 <>
                   <ChevronRight className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-                  <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[11px] font-bold shadow-[0_0_12px_rgba(255,43,206,0.3)]">
+                  <span className="whitespace-nowrap shrink-0 px-2.5 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[11px] font-bold shadow-[0_0_12px_rgba(255,43,206,0.3)]">
                     {currentLabel}
                   </span>
                 </>
@@ -433,10 +476,7 @@ export function ConsoleShell({
           </header>
 
           {banner ? (
-            <div
-              className="relative z-20 lg:sticky"
-              style={{ top: "calc(52px + env(safe-area-inset-top))" }}
-            >
+            <div className="relative z-20 shrink-0">
               {banner}
             </div>
           ) : null}
@@ -473,7 +513,7 @@ export function ConsoleShell({
                       <motion.span
                         layoutId="dock-active"
                         className="dock-active pointer-events-none absolute inset-0 rounded-[16px]"
-                        transition={{ type: "spring", stiffness: 540, damping: 42, mass: 0.65 }}
+                        transition={{ type: "spring", stiffness: 700, damping: 45, mass: 0.45 }}
                       />
                     )}
                     <t.icon
@@ -503,6 +543,9 @@ export function ConsoleShell({
                     to={t.to}
                     params={t.params}
                     hash={t.hash}
+                    onMouseEnter={() => preloadRouteTarget(t.to, t.params, t.hash)}
+                    onTouchStart={() => preloadRouteTarget(t.to, t.params, t.hash)}
+                    onFocus={() => preloadRouteTarget(t.to, t.params, t.hash)}
                     className={cls}
                     aria-current={active ? "page" : undefined}
                   >
@@ -522,7 +565,7 @@ export function ConsoleShell({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.16 }}
+              transition={{ duration: 0.1 }}
               onClick={() => setOpen(false)}
               className="mobile-keep-blur fixed inset-0 z-40 bg-background/70 backdrop-blur-sm lg:hidden"
             />
@@ -530,7 +573,7 @@ export function ConsoleShell({
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 480, damping: 42, mass: 0.55 }}
+              transition={{ type: "spring", stiffness: 620, damping: 44, mass: 0.42 }}
               drag="y"
               dragControls={sheetDrag}
               dragListener={false}
@@ -597,7 +640,7 @@ export function ConsoleShell({
                 </div>
 
                 {/* Navigation Sections */}
-                {groups.map((g, gi) => (
+                {groups.map((g) => (
                   <div key={g.label ?? "root"}>
                     {g.label && (
                       <div className="flex items-center gap-2 px-1 pb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -606,35 +649,27 @@ export function ConsoleShell({
                       </div>
                     )}
                     <div className="grid grid-cols-3 gap-2.5">
-                      {g.items.map((item, ii) => {
+                      {g.items.map((item) => {
                         const active = isActive(item);
                         return (
-                          <motion.div
+                          <Link
                             key={item.label}
-                            initial={{ opacity: 0, y: 10, scale: 0.97 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{
-                              delay: 0.02 + Math.min(gi * 3 + ii, 12) * 0.015,
-                              duration: 0.18,
-                              ease: [0.22, 1, 0.36, 1],
-                            }}
+                            to={item.to}
+                            params={item.params}
+                            hash={item.hash}
+                            onMouseEnter={() => preloadRouteTarget(item.to, item.params, item.hash)}
+                            onTouchStart={() => preloadRouteTarget(item.to, item.params, item.hash)}
+                            onClick={() => setOpen(false)}
+                            data-active={active || undefined}
+                            className="sheet-tile flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] p-2.5 text-center transition active:scale-95"
                           >
-                            <Link
-                              to={item.to}
-                              params={item.params}
-                              hash={item.hash}
-                              onClick={() => setOpen(false)}
-                              data-active={active || undefined}
-                              className="sheet-tile flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] p-2.5 text-center transition active:scale-95"
-                            >
-                              <span className="sheet-tile-icon grid h-10 w-10 place-items-center rounded-2xl">
-                                <item.icon className="h-[19px] w-[19px]" />
-                              </span>
-                              <span className="line-clamp-2 text-[11px] font-semibold leading-tight">
-                                {item.label}
-                              </span>
-                            </Link>
-                          </motion.div>
+                            <span className="sheet-tile-icon grid h-10 w-10 place-items-center rounded-2xl">
+                              <item.icon className="h-[19px] w-[19px]" />
+                            </span>
+                            <span className="line-clamp-2 text-[11px] font-semibold leading-tight">
+                              {item.label}
+                            </span>
+                          </Link>
                         );
                       })}
                     </div>

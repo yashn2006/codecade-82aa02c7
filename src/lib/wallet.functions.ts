@@ -72,3 +72,143 @@ export const exportWalletCSV = createServerFn({ method: "GET" })
     }).join("\n");
     return { csv: header + body, count: rows?.length ?? 0 };
   });
+
+async function assertCafeAccess(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string,
+  cafeId: string,
+) {
+  const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+  const [{ data: cafe }, { data: staff }, { data: isAdmin }] = await Promise.all([
+    supabaseAdmin.from("cafes").select("id, owner_id, name, slug").eq("id", cafeId).maybeSingle(),
+    supabaseAdmin
+      .from("staff_permissions")
+      .select("id")
+      .eq("cafe_id", cafeId)
+      .eq("staff_user_id", userId)
+      .maybeSingle(),
+    supabase.rpc("has_role", { _user_id: userId, _role: "super_admin" }),
+  ]);
+  if (!cafe) throw new Error("Café not found");
+  if (cafe.owner_id !== userId && !staff && !isAdmin) {
+    throw new Error("Forbidden");
+  }
+  return cafe as { id: string; owner_id: string; name: string; slug: string };
+}
+
+export const listWalletTopupRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCafeAccess(context.supabase, context.userId, data.cafe_id);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("wallet_topups")
+      .select("id, cafe_id, customer_id, amount, status, razorpay_payment_id, notes, created_at, paid_at, customers(id, full_name, phone, user_id)")
+      .eq("cafe_id", data.cafe_id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (rows ?? []).filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (r: any) => r.notes?.method === "upi_proof" || String(r.razorpay_payment_id ?? "").startsWith("UTR:"),
+    );
+  });
+
+export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      cafe_id: z.string().uuid(),
+      action: z.enum(["approve", "reject"]),
+      review_note: z.string().max(240).optional().nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const cafe = await assertCafeAccess(context.supabase, context.userId, data.cafe_id);
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+
+    const { data: reqRow, error: getErr } = await supabaseAdmin
+      .from("wallet_topups")
+      .select("id, cafe_id, customer_id, amount, status, razorpay_payment_id, notes, customers(id, full_name, user_id)")
+      .eq("id", data.id)
+      .eq("cafe_id", data.cafe_id)
+      .maybeSingle();
+    if (getErr) throw new Error(getErr.message);
+    if (!reqRow) throw new Error("Top-up request not found");
+    if (reqRow.status !== "created") {
+      throw new Error(`Request was already ${reqRow.status === "paid" ? "approved" : reqRow.status}.`);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const notesObj = ((reqRow as any).notes ?? {}) as Record<string, unknown>;
+    const utr = String(notesObj.utr_number ?? String(reqRow.razorpay_payment_id ?? "").replace(/^UTR:/, ""));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const customer = (reqRow as any).customers as { id: string; full_name?: string; user_id?: string | null } | null;
+
+    if (data.action === "approve") {
+      const { data: claimed, error: updErr } = await supabaseAdmin
+        .from("wallet_topups")
+        .update({
+          status: "paid",
+          paid_at: new Date().toISOString(),
+          notes: { ...notesObj, reviewed_by: context.userId, reviewed_at: new Date().toISOString() },
+        })
+        .eq("id", reqRow.id)
+        .eq("status", "created")
+        .select("id")
+        .maybeSingle();
+      if (updErr) throw new Error(updErr.message);
+      if (!claimed) throw new Error("Request was already processed.");
+
+      const { error: txErr } = await supabaseAdmin.rpc("apply_wallet_tx", {
+        _customer_id: reqRow.customer_id,
+        _cafe_id: reqRow.cafe_id,
+        _amount: reqRow.amount,
+        _kind: "topup",
+        _note: `Verified UPI Top-up (UTR: ${utr})`,
+      });
+      if (txErr) throw new Error(txErr.message);
+
+      if (customer?.user_id) {
+        await supabaseAdmin.from("notifications").insert({
+          user_id: customer.user_id,
+          cafe_id: cafe.id,
+          kind: "wallet_topup",
+          title: `₹${reqRow.amount} added to your ${cafe.name} wallet`,
+          body: `Your UPI payment (UTR: ${utr}) was verified.`,
+          link: "/portal#wallet",
+        });
+      }
+      return { ok: true, status: "paid" as const };
+    }
+
+    const { error: rejErr } = await supabaseAdmin
+      .from("wallet_topups")
+      .update({
+        status: "failed",
+        notes: {
+          ...notesObj,
+          reviewed_by: context.userId,
+          reviewed_at: new Date().toISOString(),
+          review_note: data.review_note ?? "Could not match UTR with bank statement",
+        },
+      })
+      .eq("id", reqRow.id)
+      .eq("status", "created");
+    if (rejErr) throw new Error(rejErr.message);
+
+    if (customer?.user_id) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: customer.user_id,
+        cafe_id: cafe.id,
+        kind: "wallet_topup",
+        title: `UPI top-up not verified · ${cafe.name}`,
+        body: data.review_note ?? `UTR ${utr} could not be matched. Contact the café counter.`,
+        link: "/portal#wallet",
+      });
+    }
+    return { ok: true, status: "failed" as const };
+  });

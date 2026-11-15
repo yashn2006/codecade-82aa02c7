@@ -36,11 +36,11 @@ export function OwnerInbox() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="relative gap-1.5">
-          <Inbox className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Inbox</span>
+        <Button variant="outline" size="sm" className="relative gap-1.5 min-h-[42px] sm:min-h-[36px] sm:h-9 w-full sm:w-auto text-xs font-semibold rounded-xl border-white/10 hover:bg-white/10 whitespace-nowrap">
+          <Inbox className="h-3.5 w-3.5 shrink-0" />
+          <span>Inbox</span>
           {unread > 0 && (
-            <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-magenta px-1 text-[10px] font-bold text-white">
+            <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-magenta px-1 text-[10px] font-bold text-white tabular-nums">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -52,7 +52,7 @@ export function OwnerInbox() {
             <Mail className="h-4 w-4" /> Messages from CoreCade
           </SheetTitle>
         </SheetHeader>
-        <ScrollArea className="mt-4 h-[calc(100vh-120px)] pr-3">
+        <ScrollArea className="mt-4 h-[calc(100dvh-110px)] pr-3">
           {q.isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, i) => (

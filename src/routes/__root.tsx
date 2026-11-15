@@ -165,30 +165,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:description",
         content:
-          "A SaaS platform for gaming cafes to manage devices, sessions, customers, and revenue.",
+          "CoreCade powers India's gaming cafés. Live sessions, bookings, memberships, devices — one ridiculously fast platform.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://corecade.in" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "CoreCade — The Operating System for Gaming Cafés" },
       {
-        name: "description",
-        content:
-          "A SaaS platform for gaming cafes to manage devices, sessions, customers, and revenue.",
-      },
-      {
         name: "twitter:description",
         content:
-          "A SaaS platform for gaming cafes to manage devices, sessions, customers, and revenue.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/81cbe3aa-ea1a-4123-ab8e-fe323d3bae63/id-preview-e0d3511e--6c5c5626-7d24-4a67-9368-fb9a601303aa.lovable.app-1781271081091.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/81cbe3aa-ea1a-4123-ab8e-fe323d3bae63/id-preview-e0d3511e--6c5c5626-7d24-4a67-9368-fb9a601303aa.lovable.app-1781271081091.png",
+          "CoreCade powers India's gaming cafés. Live sessions, bookings, memberships, devices — one ridiculously fast platform.",
       },
     ],
     links: [

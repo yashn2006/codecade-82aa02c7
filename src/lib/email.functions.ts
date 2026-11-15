@@ -38,13 +38,14 @@ const wrap = (title: string, body: string) => `
 
 export const sendWelcomeEmail = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ email: z.string().email(), name: z.string().min(1) }).parse(d))
-  .handler(async ({ data }) =>
-    sendViaResend(
+  .handler(async ({ data }) => {
+    const appUrl = (process.env.APP_URL || "https://corecade.in").replace(/\/$/, "");
+    return sendViaResend(
       data.email,
       "Welcome to CoreCade 🎮",
-      wrap(`Hey ${data.name}, welcome!`, `<p>Your account is ready. Set up your first café from the owner dashboard and start booking sessions in minutes.</p><p><a href="https://corecade.coreegin.com/owner" style="color:#e94ea0">Open dashboard →</a></p>`),
-    ),
-  );
+      wrap(`Hey ${data.name}, welcome!`, `<p>Your account is ready. Set up your first café from the owner dashboard and start booking sessions in minutes.</p><p><a href="${appUrl}/owner" style="color:#e94ea0">Open dashboard →</a></p>`),
+    );
+  });
 
 export const sendTrialExpiring = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ email: z.string().email(), cafeName: z.string(), daysLeft: z.number().int() }).parse(d))

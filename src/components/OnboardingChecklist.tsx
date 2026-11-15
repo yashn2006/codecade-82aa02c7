@@ -70,10 +70,10 @@ export function OnboardingChecklist({ cafe }: { cafe: CafeProgress }) {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-4 py-2.5 text-left"
+        className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2.5 text-left"
       >
         <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-        <span className="shrink-0 text-sm font-semibold">
+        <span className="shrink-0 text-sm font-semibold tabular-nums">
           {done}/{steps.length} complete · {pct}%
         </span>
         <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">

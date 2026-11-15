@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
-import { Plus, Building2, Power, PowerOff, Lock, Unlock, Wrench, MoreHorizontal, Trash2, ExternalLink, LayoutDashboard, Cpu, CalendarClock, Users as UsersIcon, ShoppingBag, Wallet, Receipt, UserCog, Utensils, Map as MapIcon, BadgePercent, Trophy, FileEdit, BarChart3 } from "lucide-react";
+import { Plus, Building2, Power, PowerOff, Lock, Unlock, Wrench, MoreHorizontal, Trash2, ExternalLink, LayoutDashboard, Cpu, CalendarClock, Users as UsersIcon, ShoppingBag, Wallet, UserCog, Utensils, Map as MapIcon, BadgePercent, Trophy, FileEdit, BarChart3 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -211,7 +211,6 @@ function CafeAdminCard({ cafe, index }: { cafe: CafeRow; index: number }) {
     { to: "/cafe/$slug/bookings", label: "Bookings", icon: CalendarClock },
     { to: "/cafe/$slug/customers", label: "Customers", icon: UsersIcon },
     { to: "/cafe/$slug/pos", label: "POS", icon: ShoppingBag },
-    { to: "/cafe/$slug/ledger", label: "Ledger", icon: Receipt },
     { to: "/cafe/$slug/wallet", label: "Wallet", icon: Wallet },
     { to: "/cafe/$slug/menu", label: "Menu", icon: Utensils },
     { to: "/cafe/$slug/memberships", label: "Memberships", icon: BadgePercent },

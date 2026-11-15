@@ -36,14 +36,14 @@ export function ReferralCard() {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur">
       {/* Collapsed single line */}
-      <div className="flex items-center gap-2 px-4 py-2.5">
+      <div className="flex min-h-[44px] items-center gap-2 px-4 py-2">
         <Gift className="h-4 w-4 shrink-0 text-primary" />
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">
           Refer a café, earn 30 days
         </span>
         <button
           onClick={() => copy(code, "code")}
-          className="hidden shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-mono text-[11px] font-bold text-primary transition hover:bg-primary/20 sm:inline-flex"
+          className="hidden shrink-0 min-h-[32px] items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-mono text-[11px] font-bold text-primary transition hover:bg-primary/20 sm:inline-flex"
         >
           {code}
           {copied === "code" ? (
@@ -56,7 +56,7 @@ export function ReferralCard() {
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label="Toggle referral details"
-          className="shrink-0 rounded-full p-1.5 text-muted-foreground transition hover:text-foreground"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
         >
           <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>

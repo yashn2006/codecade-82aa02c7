@@ -40,8 +40,8 @@ export function OwnerMessageAdmin({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button size="sm" variant="outline" className="gap-1.5">
-            <LifeBuoy className="h-3.5 w-3.5" /> Message admin
+          <Button size="sm" variant="outline" className="gap-1.5 min-h-[42px] sm:min-h-[36px] sm:h-9 w-full sm:w-auto text-xs font-semibold rounded-xl border-white/10 hover:bg-white/10 whitespace-nowrap">
+            <LifeBuoy className="h-3.5 w-3.5 shrink-0" /> Message admin
           </Button>
         )}
       </DialogTrigger>
@@ -66,11 +66,11 @@ export function OwnerMessageAdmin({
             }
             m.mutate({ subject, body });
           }}
-          className="space-y-3"
+          className="space-y-4"
         >
           <div className="space-y-1.5">
             <Label>Subject</Label>
-            <Input name="subject" required maxLength={200} placeholder="Help with…" />
+            <Input name="subject" required maxLength={200} placeholder="Help with…" className="h-11" />
           </div>
           <div className="space-y-1.5">
             <Label>Message</Label>
@@ -80,7 +80,7 @@ export function OwnerMessageAdmin({
             <Button
               type="submit"
               disabled={m.isPending}
-              className="gap-2"
+              className="gap-2 min-h-[42px] w-full sm:w-auto"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
               <Send className="h-4 w-4" /> {m.isPending ? "Sending…" : "Send"}

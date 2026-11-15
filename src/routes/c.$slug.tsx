@@ -29,7 +29,7 @@ export const Route = createFileRoute("/c/$slug")({
       page?.about ||
       `Book PCs, consoles, snacks and tournaments at ${name}${city}.`;
     const img = page?.cover_url || page?.logo_url || undefined;
-    const url = `https://codecade.lovable.app/c/${params.slug}`;
+    const url = `https://corecade.in/c/${params.slug}`;
     const ld = {
       "@context": "https://schema.org",
       "@type": "LocalBusiness",

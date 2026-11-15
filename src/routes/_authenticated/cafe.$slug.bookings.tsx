@@ -209,12 +209,11 @@ function BookingsPage() {
     return (
       <div
         onClick={(e) => { if ((e.target as HTMLElement).closest("button")) return; setDetail(b as unknown as BookingRow); }}
-        className={`relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur transition hover:border-primary/40 hover:bg-white/[0.05] ${compact ? "px-4 py-2.5 pl-5" : "p-4 pl-5"}`}
+        className={`relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur transition hover:border-primary/40 hover:bg-white/[0.05] ${compact ? "px-4 py-2.5" : "p-4"}`}
       >
-        <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: accent, boxShadow: `0 0 12px ${accent}` }} aria-hidden />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: accent }}>
+            <div className="font-mono text-[11px] uppercase tracking-[0.16em] tabular-nums" style={{ color: accent }}>
               {compact ? `${dayLabel(b.scheduled_at)} · ` : ""}{time(b.scheduled_at)} · {b.duration_minutes}m
             </div>
             <div className="mt-0.5 truncate text-[14px] font-semibold">
@@ -253,7 +252,7 @@ function BookingsPage() {
   return (
     <div className="pb-24">
       {/* Tabs + Customer Support Shortcut */}
-      <div className="sticky top-[52px] z-10 -mx-3 flex items-center justify-between gap-2 overflow-x-auto bg-background/70 px-3 py-2 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:px-2">
+      <div className="sticky top-0 z-10 -mx-3 flex items-center justify-between gap-2 overflow-x-auto bg-background/85 px-3 py-2 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:px-2">
         <div className="flex shrink-0 gap-2">
           {tabs.map((t) => {
             const active = tab === t.id;

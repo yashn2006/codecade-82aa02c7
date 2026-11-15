@@ -23,8 +23,8 @@ export function RouteProgress() {
         visibleRef.current = true;
         setVisible(true);
         setProgress((p) => (p < 0.12 ? 0.12 : p));
-        tick = window.setInterval(() => setProgress((p) => p + (0.9 - p) * 0.09), 160);
-      }, 120);
+        tick = window.setInterval(() => setProgress((p) => p + (0.9 - p) * 0.09), 140);
+      }, 220);
       return () => {
         window.clearTimeout(start);
         if (tick) window.clearInterval(tick);

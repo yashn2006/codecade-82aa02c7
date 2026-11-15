@@ -28,7 +28,7 @@ import {
   LifeBuoy,
   MessageSquare,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -239,22 +239,14 @@ function Portal() {
         })}
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={active}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
-        >
-          {active === "home" && <HomeTab summary={summary} onMessageCafe={openBookingSupport} />}
-          {active === "bookings" && <BookingsTab onMessageCafe={openBookingSupport} />}
-          {active === "wallet" && <WalletTab />}
-          {active === "tournaments" && <TournamentsTab />}
-          {active === "support" && <SupportTab prefill={supportPrefill} />}
-          {active === "profile" && <ProfileTab />}
-        </motion.div>
-      </AnimatePresence>
+      <div key={active} className="page-reveal">
+        {active === "home" && <HomeTab summary={summary} onMessageCafe={openBookingSupport} />}
+        {active === "bookings" && <BookingsTab onMessageCafe={openBookingSupport} />}
+        {active === "wallet" && <WalletTab />}
+        {active === "tournaments" && <TournamentsTab />}
+        {active === "support" && <SupportTab prefill={supportPrefill} />}
+        {active === "profile" && <ProfileTab />}
+      </div>
     </ConsoleShell>
   );
 }
@@ -967,12 +959,15 @@ function WalletTab() {
   }, [customers, cafeId]);
 
   const selectedCustomer = customers.find((c) => c.cafe_id === cafeId) ?? customers[0];
+  const cafeUpiMap = (data?.cafeUpi ?? {}) as Record<string, { upi_id: string | null; upi_qr_url: string | null }>;
+  const activeCafeUpi = selectedCustomer ? cafeUpiMap[selectedCustomer.cafe_id] : undefined;
+  const hasCafeUpi = Boolean(activeCafeUpi?.upi_id?.trim());
   const finalAmount = customAmount ? Math.max(0, parseInt(customAmount, 10) || 0) : amount;
 
   const proofMutation = useMutation({
     mutationFn: submitProof,
     onSuccess: () => {
-      toast.success(`${inr(finalAmount)} credited to your gaming wallet!`);
+      toast.success("Top-up proof submitted! Your wallet will be credited once the café verifies your UTR.");
       qc.invalidateQueries({ queryKey: ["portal-wallet"] });
       qc.invalidateQueries({ queryKey: ["portal-summary"] });
       setTopupModalOpen(false);
@@ -982,20 +977,28 @@ function WalletTab() {
   });
 
   async function handleTopup() {
+    if (!selectedCustomer) {
+      toast.error("Visit or book at a café first to link your wallet.");
+      return;
+    }
     if (finalAmount < 1) {
       toast.error("Please enter a valid amount");
       return;
     }
 
     if (payMethod === "upi" || !cfg?.enabled) {
-      if (!utrNumber.trim() || utrNumber.trim().length < 4) {
-        toast.error("Please enter the 12-digit UPI UTR or Transaction Reference");
+      if (!hasCafeUpi) {
+        toast.error("This café has not enabled Direct UPI yet. Please top up at the counter.");
+        return;
+      }
+      if (!utrNumber.trim() || utrNumber.trim().length < 6) {
+        toast.error("Please enter a valid UPI UTR or Transaction Reference (min 6 characters)");
         return;
       }
       proofMutation.mutate({
         data: {
-          cafe_id: selectedCustomer?.cafe_id || "",
-          customer_id: selectedCustomer?.id || "",
+          cafe_id: selectedCustomer.cafe_id,
+          customer_id: selectedCustomer.id,
           amount: finalAmount,
           utr_number: utrNumber.trim(),
         },
@@ -1053,6 +1056,16 @@ function WalletTab() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const txs = (data?.transactions ?? []) as any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const topupRequests = (data?.topupRequests ?? []) as any[];
+  const cafeUpiId = activeCafeUpi?.upi_id?.trim() ?? "";
+  const cafeQrImg =
+    activeCafeUpi?.upi_qr_url ||
+    (cafeUpiId
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+          `upi://pay?pa=${cafeUpiId}&pn=${encodeURIComponent(selectedCustomer?.cafes?.name ?? "Gaming Cafe")}&am=${finalAmount}&cu=INR`,
+        )}`
+      : null);
 
   return (
     <div className="space-y-8">
@@ -1094,9 +1107,10 @@ function WalletTab() {
       </motion.div>
 
       {/* Action Buttons */}
-      <div className="mx-auto flex max-w-xl gap-3">
+      <div className="mx-auto flex max-w-xl flex-col gap-2.5 sm:flex-row sm:gap-3">
         <Button
           onClick={() => setTopupModalOpen(true)}
+          disabled={customers.length === 0}
           className="h-12 flex-1 gap-2 text-xs font-bold text-white shadow-xl transition-transform hover:-translate-y-0.5"
           style={{ background: "var(--gradient-brand-hot)" }}
         >
@@ -1119,7 +1133,7 @@ function WalletTab() {
               type="button"
               onClick={() => setCafeId(c.cafe_id)}
               className={cn(
-                "rounded-xl border px-3.5 py-1.5 text-xs font-semibold transition",
+                "min-h-[40px] rounded-xl border px-3.5 py-1.5 text-xs font-semibold transition",
                 cafeId === c.cafe_id
                   ? "border-primary bg-primary/20 text-white"
                   : "border-white/10 text-muted-foreground hover:text-white"
@@ -1131,7 +1145,54 @@ function WalletTab() {
         </div>
       )}
 
-      {/* Transaction History Ledger */}
+      {/* UPI Verification Requests */}
+      {topupRequests.length > 0 && (
+        <div>
+          <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-primary">
+            UPI Verification Status
+          </div>
+          <div className="space-y-2">
+            {topupRequests.map((req) => {
+              const utr = String(req.notes?.utr_number ?? String(req.razorpay_payment_id ?? "").replace(/^UTR:/, ""));
+              const isPaid = req.status === "paid";
+              const isFailed = req.status === "failed";
+              return (
+                <div
+                  key={req.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs backdrop-blur"
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold text-white">
+                      {req.cafes?.name ?? "Gaming Café"} · <span className="font-mono tabular-nums">{inr(req.amount)}</span>
+                    </div>
+                    <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                      UTR: {utr || "—"} · {new Date(req.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                    {isFailed && req.notes?.review_note && (
+                      <div className="mt-1 text-[11px] text-rose-300">{req.notes.review_note}</div>
+                    )}
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "shrink-0 font-mono text-[10px] uppercase",
+                      isPaid
+                        ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                        : isFailed
+                        ? "border-rose-500/40 bg-rose-500/15 text-rose-300"
+                        : "border-amber-500/40 bg-amber-500/15 text-amber-300",
+                    )}
+                  >
+                    {isPaid ? "Verified & Credited" : isFailed ? "Rejected" : "Pending Verification"}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Transaction History */}
       <div>
         <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-primary">All Wallet Transactions</div>
         {txs.length === 0 ? (
@@ -1151,9 +1212,33 @@ function WalletTab() {
 
       {/* Top-up Dialog */}
       <Dialog open={topupModalOpen} onOpenChange={setTopupModalOpen}>
-        <DialogContent className="max-w-md border-white/15 bg-[#0e0c1a] text-foreground">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-md border-white/15 bg-[#0e0c1a] text-foreground">
           <DialogTitle className="font-display text-xl font-bold text-white">Add Money to Cyber Wallet</DialogTitle>
           <div className="mt-3 space-y-4">
+            {/* Café selector when player has >1 café */}
+            {customers.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Target Gaming Café</Label>
+                {customers.length > 1 ? (
+                  <select
+                    value={selectedCustomer?.cafe_id ?? ""}
+                    onChange={(e) => setCafeId(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-xs font-semibold text-white"
+                  >
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.cafe_id}>
+                        {c.cafes?.name ?? "Café"} (Bal: {inr(c.wallet_balance ?? 0)})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs font-semibold text-white">
+                    {selectedCustomer?.cafes?.name ?? "Gaming Café"}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quick Chips */}
             <div className="grid grid-cols-4 gap-2">
               {QUICK_TOPUP_CHIPS.map((chip) => (
@@ -1165,7 +1250,7 @@ function WalletTab() {
                     setCustomAmount("");
                   }}
                   className={cn(
-                    "rounded-xl border py-2.5 text-xs font-bold transition",
+                    "min-h-[42px] rounded-xl border py-2.5 text-xs font-bold tabular-nums transition",
                     !customAmount && amount === chip
                       ? "border-primary bg-primary/20 text-white shadow"
                       : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-white"
@@ -1182,7 +1267,7 @@ function WalletTab() {
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                 <Input
-                  className="pl-8 font-mono text-base"
+                  className="h-11 pl-8 font-mono text-base tabular-nums"
                   inputMode="numeric"
                   value={customAmount}
                   onChange={(e) => setCustomAmount(e.target.value.replace(/\D/g, ""))}
@@ -1198,69 +1283,88 @@ function WalletTab() {
                   type="button"
                   onClick={() => setPayMethod("gateway")}
                   className={cn(
-                    "flex-1 rounded-lg py-2 text-xs font-semibold transition",
+                    "min-h-[38px] flex-1 rounded-lg py-2 text-xs font-semibold transition",
                     payMethod === "gateway" ? "bg-primary text-white shadow" : "text-muted-foreground"
                   )}
                 >
-                  Razorpay Gateway
+                  Razorpay Instant
                 </button>
                 <button
                   type="button"
                   onClick={() => setPayMethod("upi")}
                   className={cn(
-                    "flex-1 rounded-lg py-2 text-xs font-semibold transition",
+                    "min-h-[38px] flex-1 rounded-lg py-2 text-xs font-semibold transition",
                     payMethod === "upi" ? "bg-primary text-white shadow" : "text-muted-foreground"
                   )}
                 >
-                  Direct UPI / UTR
+                  Direct Café UPI
                 </button>
               </div>
             )}
 
             {/* Direct UPI details */}
             {(payMethod === "upi" || !cfg?.enabled) && (
-              <div className="space-y-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">UPI ID:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText("corecade@upi");
-                      toast.success("UPI ID copied!");
-                    }}
-                    className="flex items-center gap-1 font-mono font-bold text-primary hover:underline"
-                  >
-                    <span>corecade@upi</span>
-                    <Copy className="h-3 w-3" />
-                  </button>
-                </div>
+              hasCafeUpi ? (
+                <div className="space-y-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+                  {cafeQrImg && (
+                    <div className="mx-auto w-fit overflow-hidden rounded-xl bg-white p-2">
+                      <img src={cafeQrImg} alt={`${selectedCustomer?.cafes?.name ?? "Café"} UPI QR`} className="h-36 w-36 object-contain" />
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-muted-foreground">Café UPI ID:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(cafeUpiId);
+                        toast.success("Café UPI ID copied!");
+                      }}
+                      className="flex min-h-[36px] items-center gap-1.5 font-mono font-bold text-primary hover:underline"
+                    >
+                      <span className="truncate max-w-[180px]">{cafeUpiId}</span>
+                      <Copy className="h-3.5 w-3.5 shrink-0" />
+                    </button>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    12-Digit UPI Reference / UTR Number *
-                  </Label>
-                  <Input
-                    value={utrNumber}
-                    onChange={(e) => setUtrNumber(e.target.value)}
-                    placeholder="e.g. 431289012345"
-                    className="font-mono text-sm"
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Transfer ₹{finalAmount} to corecade@upi from GPay/PhonePe, then paste the UTR here.
-                  </p>
+                  <div className="space-y-1.5">
+                    <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      12-Digit UPI Reference / UTR Number *
+                    </Label>
+                    <Input
+                      value={utrNumber}
+                      onChange={(e) => setUtrNumber(e.target.value)}
+                      placeholder="e.g. 431289012345"
+                      className="h-11 font-mono text-sm"
+                    />
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      Transfer {inr(finalAmount)} to <span className="font-mono text-foreground">{cafeUpiId}</span>, then submit the UTR. Balance credits once verified by the café.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs leading-relaxed text-amber-200">
+                  <b>{selectedCustomer?.cafes?.name ?? "This café"}</b> hasn&apos;t set up Direct UPI details yet. Please ask at the café counter to top up your wallet{cfg?.enabled ? ", or switch to Razorpay Instant above." : "."}
+                </div>
+              )
             )}
 
             <Button
               onClick={handleTopup}
-              disabled={busy || proofMutation.isPending || finalAmount < 1}
+              disabled={
+                busy ||
+                proofMutation.isPending ||
+                finalAmount < 1 ||
+                !selectedCustomer ||
+                ((payMethod === "upi" || !cfg?.enabled) && !hasCafeUpi)
+              }
               className="h-12 w-full text-xs font-bold text-white shadow-xl"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
               {busy || proofMutation.isPending
-                ? "Processing Top-Up…"
-                : `Confirm & Add ${inr(finalAmount)} to Wallet →`}
+                ? "Processing…"
+                : payMethod === "upi" || !cfg?.enabled
+                ? `Submit ${inr(finalAmount)} UPI Proof for Verification →`
+                : `Pay ${inr(finalAmount)} Instantly →`}
             </Button>
           </div>
         </DialogContent>

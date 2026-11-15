@@ -1,8 +1,15 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText, SlidersHorizontal, BarChart3, LifeBuoy, CalendarClock, IndianRupee } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { guardRoute, isSuperAdmin } from "@/lib/auth-routing";
+import { adminOverview, listAllCafes, listContacts, adminListUsersFull } from "@/lib/admin.functions";
+import { getNetworkAnalytics } from "@/lib/analytics.functions";
+import { adminListSubscriptions, adminListInvoices, getBillingDetails } from "@/lib/billing.functions";
+import { listAdminTickets } from "@/lib/tickets.functions";
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -14,6 +21,32 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 function AdminLayout() {
   useAdminRealtime();
+  const qc = useQueryClient();
+  const ovFn = useServerFn(adminOverview);
+  const anFn = useServerFn(getNetworkAnalytics);
+  const cafesFn = useServerFn(listAllCafes);
+  const subsFn = useServerFn(adminListSubscriptions);
+  const invFn = useServerFn(adminListInvoices);
+  const billFn = useServerFn(getBillingDetails);
+  const leadsFn = useServerFn(listContacts);
+  const usersFn = useServerFn(adminListUsersFull);
+  const ticketsFn = useServerFn(listAdminTickets);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void qc.prefetchQuery({ queryKey: ["admin-overview"], queryFn: () => ovFn() });
+      void qc.prefetchQuery({ queryKey: ["admin-analytics"], queryFn: () => anFn() });
+      void qc.prefetchQuery({ queryKey: ["admin-cafes"], queryFn: () => cafesFn() });
+      void qc.prefetchQuery({ queryKey: ["admin-subscriptions"], queryFn: () => subsFn() });
+      void qc.prefetchQuery({ queryKey: ["admin-invoices"], queryFn: () => invFn() });
+      void qc.prefetchQuery({ queryKey: ["billing-details"], queryFn: () => billFn() });
+      void qc.prefetchQuery({ queryKey: ["admin-leads"], queryFn: () => leadsFn() });
+      void qc.prefetchQuery({ queryKey: ["admin-users-full", ""], queryFn: () => usersFn({ data: { search: "" } }) });
+      void qc.prefetchQuery({ queryKey: ["admin-tickets"], queryFn: () => ticketsFn() });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [qc, ovFn, anFn, cafesFn, subsFn, invFn, billFn, leadsFn, usersFn, ticketsFn]);
+
   return (
     <ConsoleShell
       badge="Super Admin"

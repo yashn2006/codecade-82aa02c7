@@ -50,8 +50,8 @@ export function DeleteCafeButton({
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" variant="destructive" className="gap-1.5">
-          <Trash2 className="h-3.5 w-3.5" /> Delete café
+        <Button size="sm" variant="destructive" className="gap-1.5 min-h-[42px] sm:min-h-[36px] sm:h-9 w-full sm:w-auto text-xs font-semibold rounded-xl whitespace-nowrap">
+          <Trash2 className="h-3.5 w-3.5 shrink-0" /> Delete café
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -61,7 +61,7 @@ export function DeleteCafeButton({
           </DialogTitle>
           <DialogDescription>
             This permanently removes <span className="font-semibold text-foreground">{name}</span>{" "}
-            along with every device, booking, session, ledger entry, customer record, and audit log
+            along with every device, booking, session, wallet transaction, customer record, and audit log
             linked to it. This cannot be undone.
           </DialogDescription>
         </DialogHeader>
@@ -74,14 +74,16 @@ export function DeleteCafeButton({
             onChange={(e) => setTyped(e.target.value)}
             placeholder={slug}
             autoFocus
+            className="h-11 font-mono"
           />
         </div>
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" className="min-h-[42px]" onClick={() => setOpen(false)}>
             Cancel
           </Button>
           <Button
             variant="destructive"
+            className="min-h-[42px]"
             disabled={typed !== slug || m.isPending}
             onClick={() => m.mutate({ data: { id: cafeId, confirm_slug: typed } })}
           >

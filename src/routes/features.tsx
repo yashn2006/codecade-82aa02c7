@@ -31,7 +31,7 @@ const ownerFeatures = [
   { icon: Users, title: "Memberships", desc: "Prepaid hours, tiered discounts, auto-renewals." },
   { icon: Trophy, title: "Tournaments", desc: "Brackets, entry fees, prize pools, live leaderboards." },
   { icon: BarChart3, title: "Analytics dashboard", desc: "Revenue, sessions, peak hours, top devices — daily." },
-  { icon: Wallet, title: "Wallet & ledger", desc: "Customer wallets, top-ups, refunds — every rupee traced." },
+  { icon: Wallet, title: "Customer wallets", desc: "Prepaid wallets, verified UPI top-ups & refunds — every rupee traced." },
   { icon: CreditCard, title: "UPI + card payments", desc: "Accept Razorpay, UPI QR, cash — reconciled automatically." },
   { icon: Boxes, title: "Multi-branch (add-on)", desc: "Manage many cafés from one owner dashboard." },
   { icon: ShieldCheck, title: "Staff roles", desc: "Scoped logins — cashier, floor, manager, owner." },

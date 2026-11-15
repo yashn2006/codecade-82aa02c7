@@ -141,9 +141,12 @@ function OwnerUpgradePage() {
     },
   });
 
-  const upiId = data?.payTo.upi_id || "corecade@upi";
-  const upiQrString = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("CoreCade Pro")}&am=${selectedPlan.price}&cu=INR&tn=${encodeURIComponent(`Upgrade ${selectedPlan.name}`)}`;
-  const qrUrl = data?.payTo.qr_url || `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiQrString)}`;
+  const upiId = data?.payTo.upi_id?.trim() || "";
+  const upiQrString = upiId
+    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("CoreCade Pro")}&am=${selectedPlan.price}&cu=INR&tn=${encodeURIComponent(`Upgrade ${selectedPlan.name}`)}`
+    : "";
+  const qrUrl = data?.payTo.qr_url?.trim() || (upiQrString ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiQrString)}` : "");
+  const hasPayTarget = Boolean(upiId || qrUrl);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,7 +199,7 @@ function OwnerUpgradePage() {
           />
           <div className="relative max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-primary">
-              <Sparkles className="h-3 w-3" /> Zero Commision · 100% Retained Revenue
+              <Sparkles className="h-3 w-3" /> Zero Commission · 100% Retained Revenue
             </div>
             <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
               Power Up Your <span className="text-gradient-hot">Arcade</span>.
@@ -300,10 +303,10 @@ function OwnerUpgradePage() {
                     </div>
 
                     <div className="mt-4 flex items-baseline gap-1.5">
-                      <span className="font-display text-4xl font-extrabold tracking-tight">
+                      <span className="font-display text-4xl font-extrabold tracking-tight tabular-nums">
                         ₹{plan.price.toLocaleString("en-IN")}
                       </span>
-                      <span className="text-xs text-muted-foreground font-mono">
+                      <span className="text-xs text-muted-foreground font-mono tabular-nums">
                         / {plan.days} days
                       </span>
                     </div>
@@ -360,32 +363,45 @@ function OwnerUpgradePage() {
           <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)] items-start">
             {/* QR Card */}
             <div className="flex flex-col items-center justify-center rounded-2xl border border-white/15 bg-black/40 p-5 text-center shadow-lg">
-              <div className="relative overflow-hidden rounded-xl bg-white p-2">
-                <img
-                  src={qrUrl}
-                  alt={`Scan to pay ₹${selectedPlan.price} CoreCade`}
-                  className="h-48 w-48 object-contain"
-                />
-              </div>
+              {qrUrl ? (
+                <div className="relative overflow-hidden rounded-xl bg-white p-2">
+                  <img
+                    src={qrUrl}
+                    alt={`Scan to pay ₹${selectedPlan.price} CoreCade`}
+                    className="h-48 w-48 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-48 w-48 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/[0.03] px-4 text-xs text-muted-foreground">
+                  <QrCode className="h-8 w-8 text-primary/70" />
+                  <span>Billing UPI QR is being configured. Contact support if urgent.</span>
+                </div>
+              )}
 
-              <div className="mt-4 w-full">
-                <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">UPI ID</div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(upiId);
-                    toast.success("UPI ID copied to clipboard!");
-                  }}
-                  className="mt-1 flex items-center justify-center gap-1.5 w-full rounded-lg border border-white/10 bg-white/5 py-1.5 px-2 text-xs font-mono font-semibold hover:bg-white/10 transition"
-                >
-                  <span className="truncate">{upiId}</span>
-                  <Copy className="h-3 w-3 shrink-0 text-primary" />
-                </button>
-              </div>
+              {upiId ? (
+                <div className="mt-4 w-full">
+                  <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">UPI ID</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(upiId);
+                      toast.success("UPI ID copied to clipboard!");
+                    }}
+                    className="mt-1 flex min-h-[40px] items-center justify-center gap-1.5 w-full rounded-lg border border-white/10 bg-white/5 py-1.5 px-2.5 text-xs font-mono font-semibold hover:bg-white/10 transition"
+                  >
+                    <span className="truncate">{upiId}</span>
+                    <Copy className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 w-full rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-200">
+                  Admin has not saved a platform UPI ID yet.
+                </div>
+              )}
 
               <div className="mt-3 flex items-center gap-1 text-[11px] text-muted-foreground">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Instant manual verification</span>
+                <span>Manual verification in minutes</span>
               </div>
             </div>
 
@@ -450,8 +466,8 @@ function OwnerUpgradePage() {
               <div className="pt-2">
                 <Button
                   type="submit"
-                  disabled={upgradeMutation.isPending || txnRef.trim().length < 4}
-                  className="w-full h-12 text-sm font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+                  disabled={!hasPayTarget || upgradeMutation.isPending || txnRef.trim().length < 4}
+                  className="w-full h-12 text-sm font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5 tabular-nums"
                   style={{ background: "var(--gradient-brand-hot)" }}
                 >
                   {upgradeMutation.isPending ? (
@@ -459,6 +475,8 @@ function OwnerUpgradePage() {
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       Submitting payment verification…
                     </>
+                  ) : !hasPayTarget ? (
+                    <>Billing UPI setup pending — check Help Center</>
                   ) : (
                     <>
                       <Zap className="h-4 w-4 mr-2" />

@@ -42,8 +42,8 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1.5">
-          <IndianRupee className="h-3.5 w-3.5" />
+        <Button size="sm" variant="outline" className="gap-1.5 min-h-[42px] sm:min-h-[36px] sm:h-9 w-full sm:w-auto text-xs font-semibold rounded-xl border-white/10 hover:bg-white/10 whitespace-nowrap">
+          <IndianRupee className="h-3.5 w-3.5 shrink-0" />
           Log payment
         </Button>
       </DialogTrigger>
@@ -75,7 +75,7 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
               },
             });
           }}
-          className="space-y-3"
+          className="space-y-4"
         >
           <div className="space-y-1.5">
             <Label>Amount (₹)</Label>
@@ -87,12 +87,13 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
               required
               autoFocus
               placeholder="500"
+              className="h-11 font-mono text-base tabular-nums"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Method</Label>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {KINDS.map((k) => (
                   <Button
                     key={k}
@@ -100,7 +101,7 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
                     size="sm"
                     variant={kind === k ? "default" : "outline"}
                     onClick={() => setKind(k)}
-                    className="capitalize"
+                    className="min-h-[36px] capitalize"
                   >
                     {k}
                   </Button>
@@ -109,7 +110,7 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
             </div>
             <div className="space-y-1.5">
               <Label>Source</Label>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {SOURCES.map((s) => (
                   <Button
                     key={s}
@@ -117,7 +118,7 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
                     size="sm"
                     variant={source === s ? "default" : "outline"}
                     onClick={() => setSource(s)}
-                    className="capitalize"
+                    className="min-h-[36px] capitalize"
                   >
                     {s}
                   </Button>
@@ -133,6 +134,7 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
             <Button
               type="submit"
               disabled={m.isPending}
+              className="min-h-[42px] w-full sm:w-auto"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
               {m.isPending ? "Logging…" : "Log payment"}

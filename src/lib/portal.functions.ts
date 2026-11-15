@@ -256,13 +256,56 @@ export const getMyWalletLedger = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const customers = await myCustomerIds(context.supabase, context.userId);
     const ids = customers.map((c) => c.id);
-    if (!ids.length) return { customers, transactions: [] as any[], balance: 0 };
-    const { data: transactions } = await supabaseAdmin
-      .from("wallet_transactions")
-      .select("id, amount, kind, note, created_at, cafe_id, customer_id")
-      .in("customer_id", ids).order("created_at", { ascending: false }).limit(100);
+    const cafeIds = Array.from(new Set(customers.map((c) => c.cafe_id).filter(Boolean)));
+
+    if (!ids.length) {
+      return {
+        customers,
+        transactions: [] as any[],
+        topupRequests: [] as any[],
+        cafeUpi: {} as Record<string, { upi_id: string | null; upi_qr_url: string | null }>,
+        balance: 0,
+      };
+    }
+
+    const [{ data: transactions }, { data: pages }, { data: topups }] = await Promise.all([
+      supabaseAdmin
+        .from("wallet_transactions")
+        .select("id, amount, kind, note, created_at, cafe_id, customer_id")
+        .in("customer_id", ids)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      cafeIds.length
+        ? supabaseAdmin
+            .from("cafe_pages")
+            .select("cafe_id, upi_id, upi_qr_url")
+            .in("cafe_id", cafeIds)
+        : Promise.resolve({ data: [] as { cafe_id: string; upi_id: string | null; upi_qr_url: string | null }[] }),
+      supabaseAdmin
+        .from("wallet_topups")
+        .select("id, cafe_id, customer_id, amount, status, razorpay_payment_id, notes, created_at, paid_at, cafes(name, slug)")
+        .in("customer_id", ids)
+        .order("created_at", { ascending: false })
+        .limit(30),
+    ]);
+
+    const cafeUpi: Record<string, { upi_id: string | null; upi_qr_url: string | null }> = {};
+    for (const p of (pages ?? []) as { cafe_id: string; upi_id: string | null; upi_qr_url: string | null }[]) {
+      cafeUpi[p.cafe_id] = { upi_id: p.upi_id ?? null, upi_qr_url: p.upi_qr_url ?? null };
+    }
+
+    const topupRequests = (topups ?? []).filter(
+      (t: any) => t.notes?.method === "upi_proof" || String(t.razorpay_payment_id ?? "").startsWith("UTR:"),
+    );
+
     const balance = customers.reduce((s, c) => s + (c.wallet_balance ?? 0), 0);
-    return { customers, transactions: transactions ?? [], balance };
+    return {
+      customers,
+      transactions: transactions ?? [],
+      topupRequests,
+      cafeUpi,
+      balance,
+    };
   });
 
 export const getMyTournaments = createServerFn({ method: "GET" })
@@ -297,28 +340,78 @@ export const customerSubmitTopupProof = createServerFn({ method: "POST" })
     z.object({
       cafe_id: z.string().uuid(),
       customer_id: z.string().uuid(),
-      amount: z.number().int().min(1),
-      utr_number: z.string().min(4).max(60),
+      amount: z.number().int().min(1).max(100000),
+      utr_number: z.string().trim().min(6, "Enter a valid UPI UTR / reference (at least 6 characters)").max(60),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const utr = data.utr_number.trim();
+    if (!/^[A-Za-z0-9._-]{6,60}$/.test(utr)) {
+      throw new Error("UTR / transaction reference can only contain letters, numbers, dots or dashes.");
+    }
+
     const { data: customer } = await supabaseAdmin
       .from("customers")
-      .select("id, user_id, cafe_id")
+      .select("id, user_id, cafe_id, full_name")
       .eq("id", data.customer_id)
+      .eq("cafe_id", data.cafe_id)
       .eq("user_id", context.userId)
       .maybeSingle();
-    if (!customer) throw new Error("Customer record not found");
+    if (!customer) throw new Error("Customer record not found for this café");
 
-    const { error } = await supabaseAdmin.rpc("apply_wallet_tx", {
-      _customer_id: data.customer_id,
-      _cafe_id: data.cafe_id,
-      _amount: data.amount,
-      _kind: "topup",
-      _note: `UPI Top-up (UTR: ${data.utr_number.trim()})`,
-    });
+    const [{ data: cafe }, { data: cafePage }] = await Promise.all([
+      supabaseAdmin.from("cafes").select("id, name, slug, owner_id").eq("id", data.cafe_id).maybeSingle(),
+      supabaseAdmin.from("cafe_pages").select("upi_id").eq("cafe_id", data.cafe_id).maybeSingle(),
+    ]);
+    if (!cafe) throw new Error("Café not found");
+    if (!cafePage?.upi_id) {
+      throw new Error("This café has not enabled Direct UPI yet. Please pay at the counter.");
+    }
+
+    const { data: dup } = await supabaseAdmin
+      .from("wallet_topups")
+      .select("id, status")
+      .eq("cafe_id", data.cafe_id)
+      .eq("razorpay_payment_id", `UTR:${utr}`)
+      .in("status", ["created", "paid"])
+      .limit(1)
+      .maybeSingle();
+    if (dup) {
+      throw new Error("This UTR reference has already been submitted.");
+    }
+
+    const { data: row, error } = await supabaseAdmin
+      .from("wallet_topups")
+      .insert({
+        cafe_id: data.cafe_id,
+        customer_id: data.customer_id,
+        amount: data.amount,
+        currency: "INR",
+        status: "created",
+        razorpay_payment_id: `UTR:${utr}`,
+        notes: {
+          method: "upi_proof",
+          utr_number: utr,
+          submitted_by: context.userId,
+          customer_name: customer.full_name,
+          submitted_at: new Date().toISOString(),
+        },
+      })
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
 
-    return { ok: true };
+    if (cafe.owner_id) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: cafe.owner_id,
+        cafe_id: cafe.id,
+        kind: "wallet_topup",
+        title: `UPI top-up proof · ₹${data.amount}`,
+        body: `${customer.full_name ?? "A player"} submitted UTR ${utr}. Verify in Wallet to credit.`,
+        link: `/cafe/${cafe.slug}/wallet`,
+      });
+    }
+
+    return { ok: true, status: "pending" as const, topup_id: row.id };
   });

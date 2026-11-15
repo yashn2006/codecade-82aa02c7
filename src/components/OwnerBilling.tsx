@@ -79,7 +79,7 @@ export function OwnerBilling() {
                 </Badge>
               </div>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="font-display text-3xl font-extrabold" style={{ color: col }}>
+                <span className="font-display text-3xl font-extrabold tabular-nums" style={{ color: col }}>
                   {c.days_left}
                 </span>
                 <span className="text-xs text-muted-foreground">days left</span>
@@ -193,6 +193,7 @@ export function OwnerBilling() {
                   />
                   <Button
                     size="sm"
+                    className="min-h-[44px] sm:min-h-[38px]"
                     disabled={(txn[inv.id] ?? "").trim().length < 3 || send.isPending}
                     onClick={() =>
                       send.mutate({

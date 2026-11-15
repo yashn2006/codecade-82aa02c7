@@ -10,17 +10,13 @@ import { SUPABASE_URL } from "../supabase-config";
 // it (instead of crashing the whole Worker at boot).
 let cached: SupabaseClient | null = null;
 
-const FALLBACK_SERVICE_ROLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ2FpcW5pd2VnZ2lmY2p0b2lvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTE3MDY1OCwiZXhwIjoyMDk2NzQ2NjU4fQ.6R_GZiprt-fcJiimO1cpHvsF5KJEXvkmTYSIJIVfHp4";
-
 function build(): SupabaseClient {
   const serviceKey =
     process.env.EXTERNAL_SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    FALLBACK_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) {
     throw new Error(
-      "EXTERNAL_SUPABASE_SERVICE_ROLE_KEY is not set.",
+      "SUPABASE_SERVICE_ROLE_KEY (or EXTERNAL_SUPABASE_SERVICE_ROLE_KEY) is not set.",
     );
   }
   return createClient(SUPABASE_URL, serviceKey, {
