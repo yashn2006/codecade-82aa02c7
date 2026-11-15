@@ -8,7 +8,7 @@ import { directSignUp } from "@/lib/auth.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuroraBackground } from "@/components/AuroraBackground";
-import { BrandLockup, BrandMark } from "@/components/Brand";
+import { BrandLockup, BrandShowcase } from "@/components/Brand";
 import { toast } from "sonner";
 import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
 
@@ -623,12 +623,12 @@ function HeroPanel() {
 function FloatingMark() {
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
-  const rx = useSpring(useTransform(my, [-1, 1], [12, -12]), { stiffness: 100, damping: 14 });
-  const ry = useSpring(useTransform(mx, [-1, 1], [-18, 18]), { stiffness: 100, damping: 14 });
+  const rx = useSpring(useTransform(my, [-1, 1], [10, -10]), { stiffness: 100, damping: 14 });
+  const ry = useSpring(useTransform(mx, [-1, 1], [-14, 14]), { stiffness: 100, damping: 14 });
 
   return (
     <div
-      className="relative mt-12 h-64"
+      className="relative mt-10 h-60"
       style={{ perspective: 1200 }}
       onMouseMove={(e) => {
         const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -639,30 +639,30 @@ function FloatingMark() {
     >
       <motion.div
         style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
-        className="relative mx-auto h-full w-fit"
+        className="relative mx-auto flex h-full w-fit items-center justify-center"
       >
         {/* Glow orbs */}
-        <div className="absolute -left-12 top-6 h-40 w-40 rounded-full blur-[60px]"
-             style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.55), transparent 70%)" }} />
-        <div className="absolute -right-8 bottom-0 h-44 w-44 rounded-full blur-[70px]"
-             style={{ background: "radial-gradient(circle, oklch(0.65 0.25 295 / 0.6), transparent 70%)" }} />
+        <div
+          className="absolute -left-10 top-4 h-36 w-36 rounded-full blur-[60px]"
+          style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.55), transparent 70%)" }}
+        />
+        <div
+          className="absolute -right-8 bottom-0 h-40 w-40 rounded-full blur-[70px]"
+          style={{ background: "radial-gradient(circle, oklch(0.65 0.25 295 / 0.6), transparent 70%)" }}
+        />
         <motion.div
-          animate={{ y: [0, -10, 0] }}
+          animate={{ y: [0, -8, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           className="relative"
-          style={{ transform: "translateZ(40px)" }}
+          style={{ transform: "translateZ(36px)" }}
         >
-          <BrandMark size={180} />
+          <BrandShowcase className="aspect-[16/9] w-[330px]" />
         </motion.div>
 
         {/* Orbit ring */}
         <div
-          className="pointer-events-none absolute inset-0 m-auto h-56 w-56 rounded-full border border-primary/30"
+          className="pointer-events-none absolute inset-0 m-auto h-56 w-80 rounded-full border border-primary/25"
           style={{ transform: "translateZ(-20px) rotateX(70deg)" }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 m-auto h-72 w-72 rounded-full border border-primary/15"
-          style={{ transform: "translateZ(-40px) rotateX(70deg)" }}
         />
       </motion.div>
     </div>

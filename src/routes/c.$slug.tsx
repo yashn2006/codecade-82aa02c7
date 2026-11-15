@@ -12,6 +12,7 @@ import { getPublicCafe } from "@/lib/cafe-page.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookingFlow } from "@/components/BookingFlow";
+import { BrandLockup } from "@/components/Brand";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { supabase } from "@/lib/supabase/client";
@@ -172,12 +173,7 @@ function PublicCafePage() {
       <header className="sticky top-0 z-40">
         <div className="mx-auto mt-2.5 sm:mt-3 max-w-6xl px-3 sm:px-4">
           <div className="mobile-keep-blur flex items-center justify-between gap-2 rounded-2xl border border-white/12 bg-[#0b0820]/75 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl sm:px-4 sm:py-2.5">
-            <Link to="/discover" className="flex min-h-[40px] items-center gap-2 shrink-0">
-              <div className="grid h-8 w-8 place-items-center rounded-lg" style={{ background: "linear-gradient(135deg,#ff52e0,#7b2fff,#2d8eff)", boxShadow: "0 0 18px rgba(255,82,224,.5)" }}>
-                <Joystick className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-display text-sm font-black tracking-[0.18em]">CORECADE</span>
-            </Link>
+            <BrandLockup size={28} to="/discover" />
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Link to="/discover"><Button size="sm" variant="ghost" className="min-h-[40px] border border-white/15 bg-transparent px-2.5 text-xs text-white hover:bg-white/10 sm:px-3">Arenas</Button></Link>
               {signedIn ? (

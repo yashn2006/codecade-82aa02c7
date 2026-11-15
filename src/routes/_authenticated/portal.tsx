@@ -291,14 +291,12 @@ function HomeTab({
   return (
     <div className="space-y-6">
       {/* HOLOGRAPHIC GAMER VIP IDENTITY BANNER */}
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-white/12 bg-gradient-to-br from-[#16102c] via-[#0d0918] to-[#190c26] p-5 shadow-2xl sm:p-8"
+      <div
+        className="relative overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-[#171130] via-[#0d0919] to-[#1a0d2a] p-5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.12)] sm:p-8"
       >
         {/* Glow orb */}
         <div
-          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full opacity-50 blur-[80px]"
+          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full opacity-55 blur-[80px]"
           style={{ background: "radial-gradient(circle, oklch(0.7 0.26 335 / 0.6), transparent 70%)" }}
           aria-hidden
         />
@@ -333,7 +331,7 @@ function HomeTab({
               <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="font-mono">ID: #{profile?.id ? profile.id.slice(0, 8).toUpperCase() : "CC-8942"}</span>
                 <span>·</span>
-                <span>{summary?.totalHours ?? 0} Hours Logged</span>
+                <span className="tabular-nums">{summary?.totalHours ?? 0} Hours Logged</span>
               </div>
             </div>
           </div>
@@ -343,7 +341,7 @@ function HomeTab({
             <Link
               to="/portal"
               hash="wallet"
-              className="group flex items-center justify-between sm:justify-start gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-5 py-3 transition hover:border-primary/60 hover:bg-primary/20"
+              className="group flex min-h-[52px] items-center justify-between sm:justify-start gap-3 rounded-2xl border border-primary/35 bg-primary/12 px-5 py-3 transition hover:border-primary/65 hover:bg-primary/20"
             >
               <div>
                 <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Wallet Balance</div>
@@ -357,7 +355,7 @@ function HomeTab({
             </Link>
 
             <Link to="/discover" className="w-full sm:w-auto">
-              <Button className="h-12 w-full sm:w-auto gap-2 text-xs font-bold text-white shadow-lg" style={{ background: "var(--gradient-brand-hot)" }}>
+              <Button className="h-12 min-h-[52px] w-full sm:w-auto gap-2 text-xs font-bold text-white shadow-lg" style={{ background: "var(--gradient-brand-hot)" }}>
                 <Compass className="h-4 w-4" /> Discover Arenas
               </Button>
             </Link>
@@ -365,7 +363,7 @@ function HomeTab({
         </div>
 
         {/* Level & XP Progression HUD */}
-        <div className="mt-5 border-t border-white/5 pt-4">
+        <div className="mt-5 border-t border-white/10 pt-4">
           <div className="flex items-center justify-between text-[11px] font-mono">
             <span className="flex items-center gap-1.5 font-bold text-white">
               <Award className="h-3.5 w-3.5 text-primary" /> LEVEL {prog.level} {prog.tier}
@@ -381,7 +379,7 @@ function HomeTab({
             />
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* LIVE ACTIVE SESSION HUD (If playing right now) */}
       {active && <ActiveSessionCockpit session={active} />}
@@ -409,12 +407,12 @@ function HomeTab({
         <TelemetryCard icon={Flame} label="Completed Sessions" value={String(summary?.completed ?? 0)} color="#ff9b45" />
       </div>
 
-      {/* RECENT ACTIVITY & LEDGER */}
-      <div className="rounded-3xl border border-white/10 bg-card/40 p-5 backdrop-blur-xl">
+      {/* RECENT ACTIVITY */}
+      <div className="rounded-3xl border border-white/12 bg-card/55 p-5 backdrop-blur-xl">
         <div className="mb-4 flex items-center justify-between">
           <div className="font-mono text-[10px] uppercase tracking-widest text-primary">Recent Transactions & Passes</div>
           <Link to="/portal" hash="wallet" className="text-xs text-primary font-semibold hover:underline">
-            View Ledger →
+            View Wallet →
           </Link>
         </div>
 
@@ -461,9 +459,9 @@ function TelemetryCard({
   color: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur transition hover:border-white/20">
+    <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[#110d20]/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur transition hover:border-white/25">
       <div className="flex items-center gap-2">
-        <div className="rounded-lg p-1.5" style={{ background: `${color}20`, color }}>
+        <div className="rounded-lg p-1.5" style={{ background: `${color}22`, color }}>
           <Icon className="h-4 w-4" />
         </div>
         <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>

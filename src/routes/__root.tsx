@@ -167,8 +167,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "CoreCade powers India's gaming cafés. Live sessions, bookings, memberships, devices — one ridiculously fast platform.",
       },
+      { property: "og:site_name", content: "CoreCade" },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://corecade.in" },
+      { property: "og:image", content: "/logo.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "CoreCade — The Operating System for Gaming Cafés" },
       {
@@ -176,12 +178,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "CoreCade powers India's gaming cafés. Live sessions, bookings, memberships, devices — one ridiculously fast platform.",
       },
+      { name: "twitter:image", content: "/logo.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "icon", href: "/favicon.ico" },
-      { rel: "apple-touch-icon", href: "/favicon.ico" },
+      { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/favicon-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/favicon-512.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
       {

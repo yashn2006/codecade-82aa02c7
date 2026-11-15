@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { BrandLockup } from "@/components/Brand";
+import { BrandLockup, BrandShowcase } from "@/components/Brand";
 import { BookingFlow } from "@/components/BookingFlow";
 import discoverBg from "@/assets/images/discover_cyber_arena_1794330285407.jpg";
 import stationHeroImg from "@/assets/livefloor/station-hero.jpg";
@@ -174,15 +174,15 @@ function DiscoverPage() {
         <header className="mobile-keep-blur sticky top-0 z-40 border-b border-white/[0.08] bg-[#07060d]/80 backdrop-blur-xl transition-all">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 sm:py-3.5 lg:px-8">
             <div className="flex items-center gap-6">
-              <BrandLockup size={28} to="/" />
+              <BrandLockup size={30} badge="Arenas" to="/" />
               <div className="hidden items-center gap-2 border-l border-white/10 pl-6 text-xs text-muted-foreground md:flex">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
                 </span>
-                <span>{cafes.length} Arenas Online</span>
+                <span className="tabular-nums">{cafes.length} Arenas Online</span>
                 <span className="text-white/20">·</span>
-                <span className="font-mono text-emerald-400">{activeSessionsCount} Active Gamers</span>
+                <span className="font-mono text-emerald-400 tabular-nums">{activeSessionsCount} Active Gamers</span>
               </div>
             </div>
 
@@ -227,13 +227,21 @@ function DiscoverPage() {
         </header>
 
         {/* HERO SECTION */}
-        <section className="relative overflow-hidden px-4 pt-12 pb-10 sm:px-6 sm:pt-20 lg:px-8">
+        <section className="relative overflow-hidden px-4 pt-10 pb-10 sm:px-6 sm:pt-16 lg:px-8">
           <div className="mx-auto max-w-5xl text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mx-auto mb-5 max-w-[210px] sm:max-w-[260px]"
+            >
+              <BrandShowcase compact className="aspect-[16/9]" />
+            </motion.div>
+
             {/* Cyber Kicker */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-semibold text-primary backdrop-blur"
+              className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/12 px-4 py-1 text-xs font-semibold text-primary backdrop-blur"
             >
               <Sparkles className="h-3.5 w-3.5" />
               <span>Real-Time Esports & Gaming Café Locator</span>
@@ -243,7 +251,7 @@ function DiscoverPage() {
             <motion.h1
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
+              transition={{ delay: 0.04 }}
               className="mt-4 font-display text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl"
             >
               FIND YOUR <span className="text-gradient-hot">PERFECT ARENA</span>.
@@ -252,8 +260,8 @@ function DiscoverPage() {
             <motion.p
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg"
+              transition={{ delay: 0.08 }}
+              className="mx-auto mt-4 max-w-2xl text-[15px] text-muted-foreground sm:text-lg"
             >
               Book 240Hz RTX 40-series rigs, 4K PS5 consoles and high-octane racing simulators with guaranteed seat locks in under 30 seconds.
             </motion.p>
@@ -262,22 +270,22 @@ function DiscoverPage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15 }}
-              className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2 backdrop-blur-xl sm:grid-cols-4"
+              transition={{ delay: 0.12 }}
+              className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-2.5 rounded-2xl border border-white/12 bg-white/[0.04] p-2.5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:grid-cols-4"
             >
-              <div className="rounded-xl border border-white/5 bg-black/30 p-2.5 text-center">
+              <div className="rounded-xl border border-white/10 bg-[#0d0a1a]/90 p-3 text-center">
                 <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Total Stations</div>
-                <div className="mt-0.5 font-display text-xl font-extrabold text-white">{totalRigs}+</div>
+                <div className="mt-0.5 font-display text-xl font-extrabold text-white tabular-nums">{totalRigs}+</div>
               </div>
-              <div className="rounded-xl border border-white/5 bg-black/30 p-2.5 text-center">
+              <div className="rounded-xl border border-white/10 bg-[#0d0a1a]/90 p-3 text-center">
                 <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Starting Rate</div>
-                <div className="mt-0.5 font-display text-xl font-extrabold text-emerald-400">₹60 / hr</div>
+                <div className="mt-0.5 font-display text-xl font-extrabold text-emerald-400 tabular-nums">₹60 / hr</div>
               </div>
-              <div className="rounded-xl border border-white/5 bg-black/30 p-2.5 text-center">
+              <div className="rounded-xl border border-white/10 bg-[#0d0a1a]/90 p-3 text-center">
                 <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Verified Cafés</div>
-                <div className="mt-0.5 font-display text-xl font-extrabold text-primary">{cafes.length}</div>
+                <div className="mt-0.5 font-display text-xl font-extrabold text-primary tabular-nums">{cafes.length}</div>
               </div>
-              <div className="rounded-xl border border-white/5 bg-black/30 p-2.5 text-center">
+              <div className="rounded-xl border border-white/10 bg-[#0d0a1a]/90 p-3 text-center">
                 <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Seat Lock</div>
                 <div className="mt-0.5 font-display text-xl font-extrabold text-amber-300">Instant</div>
               </div>
@@ -548,11 +556,12 @@ function DiscoverPage() {
         )}
 
         {/* Footer */}
-        <footer className="border-t border-white/[0.08] bg-black/40 py-8 text-center text-xs text-muted-foreground">
+        <footer className="border-t border-white/[0.08] bg-black/50 py-8 text-center text-xs text-muted-foreground">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2">
-              <span className="font-display font-bold text-white">CoreCade</span>
-              <span>· India’s Gaming & Esports Infrastructure</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <BrandLockup size={26} to="/" />
+              <span className="hidden text-white/25 sm:inline">·</span>
+              <span>Discover · Book · Play</span>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/portal" className="hover:text-white transition">Gamer Portal</Link>
@@ -792,8 +801,8 @@ function ArenaMapView({ cafes, onSelectCafe }: { cafes: Cafe[]; onSelectCafe: (c
   }, [mapLoaded, cafes]);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0d0b17] shadow-2xl">
-      <div ref={containerRef} style={{ height: "600px", width: "100%" }} />
+    <div className="relative overflow-hidden rounded-3xl border border-white/12 bg-[#0d0b17] shadow-2xl">
+      <div ref={containerRef} className="h-[420px] w-full sm:h-[580px]" />
     </div>
   );
 }

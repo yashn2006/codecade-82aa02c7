@@ -7,7 +7,7 @@ import {
   Activity, Sparkles, Terminal, Gamepad2, LayoutDashboard, Menu, X,
 } from "lucide-react";
 import { AuroraBackground } from "@/components/AuroraBackground";
-import { BrandLockup, BrandMark } from "@/components/Brand";
+import { BrandLockup, BrandShowcase } from "@/components/Brand";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { ConsoleMockup } from "@/components/ConsoleMockup";
 import { TerminalContact } from "@/components/TerminalContact";
@@ -324,7 +324,7 @@ function Hero() {
           {/* Trust / proof strip */}
           <motion.div
             initial="hidden" animate="visible" custom={4} variants={fadeUp}
-            className="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-border/40 pt-6"
+            className="mt-10 grid max-w-md grid-cols-3 gap-3 sm:gap-4 border-t border-white/10 pt-6"
           >
             {[
               { v: 15, l: "day free trial", pre: "", suf: "", fmt: (n: number) => Math.round(n).toString() },
@@ -332,13 +332,12 @@ function Hero() {
               { v: 99.9, l: "uptime", pre: "", suf: "%", fmt: (n: number) => n.toFixed(1) },
             ].map((k) => (
               <div key={k.l}>
-                <div className="font-display text-2xl font-extrabold text-gradient flex items-center min-h-[2rem]">
+                <div className="font-display text-2xl sm:text-3xl font-extrabold text-gradient flex items-center min-h-[2rem] tabular-nums">
                   {k.pre}<AnimatedNumber value={k.v} duration={1500} suffix={k.suf} format={k.fmt} />
                 </div>
-                <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{k.l}</div>
+                <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{k.l}</div>
               </div>
             ))}
-
           </motion.div>
         </div>
 
@@ -904,22 +903,13 @@ function Footer() {
         <div className="grid gap-10 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-3">
-              <BrandMark size={32} />
-              <span className="font-display text-lg font-bold">
-                <span className="text-foreground">core</span><span className="text-gradient">cade</span>
-              </span>
+            <BrandLockup size={34} to="/" />
+            <div className="mt-4">
+              <BrandShowcase compact className="aspect-[16/9] max-w-[220px]" />
             </div>
             <p className="mt-4 max-w-sm text-sm text-muted-foreground">
               The operating system for gaming cafés. Live sessions, bookings, memberships, devices — one ridiculously fast platform.
             </p>
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-              <Sparkles className="h-3 w-3 text-primary" />
-              A product of{" "}
-              <a href="https://coreegin.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition">
-                CoreEgin
-              </a>
-            </div>
           </div>
 
           {/* Product */}
@@ -938,15 +928,11 @@ function Footer() {
             <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Company</div>
             <ul className="mt-4 space-y-2.5 text-sm">
               <li>
-                <a href="mailto:support@corecade.io" className="text-foreground/80 hover:text-foreground transition">
-                  support@corecade.io
+                <a href="mailto:support@corecade.in" className="text-foreground/80 hover:text-foreground transition">
+                  support@corecade.in
                 </a>
               </li>
-              <li>
-                <a href="https://coreegin.com" target="_blank" rel="noopener noreferrer" className="text-foreground/80 hover:text-foreground transition">
-                  coreegin.com
-                </a>
-              </li>
+              <li><Link to="/features" className="text-foreground/80 hover:text-foreground transition">All Features</Link></li>
               <li><Link to="/terms" className="text-foreground/80 hover:text-foreground transition">Terms</Link></li>
               <li><Link to="/privacy" className="text-foreground/80 hover:text-foreground transition">Privacy</Link></li>
               <li><Link to="/refund-policy" className="text-foreground/80 hover:text-foreground transition">Refund policy</Link></li>
@@ -959,12 +945,7 @@ function Footer() {
           <div className="text-center sm:text-left">
             © {year} <span className="text-foreground">CoreCade</span>. All rights reserved.
             <span className="mx-2 opacity-40">·</span>
-            CoreCade is a product of{" "}
-            <a href="https://coreegin.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition">
-              CoreEgin
-            </a>{" "}
-            &{" "}
-            <span className="font-mono uppercase tracking-widest text-foreground/80">powered by CoreEngine</span>.
+            <span className="font-mono uppercase tracking-widest text-foreground/80">Discover · Book · Play</span>
           </div>
           <div className="font-mono text-[10px] uppercase tracking-[0.25em]">Made in India 🇮🇳</div>
         </div>
