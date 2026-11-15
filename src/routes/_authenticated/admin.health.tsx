@@ -31,17 +31,17 @@ function HealthPanel() {
         <h2 className="font-display text-3xl font-extrabold">System health</h2>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Activity} label="Active sessions" value={d?.sessionsActive ?? 0} accent="magenta" hint="live" />
         <StatCard icon={CircleDot} label="Cafés live" value={d?.cafesActive ?? 0} accent="violet" delay={0.05} />
         <StatCard icon={Pause} label="Cafés paused" value={d?.cafesPaused ?? 0} accent="azure" delay={0.1} />
         <StatCard icon={Cpu} label="Devices on network" value={d?.devices ?? 0} accent="violet" delay={0.15} />
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border/60 bg-card/40 p-4 sm:p-5 backdrop-blur">
         <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Last 24 hours</div>
         <div className="mt-1 font-display text-xl font-bold">Activity pulse</div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Row icon={Activity} label="Sessions started" value={d?.sessions24 ?? 0} />
           <Row icon={ShoppingBag} label="Orders" value={d?.orders24 ?? 0} />
           <Row icon={CalendarClock} label="Bookings" value={d?.bookings24 ?? 0} />

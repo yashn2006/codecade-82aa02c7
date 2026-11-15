@@ -105,7 +105,7 @@ function BillingPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           { label: "Awaiting review", value: String(awaiting.length), icon: Receipt, c: "#38bdf8" },
           { label: "Collected", value: money(collected), icon: IndianRupee, c: "#22c55e" },
@@ -120,7 +120,7 @@ function BillingPanel() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Charge a café */}
         <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
           <h2 className="font-display text-lg font-bold">Charge a café</h2>
@@ -219,9 +219,9 @@ function BillingPanel() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.02, 0.3) }}
-                className="flex flex-wrap items-center gap-3 px-5 py-4"
+                className="flex flex-wrap items-center gap-3 px-4 sm:px-5 py-4"
               >
-                <div className="min-w-[180px] flex-1">
+                <div className="min-w-0 w-full sm:w-auto sm:min-w-[180px] sm:flex-1">
                   <div className="text-sm font-semibold">{r.cafe_name ?? "—"}</div>
                   <div className="text-[11px] text-muted-foreground">
                     {money(r.amount_paise)} · {r.days} days
@@ -229,7 +229,7 @@ function BillingPanel() {
                   </div>
                 </div>
 
-                <div className="min-w-[170px] text-[11px] text-muted-foreground">
+                <div className="min-w-0 w-full sm:w-auto sm:min-w-[170px] text-[11px] text-muted-foreground">
                   {r.txn_ref ? (
                     <div>
                       Txn: <span className="font-mono text-foreground">{r.txn_ref}</span>

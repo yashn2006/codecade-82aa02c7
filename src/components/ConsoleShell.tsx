@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
@@ -81,9 +81,15 @@ export function ConsoleShell({
   const [open, setOpen] = useState(false);
   const [effectsPref, setEffectsPref] = useState<"liquid" | "crisp">("liquid");
   const [motionPref, setMotionPref] = useState<"smooth" | "reduced">("smooth");
+  const mainRef = useRef<HTMLElement>(null);
   const path = useRouterState({ select: (s) => s.location.pathname });
   const hash = useRouterState({ select: (s) => s.location.hash });
   const safeNav = useMemo(() => (Array.isArray(nav) ? nav : []), [nav]);
+
+  const normalizeHash = (h?: string) => {
+    const clean = (h ?? "").replace(/^#/, "");
+    return clean || undefined;
+  };
 
   const preloadRouteTarget = useCallback(
     (to?: string, params?: Record<string, string>, targetHash?: string) => {
@@ -92,7 +98,7 @@ export function ConsoleShell({
         .preloadRoute({
           to: to as never,
           params: params as never,
-          hash: targetHash,
+          hash: normalizeHash(targetHash),
         })
         .catch(() => {});
     },
@@ -129,6 +135,7 @@ export function ConsoleShell({
 
   useEffect(() => {
     setOpen(false);
+    mainRef.current?.scrollTo({ top: 0 });
   }, [path, hash]);
 
   // Quietly preload sibling route JS chunks while idle so sidebar/dock clicks feel instantaneous.
@@ -201,10 +208,10 @@ export function ConsoleShell({
       icon: n.icon,
       to: n.to,
       params: n.params,
-      hash: n.hash,
+      hash: normalizeHash(n.hash),
       exact: n.exact,
     }));
-    return safeNav.length > 4 ? [...primary, { label: "More", icon: Menu, more: true }] : primary;
+    return [...primary, { label: "Menu", icon: Menu, more: true }];
   }, [tabs, safeNav]);
 
   const tabActive = (t: MobileTab) => {
@@ -254,12 +261,13 @@ export function ConsoleShell({
   const avatar = (email[0] ?? "?").toUpperCase();
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-background text-foreground flex flex-col lg:flex-row">
+    <>
+    <div className="relative h-dvh w-full max-w-full overflow-hidden bg-background text-foreground flex flex-col lg:flex-row">
       <AuroraBackground intensity={intensity} />
       <CommandPalette />
 
       {/* ============ Desktop sidebar (Pinned, Fixed height, Full width only) ============ */}
-      <aside className="relative z-30 hidden lg:flex h-screen w-[230px] flex-shrink-0 flex-col liquid-glass-sidebar select-none">
+      <aside className="relative z-30 hidden lg:flex h-dvh w-[230px] flex-shrink-0 flex-col liquid-glass-sidebar select-none">
         {/* Brand / Logo */}
         <div className="flex h-[54px] shrink-0 items-center px-4 border-b border-white/[0.08]">
           <BrandLockup size={22} to={safeNav[0]?.to ?? "/"} params={safeNav[0]?.params} />
@@ -292,9 +300,8 @@ export function ConsoleShell({
                       key={item.label}
                       to={item.to}
                       params={item.params}
-                      hash={item.hash}
+                      hash={normalizeHash(item.hash)}
                       onMouseEnter={() => preloadRouteTarget(item.to, item.params, item.hash)}
-                      onTouchStart={() => preloadRouteTarget(item.to, item.params, item.hash)}
                       onFocus={() => preloadRouteTarget(item.to, item.params, item.hash)}
                       className={cn(
                         "group relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-colors duration-150",
@@ -352,25 +359,39 @@ export function ConsoleShell({
       </aside>
 
       {/* ============ Main Center Container (Scrolls independently) ============ */}
-      <div className="relative flex min-w-0 flex-1 h-screen flex-col overflow-hidden">
+      <div className="relative flex min-w-0 w-full max-w-full flex-1 h-dvh flex-col overflow-hidden">
         {/* Header bar — pinned at top of center column */}
         <header
-          className="mobile-header mobile-keep-blur shrink-0 z-30 h-[50px] lg:h-[54px] liquid-glass-header grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 px-3 sm:flex sm:justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] sm:px-4"
+          className="mobile-header mobile-keep-blur shrink-0 z-30 w-full max-w-full min-h-[54px] liquid-glass-header grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 lg:grid-cols-[1fr_auto_1fr] lg:h-[54px] lg:py-0 sm:px-4"
           style={{
-            paddingTop: "env(safe-area-inset-top)",
+            paddingTop: "max(env(safe-area-inset-top), 0.375rem)",
           }}
         >
           <div className="flex min-w-0 items-center gap-2 lg:justify-self-start">
-            {/* Mobile: logo mark + the section you're on */}
+            {/* Mobile: Menu drawer button + logo mark + current section */}
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={open}
+              className={cn(
+                "grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition active:scale-95 lg:hidden",
+                open
+                  ? "border-primary/60 bg-primary/20 text-primary shadow-[0_0_16px_-4px_var(--primary)]"
+                  : "border-white/12 bg-white/[0.06] text-foreground hover:bg-white/10",
+              )}
+            >
+              <Menu className="h-4.5 w-4.5" />
+            </button>
             <Link
               to={(safeNav[0]?.to ?? "/") as never}
               params={safeNav[0]?.params as never}
-              className="flex min-h-[44px] min-w-[44px] -ml-1.5 items-center justify-center shrink-0 lg:hidden"
+              className="flex h-10 w-9 items-center justify-center shrink-0 lg:hidden"
               aria-label="Home"
             >
-              <BrandMark size={30} />
+              <BrandMark size={28} />
             </Link>
-            <div className="min-w-0 leading-tight lg:hidden">
+            <div className="min-w-0 flex-1 leading-tight lg:hidden">
               <motion.div
                 key={currentLabel}
                 initial={{ opacity: 0.7, y: 3 }}
@@ -380,7 +401,7 @@ export function ConsoleShell({
               >
                 {currentLabel}
               </motion.div>
-              <div className="truncate font-mono text-[9px] uppercase tracking-[0.2em] text-primary/85">
+              <div className="truncate font-mono text-[9px] uppercase tracking-[0.18em] text-primary/85">
                 {title}
               </div>
             </div>
@@ -482,80 +503,83 @@ export function ConsoleShell({
           ) : null}
 
           {/* Main content — independently scrollable center viewport */}
-          <main className="dashboard-content flex-1 min-w-0 max-w-full overflow-y-auto overscroll-y-contain px-4 pb-28 pt-4 sm:px-6 lg:px-8 lg:pb-12">
-            <PageTransition routeKey={path}>{children}</PageTransition>
-          </main>
-
-          {/* soft fade so content melts under the floating dock */}
-          <div
-            aria-hidden
-            className="mobile-dock-fade pointer-events-none fixed inset-x-0 bottom-0 z-20 h-24 lg:hidden"
-          />
-
-          {/* ============ Mobile floating dock ============ */}
-          <nav
-            className="fixed inset-x-0 bottom-0 z-30 px-3 lg:hidden"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
-            aria-label="Primary"
+          <main
+            ref={mainRef}
+            className="dashboard-content flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden overscroll-y-contain px-3.5 pb-28 pt-3.5 sm:px-6 lg:px-8 lg:pb-12"
           >
-            <div
-              className="mobile-dock mobile-keep-blur liquid-glass-dock relative mx-auto grid h-[56px] max-w-md gap-1 rounded-[22px] p-1 shadow-[0_20px_50px_rgba(0,0,0,0.75)]"
-              style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0,1fr))` }}
-            >
-              {mobileTabs.map((t) => {
-                const active = t.more ? open || !anyTabActive : tabActive(t);
-                const cls = `relative flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-[16px] text-[10px] font-semibold tracking-wide transition-colors duration-150 active:scale-[0.94] ${
-                  active ? "text-foreground" : "text-muted-foreground"
-                }`;
-                const inner = (
-                  <>
-                    {active && (
-                      <motion.span
-                        layoutId="dock-active"
-                        className="dock-active pointer-events-none absolute inset-0 rounded-[16px]"
-                        transition={{ type: "spring", stiffness: 700, damping: 45, mass: 0.45 }}
-                      />
-                    )}
-                    <t.icon
-                      className={`relative z-10 h-[18px] w-[18px] transition-transform duration-150 ${active ? "-translate-y-px text-primary drop-shadow-[0_0_8px_var(--primary)]" : ""}`}
-                      strokeWidth={active ? 2.3 : 1.8}
-                    />
-                    <span className="relative z-10 max-w-full truncate px-1">{t.label}</span>
-                  </>
-                );
-                if (t.more || !t.to) {
-                  return (
-                    <button
-                      key={t.label}
-                      type="button"
-                      onClick={() => setOpen(true)}
-                      className={cls}
-                      aria-label="More menu"
-                      aria-expanded={open}
-                    >
-                      {inner}
-                    </button>
-                  );
-                }
-                return (
-                  <Link
-                    key={t.label}
-                    to={t.to}
-                    params={t.params}
-                    hash={t.hash}
-                    onMouseEnter={() => preloadRouteTarget(t.to, t.params, t.hash)}
-                    onTouchStart={() => preloadRouteTarget(t.to, t.params, t.hash)}
-                    onFocus={() => preloadRouteTarget(t.to, t.params, t.hash)}
-                    className={cls}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    {inner}
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
+            <PageTransition routeKey={normalizeHash(hash) ? `${path}#${normalizeHash(hash)}` : path}>{children}</PageTransition>
+          </main>
         </div>
+      </div>
+
+      {/* soft fade so content melts under the floating dock */}
+      <div
+        aria-hidden
+        className="mobile-dock-fade pointer-events-none fixed inset-x-0 bottom-0 z-30 h-24 lg:hidden"
+      />
+
+      {/* ============ Mobile floating dock ============ */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 w-full max-w-full px-2 sm:px-3 lg:hidden"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
+        aria-label="Primary"
+      >
+        <div
+          className="mobile-dock mobile-keep-blur liquid-glass-dock relative mx-auto grid h-[56px] w-full max-w-md gap-0.5 sm:gap-1 overflow-hidden rounded-[22px] p-1 shadow-[0_20px_50px_rgba(0,0,0,0.75)]"
+          style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0,1fr))` }}
+        >
+          {mobileTabs.map((t) => {
+            const active = t.more ? open || !anyTabActive : tabActive(t);
+            const cls = `relative flex min-h-[44px] min-w-0 overflow-hidden flex-col items-center justify-center gap-0.5 rounded-[16px] px-0.5 text-[9.5px] sm:text-[10px] font-semibold tracking-wide transition-colors duration-150 active:scale-[0.94] ${
+              active ? "text-foreground" : "text-muted-foreground"
+            }`;
+            const inner = (
+              <>
+                {active && (
+                  <span
+                    aria-hidden
+                    className="dock-active pointer-events-none absolute inset-0 rounded-[16px]"
+                  />
+                )}
+                <t.icon
+                  className={`relative z-10 h-[18px] w-[18px] shrink-0 transition-transform duration-150 ${active ? "-translate-y-px text-primary drop-shadow-[0_0_8px_var(--primary)]" : ""}`}
+                  strokeWidth={active ? 2.3 : 1.8}
+                />
+                <span className="relative z-10 block w-full truncate text-center px-0.5 leading-tight">{t.label}</span>
+              </>
+            );
+            if (t.more || !t.to) {
+              return (
+                <button
+                  key={t.label}
+                  type="button"
+                  onClick={() => setOpen((v) => !v)}
+                  className={cls}
+                  aria-label="More menu"
+                  aria-expanded={open}
+                >
+                  {inner}
+                </button>
+              );
+            }
+            return (
+              <Link
+                key={t.label}
+                to={t.to}
+                params={t.params}
+                hash={normalizeHash(t.hash)}
+                onMouseEnter={() => preloadRouteTarget(t.to, t.params, t.hash)}
+                onFocus={() => preloadRouteTarget(t.to, t.params, t.hash)}
+                onClick={() => setOpen(false)}
+                className={cls}
+                aria-current={active ? "page" : undefined}
+              >
+                {inner}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* ============ "More" sheet ============ */}
       <AnimatePresence>
@@ -567,7 +591,7 @@ export function ConsoleShell({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.1 }}
               onClick={() => setOpen(false)}
-              className="mobile-keep-blur fixed inset-0 z-40 bg-background/70 backdrop-blur-sm lg:hidden"
+              className="mobile-keep-blur fixed inset-0 z-[60] bg-background/70 backdrop-blur-sm lg:hidden"
             />
             <motion.aside
               initial={{ y: "100%" }}
@@ -582,7 +606,7 @@ export function ConsoleShell({
               onDragEnd={(_, info) => {
                 if (info.offset.y > 85 || info.velocity.y > 480) setOpen(false);
               }}
-              className="mobile-sheet mobile-keep-blur fixed inset-x-0 bottom-0 z-50 flex max-h-[88dvh] flex-col overflow-hidden rounded-t-[30px] lg:hidden"
+              className="mobile-sheet mobile-keep-blur fixed inset-x-0 bottom-0 z-[70] w-full max-w-full flex max-h-[88dvh] flex-col overflow-hidden rounded-t-[30px] lg:hidden"
               style={{
                 paddingBottom: "max(env(safe-area-inset-bottom), 1rem)",
                 willChange: "transform",
@@ -656,12 +680,11 @@ export function ConsoleShell({
                             key={item.label}
                             to={item.to}
                             params={item.params}
-                            hash={item.hash}
+                            hash={normalizeHash(item.hash)}
                             onMouseEnter={() => preloadRouteTarget(item.to, item.params, item.hash)}
-                            onTouchStart={() => preloadRouteTarget(item.to, item.params, item.hash)}
                             onClick={() => setOpen(false)}
                             data-active={active || undefined}
-                            className="sheet-tile flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] p-2.5 text-center transition active:scale-95"
+                            className="sheet-tile flex min-h-[84px] min-w-0 flex-col items-center justify-center gap-2 rounded-[20px] p-2.5 text-center transition active:scale-95"
                           >
                             <span className="sheet-tile-icon grid h-10 w-10 place-items-center rounded-2xl">
                               <item.icon className="h-[19px] w-[19px]" />
@@ -748,6 +771,6 @@ export function ConsoleShell({
           </>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

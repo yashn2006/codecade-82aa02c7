@@ -280,7 +280,7 @@ function StaffPage() {
                   const online = lastSeen && Date.now() - new Date(lastSeen).getTime() < 5 * 60 * 1000;
                   return (
                     <tr key={s.id} className="border-b border-border/30 last:border-0">
-                      <td className="sticky left-0 z-10 min-w-[180px] bg-card/80 p-3 backdrop-blur">
+                      <td className="sticky left-0 z-10 min-w-[130px] sm:min-w-[180px] bg-card/80 p-2.5 sm:p-3 backdrop-blur">
                         <div className="flex items-center gap-2">
                           <span className={`h-2 w-2 rounded-full ${online ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" : "bg-muted-foreground/30"}`} />
                           <div className="min-w-0">

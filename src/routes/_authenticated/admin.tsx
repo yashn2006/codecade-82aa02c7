@@ -2,7 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText, SlidersHorizontal, BarChart3, LifeBuoy, CalendarClock, IndianRupee } from "lucide-react";
+import { Shield, Building2, Users, FileText, Settings as SettingsIcon, TrendingUp, Megaphone, Activity, ScrollText, SlidersHorizontal, BarChart3, LifeBuoy, CalendarClock, IndianRupee, Menu } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { guardRoute, isSuperAdmin } from "@/lib/auth-routing";
@@ -53,6 +53,13 @@ function AdminLayout() {
       title="Network command center"
       subtitle="Cafés, users, leads — the whole platform from one console."
       intensity="hero"
+      tabs={[
+        { label: "Overview", icon: Shield, to: "/admin", exact: true },
+        { label: "Cafés", icon: Building2, to: "/admin/cafes" },
+        { label: "Billing", icon: IndianRupee, to: "/admin/billing", match: ["/admin/subscriptions", "/admin/revenue", "/admin/reports"] },
+        { label: "Support", icon: LifeBuoy, to: "/admin/support", match: ["/admin/leads", "/admin/users"] },
+        { label: "Menu", icon: Menu, more: true },
+      ]}
       nav={[
         { label: "Overview", icon: Shield, to: "/admin", exact: true },
         { label: "Revenue", icon: TrendingUp, to: "/admin/revenue" },

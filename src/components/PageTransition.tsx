@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/LoadingSkeleton";
  */
 export function PageTransition({ routeKey, children }: { routeKey: string; children: ReactNode }) {
   return (
-    <div key={routeKey} className="page-reveal min-w-0">
+    <div key={routeKey} className="page-reveal min-w-0 w-full max-w-full overflow-x-hidden">
       {children}
     </div>
   );

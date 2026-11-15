@@ -27,6 +27,7 @@ import {
   Award,
   LifeBuoy,
   MessageSquare,
+  Menu,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -188,8 +189,15 @@ function Portal() {
         icon: t.icon,
         to: "/portal",
         exact: true,
-        hash: t.key === "home" ? "" : t.key,
+        hash: t.key === "home" ? undefined : t.key,
       }))}
+      tabs={[
+        { label: "Home", icon: Home, to: "/portal", exact: true },
+        { label: "Bookings", icon: CalendarRange, to: "/portal", hash: "bookings", exact: true },
+        { label: "Wallet", icon: Wallet, to: "/portal", hash: "wallet", exact: true },
+        { label: "Support", icon: LifeBuoy, to: "/portal", hash: "support", exact: true },
+        { label: "Menu", icon: Menu, more: true },
+      ]}
       intensity="hero"
     >
       <div className="mb-4">
@@ -216,7 +224,7 @@ function Portal() {
       )}
 
       {/* Mobile horizontal quick-section rail (all 6 portal views) */}
-      <div className="-mx-4 mb-5 flex flex-nowrap items-center gap-2 overflow-x-auto px-4 pb-1 lg:hidden">
+      <div className="mb-5 flex w-full max-w-full flex-nowrap items-center gap-2 overflow-x-auto pb-1 lg:hidden">
         {TABS.map((t) => {
           const isTabActive = active === t.key;
           const Icon = t.icon;
@@ -224,7 +232,7 @@ function Portal() {
             <Link
               key={t.key}
               to="/portal"
-              hash={t.key === "home" ? "" : t.key}
+              hash={t.key === "home" ? undefined : t.key}
               className={cn(
                 "flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-2xl border px-3.5 text-xs font-semibold transition active:scale-[0.97]",
                 isTabActive
@@ -239,7 +247,7 @@ function Portal() {
         })}
       </div>
 
-      <div key={active} className="page-reveal">
+      <div key={active} className="page-reveal min-w-0 w-full max-w-full">
         {active === "home" && <HomeTab summary={summary} onMessageCafe={openBookingSupport} />}
         {active === "bookings" && <BookingsTab onMessageCafe={openBookingSupport} />}
         {active === "wallet" && <WalletTab />}
@@ -391,7 +399,7 @@ function HomeTab({
       {memberships.length > 0 && (
         <div className="space-y-3">
           <div className="font-mono text-[10px] uppercase tracking-widest text-primary">Active Memberships</div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {memberships.map((m) => (
               <MembershipCyberCard key={m.id} m={m} />
             ))}
@@ -408,8 +416,8 @@ function HomeTab({
       </div>
 
       {/* RECENT ACTIVITY */}
-      <div className="rounded-3xl border border-white/12 bg-card/55 p-5 backdrop-blur-xl">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="rounded-3xl border border-white/12 bg-card/55 p-4 sm:p-5 backdrop-blur-xl">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="font-mono text-[10px] uppercase tracking-widest text-primary">Recent Transactions & Passes</div>
           <Link to="/portal" hash="wallet" className="text-xs text-primary font-semibold hover:underline">
             View Wallet →
@@ -1393,7 +1401,7 @@ function TournamentsTab() {
             description="Sign up for an arena tournament below to compete for cash prize pools and leaderboard glory."
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {mine.map((r) => {
               const t = r.tournaments;
               if (!t) return null;
@@ -1412,7 +1420,7 @@ function TournamentsTab() {
             description="Cafés post weekly Valorant, CS2, Tekken, and FIFA brackets. Check back soon."
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {upcoming.map((t) => (
               <TournamentCyberCard key={t.id} t={t} register />
             ))}

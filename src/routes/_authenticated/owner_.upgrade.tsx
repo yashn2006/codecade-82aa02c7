@@ -18,6 +18,7 @@ import {
   Receipt,
   Loader2,
   ArrowRight,
+  Menu,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -176,6 +177,12 @@ function OwnerUpgradePage() {
       badge="Subscription"
       title="Upgrade Plan"
       subtitle="Select a plan, complete payment, and keep your gaming café running seamlessly."
+      tabs={[
+        { label: "Cafés", icon: LayoutDashboard, to: "/owner", exact: true },
+        { label: "Upgrade", icon: Zap, to: "/owner/upgrade", exact: true },
+        { label: "Help", icon: LifeBuoy, to: "/owner/help", exact: true },
+        { label: "Menu", icon: Menu, more: true },
+      ]}
       nav={[
         { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true, group: "Workspace" },
         { label: "Upgrade Plan", icon: Zap, to: "/owner/upgrade", exact: true, group: "Workspace" },
@@ -187,7 +194,7 @@ function OwnerUpgradePage() {
         <motion.section
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          className="hub-card relative overflow-hidden rounded-3xl p-6 sm:p-8"
+          className="hub-card relative overflow-hidden rounded-3xl p-4 sm:p-8"
         >
           <div
             className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-[90px]"
@@ -201,7 +208,7 @@ function OwnerUpgradePage() {
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-primary">
               <Sparkles className="h-3 w-3" /> Zero Commission · 100% Retained Revenue
             </div>
-            <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
+            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
               Power Up Your <span className="text-gradient-hot">Arcade</span>.
             </h1>
             <p className="mt-3 text-muted-foreground leading-relaxed">
@@ -267,7 +274,7 @@ function OwnerUpgradePage() {
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {PLANS.map((plan) => {
               const isSelected = selectedPlan.id === plan.id;
               return (
@@ -360,7 +367,7 @@ function OwnerUpgradePage() {
             </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)] items-start">
+          <div className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-[260px_minmax(0,1fr)] items-start">
             {/* QR Card */}
             <div className="flex flex-col items-center justify-center rounded-2xl border border-white/15 bg-black/40 p-5 text-center shadow-lg">
               {qrUrl ? (
@@ -368,11 +375,11 @@ function OwnerUpgradePage() {
                   <img
                     src={qrUrl}
                     alt={`Scan to pay ₹${selectedPlan.price} CoreCade`}
-                    className="h-48 w-48 object-contain"
+                    className="h-40 w-40 sm:h-48 sm:w-48 object-contain"
                   />
                 </div>
               ) : (
-                <div className="flex h-48 w-48 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/[0.03] px-4 text-xs text-muted-foreground">
+                <div className="flex h-40 w-40 sm:h-48 sm:w-48 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/[0.03] px-4 text-xs text-muted-foreground">
                   <QrCode className="h-8 w-8 text-primary/70" />
                   <span>Billing UPI QR is being configured. Contact support if urgent.</span>
                 </div>

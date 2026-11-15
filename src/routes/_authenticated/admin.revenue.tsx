@@ -30,7 +30,7 @@ function AdminRevenue() {
         <h2 className="font-display text-3xl font-extrabold">Revenue analytics</h2>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={IndianRupee} label="Total revenue" value={d?.totalRevenue ?? 0} accent="magenta" delay={0} hint="₹" />
         <StatCard icon={Activity} label="Sessions" value={d?.totalSessions ?? 0} accent="azure" delay={0.05} />
         <StatCard icon={TrendingUp} label="Orders" value={d?.totalOrders ?? 0} accent="violet" delay={0.1} />

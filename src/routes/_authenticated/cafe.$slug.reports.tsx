@@ -57,7 +57,7 @@ function ReportsPage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Reports</div>
           <h1 className="font-display text-2xl font-black">Performance &amp; revenue</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(["7d", "30d", "90d"] as const).map((r) => (
             <Button key={r} size="sm" variant={range === r ? "default" : "outline"} onClick={() => setRange(r)}>
               {r}
@@ -69,14 +69,14 @@ function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={TrendingUp} label="Total revenue" value={`₹${data.totalRevenue.toLocaleString("en-IN")}`} />
         <Stat icon={Activity} label="Sessions" value={data.sessionCount} />
         <Stat icon={Calendar} label="F&B" value={`₹${data.breakdown.fnb.toLocaleString("en-IN")}`} />
         <Stat icon={Users} label="Memberships" value={`₹${data.breakdown.memberships.toLocaleString("en-IN")}`} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur lg:col-span-2">
           <div className="font-display text-lg font-bold">Revenue trend</div>
           <div className="mt-3"><Sparkline data={data.dailySeries} accent="violet" height={100} /></div>
@@ -102,31 +102,35 @@ function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-border/60 bg-card/40 p-4 sm:p-5 backdrop-blur">
           <div className="font-display text-lg font-bold">Top devices</div>
           {data.topDevices.length === 0 ? (
             <EmptyState icon={Activity} title="No device activity" />
           ) : (
-            <table className="mt-3 w-full text-sm">
-              <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="py-2">Device</th><th>Sessions</th><th className="text-right">Revenue</th></tr></thead>
-              <tbody>{data.topDevices.map((d, i) => (
-                <tr key={i} className="border-t border-border/40"><td className="py-2">{d.name} <span className="text-muted-foreground">· {d.type}</span></td><td>{d.sessions}</td><td className="text-right font-mono text-gold">₹{d.revenue.toLocaleString("en-IN")}</td></tr>
-              ))}</tbody>
-            </table>
+            <div className="mt-3 w-full max-w-full overflow-x-auto">
+              <table className="w-full min-w-[340px] text-sm">
+                <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="py-2">Device</th><th>Sessions</th><th className="text-right">Revenue</th></tr></thead>
+                <tbody>{data.topDevices.map((d, i) => (
+                  <tr key={i} className="border-t border-border/40"><td className="py-2">{d.name} <span className="text-muted-foreground">· {d.type}</span></td><td>{d.sessions}</td><td className="text-right font-mono text-gold">₹{d.revenue.toLocaleString("en-IN")}</td></tr>
+                ))}</tbody>
+              </table>
+            </div>
           )}
         </div>
-        <div className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
+        <div className="rounded-2xl border border-border/60 bg-card/40 p-4 sm:p-5 backdrop-blur">
           <div className="font-display text-lg font-bold">Top customers</div>
           {data.topCustomers.length === 0 ? (
             <EmptyState icon={Users} title="No customers yet" />
           ) : (
-            <table className="mt-3 w-full text-sm">
-              <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="py-2">Name</th><th>Sessions</th><th className="text-right">Spent</th></tr></thead>
-              <tbody>{data.topCustomers.map((c: any, i: number) => (
-                <tr key={i} className="border-t border-border/40"><td className="py-2">{c.full_name}</td><td>{c.total_sessions ?? 0}</td><td className="text-right font-mono text-gold">₹{(c.total_spent ?? 0).toLocaleString("en-IN")}</td></tr>
-              ))}</tbody>
-            </table>
+            <div className="mt-3 w-full max-w-full overflow-x-auto">
+              <table className="w-full min-w-[320px] text-sm">
+                <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th className="py-2">Name</th><th>Sessions</th><th className="text-right">Spent</th></tr></thead>
+                <tbody>{data.topCustomers.map((c: any, i: number) => (
+                  <tr key={i} className="border-t border-border/40"><td className="py-2">{c.full_name}</td><td>{c.total_sessions ?? 0}</td><td className="text-right font-mono text-gold">₹{(c.total_spent ?? 0).toLocaleString("en-IN")}</td></tr>
+                ))}</tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

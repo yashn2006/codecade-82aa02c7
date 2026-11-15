@@ -160,27 +160,36 @@
     color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
     overflow-y: auto;
     overscroll-behavior-y: auto;
-    touch-action: pan-x pan-y;
+    touch-action: pan-y;
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    width: 100%;
+    max-width: 100%;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: clip;
     overflow-y: visible;
     overscroll-behavior-y: auto;
-    touch-action: pan-x pan-y;
+    touch-action: pan-y;
     position: relative;
   }
 
   #root {
+    width: 100%;
+    max-width: 100%;
     min-height: 100vh;
-    overflow: visible;
-    touch-action: pan-x pan-y;
+    min-height: 100dvh;
+    overflow-x: clip;
+    touch-action: pan-y;
   }
 
   /* Let modal primitives lock background scrolling while their content scrolls. */
@@ -767,6 +776,7 @@ input, textarea, select { font-size: 16px; } /* prevents iOS zoom-on-focus */
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   scroll-snap-type: x proximity;
+  touch-action: pan-x pan-y;
 }
 .overflow-x-auto::-webkit-scrollbar { display: none; }
 
@@ -787,9 +797,9 @@ input, textarea, select { font-size: 16px; } /* prevents iOS zoom-on-focus */
 .safe-b { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
 .safe-t { padding-top: max(env(safe-area-inset-top), 0px); }
 
-/* crisp active feedback everywhere on touch */
+/* crisp active feedback on interactive controls without scaling whole layout cards */
 @media (hover: none) {
-  button:active, a:active, [role="button"]:active { transform: scale(0.985); }
+  button:active, [role="button"]:active { transform: scale(0.985); }
 }
 
 /* ===================================================================== */
@@ -1187,7 +1197,7 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
 /* ===== Instant GPU page/tab reveal + Fast transition preference ===== */
 @keyframes cc-page-reveal {
   from { opacity: 0.85; transform: translate3d(0, 3px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: 1; transform: none; }
 }
 .page-reveal {
   animation: cc-page-reveal 75ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -1303,10 +1313,28 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
 }
 
 /* Shared mobile workspace safeguards, scoped away from public pages. */
-.dashboard-content { overflow-wrap: anywhere; }
-.dashboard-content :where(.grid) > *, .dashboard-dialog :where(.grid) > * { min-width: 0; }
-.dashboard-content :where(input, textarea, select), .dashboard-dialog :where(input, textarea, select) { min-width: 0; max-width: 100%; }
-.dashboard-dialog { max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+.dashboard-content {
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.dashboard-content :where(.grid, .flex) > *,
+.dashboard-dialog :where(.grid, .flex) > * {
+  min-width: 0;
+}
+.dashboard-content :where(.grid) {
+  max-width: 100%;
+}
+.dashboard-content :where(input, textarea, select),
+.dashboard-dialog :where(input, textarea, select) {
+  min-width: 0;
+  max-width: 100%;
+}
+.dashboard-dialog {
+  max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-width: calc(100vw - 1rem);
+  overflow-x: hidden;
+}
 @media (max-width: 639px) {
   .dashboard-content :where(h1, h2, h3) { letter-spacing: 0; overflow-wrap: anywhere; }
   .dashboard-content :where(input, textarea, select), .dashboard-dialog :where(input, textarea, select) { font-size: 16px; }

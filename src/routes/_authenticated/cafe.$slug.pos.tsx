@@ -148,7 +148,7 @@ function POSPage() {
   if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-2">
@@ -172,7 +172,7 @@ function POSPage() {
             } />
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {items.map((it) => {
               const out = it.stock !== null && it.stock <= 0;
               return (

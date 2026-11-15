@@ -24,17 +24,17 @@ function OverviewPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Building2} label="Cafés" value={s.cafes} accent="violet" delay={0} />
         <StatCard icon={Users} label="Users" value={s.users} accent="azure" delay={0.05} />
         <StatCard icon={Activity} label="Active sessions" value={s.activeSessions} accent="magenta" delay={0.1} hint="Live" />
         <StatCard icon={FileText} label="New leads" value={s.newLeads} accent="violet" delay={0.15} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-4 sm:p-5 backdrop-blur">
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet/30 blur-3xl" />
-          <div className="relative flex items-start justify-between">
+          <div className="relative flex flex-wrap items-start justify-between gap-2">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Network pulse · last 7 days</div>
               <div className="font-display text-2xl font-extrabold">Revenue trend</div>
@@ -85,29 +85,31 @@ function OverviewPanel() {
           {(a?.recent ?? []).length === 0 ? (
             <EmptyState icon={Activity} title="No sessions yet" description="When cafés go live, you'll see their pulse here." />
           ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <tr><th className="p-3">When</th><th className="p-3">Café</th><th className="p-3">Device</th><th className="p-3">Customer</th><th className="p-3 text-right">Amount</th><th className="p-3">Status</th></tr>
-              </thead>
-              <tbody>
-                {(a?.recent ?? []).map((sess, i) => (
-                  <motion.tr key={sess.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="border-b border-border/30 last:border-0">
-                    <td className="p-3 font-mono text-xs text-azure">{new Date(sess.started_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
-                    <td className="p-3">{(sess.cafes as { name?: string } | null)?.name ?? "—"}</td>
-                    <td className="p-3 font-mono text-xs">{(sess.devices as { name?: string } | null)?.name ?? "—"}</td>
-                    <td className="p-3">{(sess.customers as { full_name?: string } | null)?.full_name ?? "Walk-in"}</td>
-                    <td className="p-3 text-right font-mono">{sess.amount != null ? `₹${sess.amount}` : "—"}</td>
-                    <td className="p-3"><Badge variant={sess.status === "active" ? "default" : "outline"}>{sess.status}</Badge></td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="w-full max-w-full overflow-x-auto">
+              <table className="w-full min-w-[540px] text-sm">
+                <thead className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr><th className="p-3">When</th><th className="p-3">Café</th><th className="p-3">Device</th><th className="p-3">Customer</th><th className="p-3 text-right">Amount</th><th className="p-3">Status</th></tr>
+                </thead>
+                <tbody>
+                  {(a?.recent ?? []).map((sess, i) => (
+                    <motion.tr key={sess.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="border-b border-border/30 last:border-0">
+                      <td className="p-3 font-mono text-xs text-azure whitespace-nowrap">{new Date(sess.started_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                      <td className="p-3">{(sess.cafes as { name?: string } | null)?.name ?? "—"}</td>
+                      <td className="p-3 font-mono text-xs">{(sess.devices as { name?: string } | null)?.name ?? "—"}</td>
+                      <td className="p-3">{(sess.customers as { full_name?: string } | null)?.full_name ?? "Walk-in"}</td>
+                      <td className="p-3 text-right font-mono whitespace-nowrap">{sess.amount != null ? `₹${sess.amount}` : "—"}</td>
+                      <td className="p-3"><Badge variant={sess.status === "active" ? "default" : "outline"}>{sess.status}</Badge></td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </motion.div>
 
       {/* Quick links */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { to: "/admin/cafes", icon: Building2, label: "Manage cafés", desc: "Onboard, suspend or restrict" },
           { to: "/admin/users", icon: Users, label: "Users & roles", desc: "Grant or revoke access" },

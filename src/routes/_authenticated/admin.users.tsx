@@ -68,7 +68,7 @@ function UsersPanel() {
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <div className="relative min-w-0 flex-1">
+        <div className="relative w-full sm:w-auto sm:min-w-[200px] sm:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-10"
@@ -88,7 +88,7 @@ function UsersPanel() {
       </div>
 
       <Tabs defaultValue="all" className="mt-4">
-        <TabsList className="glass-strong rounded-2xl p-1 flex-wrap">
+        <TabsList className="glass-strong h-auto w-full justify-start rounded-2xl p-1 flex-wrap">
           <TabsTrigger value="all">All <Badge variant="secondary" className="ml-2">{buckets.all.length}</Badge></TabsTrigger>
           <TabsTrigger value="super_admin">Super admins <Badge variant="secondary" className="ml-2">{buckets.super_admin.length}</Badge></TabsTrigger>
           <TabsTrigger value="cafe_owner">Café owners <Badge variant="secondary" className="ml-2">{buckets.cafe_owner.length}</Badge></TabsTrigger>
@@ -105,7 +105,7 @@ function UsersPanel() {
               return (
               <div key={u.id} className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur transition hover:border-primary/40">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <button className="min-w-0 text-left" onClick={() => setOpenUserId(u.id)}>
+                  <button className="min-w-0 w-full sm:w-auto sm:flex-1 text-left" onClick={() => setOpenUserId(u.id)}>
                     <div className="flex items-center gap-2 font-medium">
                       {u.full_name || u.email || "—"}
                       {isBanned && <Badge variant="destructive" className="gap-1"><ShieldAlert className="h-3 w-3" />restricted</Badge>}

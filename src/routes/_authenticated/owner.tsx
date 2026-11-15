@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, CalendarRange, ShoppingBag, Users, Wallet,
   BookOpen, LineChart, BadgeCheck, UsersRound, ArrowRight, Building2,
-  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy, Zap, Trophy, Loader2,
+  Plus, TrendingUp, Activity, IndianRupee, LifeBuoy, Zap, Trophy, Loader2, Menu,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
@@ -63,6 +63,12 @@ function OwnerHub() {
       badge="Owner"
       title="Your Cafés"
       subtitle="Owner hub"
+      tabs={[
+        { label: "Cafés", icon: LayoutDashboard, to: "/owner", exact: true },
+        { label: "Upgrade", icon: Zap, to: "/owner/upgrade", exact: true },
+        { label: "Help", icon: LifeBuoy, to: "/owner/help", exact: true },
+        { label: "Menu", icon: Menu, more: true },
+      ]}
       nav={[
         { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true, group: "Workspace" },
         { label: "Upgrade Plan", icon: Zap, to: "/owner/upgrade", exact: true, group: "Workspace" },
@@ -75,7 +81,7 @@ function OwnerHub() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="hub-card relative mb-8 overflow-hidden rounded-3xl p-6 sm:p-8"
+        className="hub-card relative mb-8 overflow-hidden rounded-3xl p-4 sm:p-8"
       >
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-[90px]"
@@ -88,7 +94,7 @@ function OwnerHub() {
         <div className="relative flex flex-wrap items-end justify-between gap-5">
           <div className="min-w-0 max-w-2xl">
             <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Owner Hub</div>
-            <h1 className="mt-2 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
+            <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
               Your <span className="text-gradient-hot">Cafés</span>.
             </h1>
             <p className="mt-3 max-w-xl text-muted-foreground">
@@ -137,7 +143,7 @@ function OwnerHub() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.04 }}
-              className="hub-card relative overflow-hidden rounded-3xl p-5 sm:p-6"
+              className="hub-card relative overflow-hidden rounded-3xl p-4 sm:p-6"
             >
               <div className="relative mb-4"><OnboardingChecklist cafe={cafe} /></div>
 
@@ -175,7 +181,7 @@ function OwnerHub() {
               </div>
 
               {/* Quick action grid — 3x3 */}
-              <div className="relative mt-5 grid grid-cols-3 gap-2.5">
+              <div className="relative mt-5 grid grid-cols-3 gap-2 sm:gap-2.5">
                 {QUICK.map((s) => (
                   <Link
                     key={s.label}
@@ -366,7 +372,7 @@ function CreateCafeButton() {
               <div className="space-y-1.5">
                 <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Public URL *</Label>
                 <div className="flex items-center overflow-hidden rounded-md border border-border bg-background">
-                  <span className="select-none border-r border-border bg-card/60 px-3 py-3 font-mono text-xs text-muted-foreground">corecade.in/c/</span>
+                  <span className="shrink-0 select-none border-r border-border bg-card/60 px-2.5 py-3 font-mono text-[11px] text-muted-foreground sm:px-3 sm:text-xs">corecade.in/c/</span>
                   <Input
                     name="slug" required pattern="[a-z0-9-]+"
                     placeholder="pixel-arcade"
@@ -389,7 +395,7 @@ function CreateCafeButton() {
           {/* Step 1 — Hours & days */}
           {step === 1 && (
             <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Opens at</Label>
                   <div className="relative">

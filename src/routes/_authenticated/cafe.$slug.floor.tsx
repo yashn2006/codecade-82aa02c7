@@ -394,13 +394,13 @@ function FloorBuilder() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
         {/* Floor canvas */}
-        <div className="relative overflow-auto rounded-3xl border border-border/60 bg-[radial-gradient(120%_80%_at_50%_-10%,oklch(0.18_0.05_285)_0%,oklch(0.07_0.02_285)_60%)] p-4 shadow-2xl">
+        <div className="relative min-w-0 w-full max-w-full overflow-auto rounded-3xl border border-border/60 bg-[radial-gradient(120%_80%_at_50%_-10%,oklch(0.18_0.05_285)_0%,oklch(0.07_0.02_285)_60%)] p-3 sm:p-4 shadow-2xl">
           <div
             className="grid"
             style={{
-              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+              gridTemplateColumns: `repeat(${cols}, minmax(84px, 1fr))`,
               gridTemplateRows: `repeat(${rows}, minmax(${scale === "compact" ? "92px" : scale === "spacious" ? "134px" : "112px"}, auto))`,
               gap: scale === "compact" ? 8 : 12,
             }}
@@ -504,7 +504,7 @@ function FloorBuilder() {
         </div>
 
         {/* Right tray */}
-        <aside className="space-y-3">
+        <aside className="min-w-0 space-y-3">
           <div className="rounded-2xl border border-border/60 bg-card/40 p-3.5 backdrop-blur shadow-xl">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">

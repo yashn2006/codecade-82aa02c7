@@ -252,7 +252,7 @@ function BookingsPage() {
   return (
     <div className="pb-24">
       {/* Tabs + Customer Support Shortcut */}
-      <div className="sticky top-0 z-10 -mx-3 flex items-center justify-between gap-2 overflow-x-auto bg-background/85 px-3 py-2 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:px-2">
+      <div className="sticky top-0 z-10 flex w-full max-w-full items-center justify-between gap-2 overflow-x-auto rounded-2xl bg-background/85 px-2.5 py-2 backdrop-blur-xl">
         <div className="flex shrink-0 gap-2">
           {tabs.map((t) => {
             const active = tab === t.id;
@@ -313,9 +313,9 @@ function BookingsPage() {
           today.length === 0 ? (
             <EmptyState icon={CalendarDays} title="No bookings today" description="Your floor is fully walk-in right now." />
           ) : (
-            <div className="relative pl-14">
+            <div className="relative pl-12 sm:pl-14">
               {/* rail */}
-              <span className="absolute bottom-0 left-[52px] top-0 w-px bg-white/8" aria-hidden />
+              <span className="absolute bottom-0 left-[44px] sm:left-[52px] top-0 w-px bg-white/8" aria-hidden />
               {/* NOW marker */}
               <div className="relative mb-3 flex items-center gap-2" aria-hidden>
                 <span className="w-10 shrink-0 text-right font-mono text-[10px] font-bold text-primary">
@@ -327,7 +327,7 @@ function BookingsPage() {
               <div className="space-y-3">
                 {today.map((b) => (
                   <div key={b.id} className="relative">
-                    <span className="absolute -left-14 top-4 w-10 text-right font-mono text-[10px] text-muted-foreground">
+                    <span className="absolute -left-12 sm:-left-14 top-4 w-9 sm:w-10 text-right font-mono text-[10px] text-muted-foreground">
                       {time(b.scheduled_at)}
                     </span>
                     <span
@@ -358,7 +358,7 @@ function BookingsPage() {
       {/* FAB */}
       <button
         onClick={() => setOpen(true)}
-        className="btn-glow-magenta fixed bottom-24 right-5 z-30 inline-flex h-14 items-center gap-2 rounded-full px-5 text-[14px] font-bold text-primary-foreground transition hover:brightness-110 sm:bottom-8"
+        className="btn-glow-magenta fixed bottom-[84px] right-4 z-30 inline-flex h-12 sm:h-14 items-center gap-2 rounded-full px-4 sm:px-5 text-[13px] sm:text-[14px] font-bold text-primary-foreground transition hover:brightness-110 sm:right-5 sm:bottom-8"
         style={{ background: "var(--gradient-brand-hot)" }}
       >
         <Plus className="h-5 w-5" /> New booking

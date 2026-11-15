@@ -255,7 +255,7 @@ function WalletPage() {
   return (
     <div className="space-y-6">
       {/* KPI Overview */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="liquid-glass-card rounded-2xl border border-white/10 p-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Customer wallet pool</span>
@@ -361,10 +361,10 @@ function WalletPage() {
         </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="relative min-w-[210px] flex-1 sm:max-w-xs">
+            <div className="relative min-w-0 w-full sm:min-w-[210px] sm:flex-1 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
@@ -395,7 +395,7 @@ function WalletPage() {
                     <div className="truncate font-semibold text-foreground">{c.full_name}</div>
                     <div className="font-mono text-xs text-muted-foreground">{c.phone ?? "—"}</div>
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <div className="mr-1 text-right">
                       <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Balance</div>
                       <div className="font-display text-xl font-bold tabular-nums text-gradient">₹{c.wallet_balance}</div>

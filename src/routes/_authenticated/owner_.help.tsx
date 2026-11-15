@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   LifeBuoy, LayoutDashboard, Rocket, Wallet, ShieldCheck,
-  Mail, Bell, ChevronDown, BookOpen,
+  Mail, Bell, ChevronDown, BookOpen, Zap, Menu,
 } from "lucide-react";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { SupportTickets } from "@/components/SupportTickets";
@@ -56,8 +56,15 @@ function OwnerHelp() {
       badge="Help"
       title="Help Center"
       subtitle="Quick answers, a direct line to support, and your ticket history — all in one place."
+      tabs={[
+        { label: "Cafés", icon: LayoutDashboard, to: "/owner", exact: true },
+        { label: "Upgrade", icon: Zap, to: "/owner/upgrade", exact: true },
+        { label: "Help", icon: LifeBuoy, to: "/owner/help", exact: true },
+        { label: "Menu", icon: Menu, more: true },
+      ]}
       nav={[
         { label: "Owner Hub", icon: LayoutDashboard, to: "/owner", exact: true, group: "Workspace" },
+        { label: "Upgrade Plan", icon: Zap, to: "/owner/upgrade", exact: true, group: "Workspace" },
         { label: "Help Center", icon: LifeBuoy, to: "/owner/help", exact: true, group: "Support" },
       ]}
     >
@@ -66,7 +73,7 @@ function OwnerHelp() {
       <motion.section
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        className="hub-card relative mb-8 overflow-hidden rounded-3xl p-8"
+        className="hub-card relative mb-8 overflow-hidden rounded-3xl p-5 sm:p-8"
       >
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-[90px]"
@@ -78,7 +85,7 @@ function OwnerHelp() {
         />
         <div className="relative max-w-2xl">
           <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Help Center</div>
-          <h1 className="mt-2 font-display text-5xl font-extrabold tracking-tight">
+          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
             We've got your <span className="text-gradient-hot">back</span>.
           </h1>
           <p className="mt-3 max-w-xl text-muted-foreground">
@@ -88,7 +95,7 @@ function OwnerHelp() {
       </motion.section>
 
       {/* Pillars */}
-      <div className="mb-10 grid gap-4 md:grid-cols-3">
+      <div className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-3">
         <Pillar icon={Rocket}      title="Getting started"
                 body="Add seats → set rates → take your first booking. About 5 minutes end-to-end." accent="oklch(0.74 0.21 15)" />
         <Pillar icon={Wallet}      title="Payments & refunds"

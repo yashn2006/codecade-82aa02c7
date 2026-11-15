@@ -54,7 +54,7 @@ function AuditPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <select
           value={cafeId} onChange={(e) => setCafeId(e.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          className="h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 text-sm"
         >
           <option value="">All cafés</option>
           {(cafes.data ?? []).map((c) => (
@@ -64,14 +64,14 @@ function AuditPanel() {
         <Input
           placeholder="Action (e.g. session.end, order.refund)"
           value={action} onChange={(e) => setAction(e.target.value)}
-          className="h-10 w-64"
+          className="h-10 w-full sm:w-64"
         />
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Filter by actor email…"
             value={q} onChange={(e) => setQ(e.target.value)}
-            className="h-10 w-72 pl-9"
+            className="h-10 w-full sm:w-72 pl-9"
           />
         </div>
         <Button variant="outline" onClick={() => logs.refetch()} className="gap-2">
@@ -90,38 +90,40 @@ function AuditPanel() {
         <EmptyState icon={ScrollText} title="No audit entries" description="When staff & owners act on the platform, you'll see it here." />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/30 backdrop-blur">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="p-3">When</th>
-                <th className="p-3">Actor</th>
-                <th className="p-3">Café</th>
-                <th className="p-3">Action</th>
-                <th className="p-3">Resource</th>
-                <th className="p-3">Meta</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border/30 last:border-0">
-                  <td className="p-3 font-mono text-xs text-azure">
-                    {new Date(r.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </td>
-                  <td className="p-3 font-mono text-xs">{r.actor_email ?? "—"}</td>
-                  <td className="p-3 text-xs">{r.cafes?.name ?? "—"}</td>
-                  <td className="p-3"><Badge variant="outline" className="font-mono text-[10px]">{r.action}</Badge></td>
-                  <td className="p-3 font-mono text-[10px] text-muted-foreground">
-                    {r.resource_type ? `${r.resource_type}${r.resource_id ? ` · ${r.resource_id.slice(0, 8)}` : ""}` : "—"}
-                  </td>
-                  <td className="p-3 max-w-sm">
-                    <pre className="overflow-hidden truncate text-[10px] text-muted-foreground">
-                      {r.meta && Object.keys(r.meta).length ? JSON.stringify(r.meta) : "—"}
-                    </pre>
-                  </td>
+          <div className="w-full max-w-full overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="p-3">When</th>
+                  <th className="p-3">Actor</th>
+                  <th className="p-3">Café</th>
+                  <th className="p-3">Action</th>
+                  <th className="p-3">Resource</th>
+                  <th className="p-3">Meta</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-border/30 last:border-0">
+                    <td className="p-3 font-mono text-xs text-azure whitespace-nowrap">
+                      {new Date(r.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                    <td className="p-3 font-mono text-xs">{r.actor_email ?? "—"}</td>
+                    <td className="p-3 text-xs">{r.cafes?.name ?? "—"}</td>
+                    <td className="p-3"><Badge variant="outline" className="font-mono text-[10px]">{r.action}</Badge></td>
+                    <td className="p-3 font-mono text-[10px] text-muted-foreground">
+                      {r.resource_type ? `${r.resource_type}${r.resource_id ? ` · ${r.resource_id.slice(0, 8)}` : ""}` : "—"}
+                    </td>
+                    <td className="p-3 max-w-sm">
+                      <pre className="overflow-hidden truncate text-[10px] text-muted-foreground">
+                        {r.meta && Object.keys(r.meta).length ? JSON.stringify(r.meta) : "—"}
+                      </pre>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

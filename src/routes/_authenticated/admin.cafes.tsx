@@ -130,7 +130,7 @@ function CafesPanel() {
 
 
       <Tabs defaultValue="all" className="mt-5">
-        <TabsList className="glass-strong flex-wrap rounded-2xl p-1">
+        <TabsList className="glass-strong h-auto w-full justify-start flex-wrap rounded-2xl p-1">
           <TabsTrigger value="all">All <Badge variant="secondary" className="ml-2">{buckets.all.length}</Badge></TabsTrigger>
           <TabsTrigger value="active">Live <Badge variant="secondary" className="ml-2">{buckets.active.length}</Badge></TabsTrigger>
           <TabsTrigger value="maintenance">Maintenance <Badge variant="secondary" className="ml-2">{buckets.maintenance.length}</Badge></TabsTrigger>
@@ -144,7 +144,7 @@ function CafesPanel() {
             ) : buckets[k].length === 0 ? (
               <EmptyState icon={Building2} title="Nothing here" description="No cafés in this bucket yet." />
             ) : (
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {buckets[k].map((c, i) => <CafeAdminCard key={c.id} cafe={c} index={i} />)}
               </div>
             )}
