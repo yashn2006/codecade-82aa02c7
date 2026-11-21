@@ -21,8 +21,12 @@ export function useIdleLogout(timeoutMs = 30 * 60 * 1000) {
       } catch {
         /* ignore signout error */
       }
+      const label =
+        timeoutMs >= 3_600_000
+          ? `${Math.round(timeoutMs / 3_600_000)} hours`
+          : `${Math.max(1, Math.round(timeoutMs / 60_000))} minutes`;
       toast.message("Signed out for inactivity", {
-        description: "You were idle for 30 minutes.",
+        description: `You were idle for ${label}.`,
       });
       navigate({ to: "/auth", replace: true });
     };

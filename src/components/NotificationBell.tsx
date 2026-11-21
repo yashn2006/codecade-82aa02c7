@@ -69,6 +69,15 @@ export function NotificationBell() {
 
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   // Realtime subscription
   useEffect(() => {
     let cancelled = false;
@@ -128,7 +137,7 @@ export function NotificationBell() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-              className="mobile-keep-blur absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] origin-top-right overflow-hidden rounded-3xl border border-white/15 bg-[#0e0a1f]/90 shadow-[0_20px_60px_rgba(0,0,0,0.75),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-2xl"
+              className="mobile-keep-blur fixed left-3 right-3 top-[calc(max(env(safe-area-inset-top),0.375rem)+58px)] z-50 origin-top-right overflow-hidden rounded-3xl border border-white/15 bg-[#0e0a1f]/95 shadow-[0_20px_60px_rgba(0,0,0,0.75),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-2xl sm:inset-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-[22rem]"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.02] px-4 py-3">
@@ -230,10 +239,10 @@ export function NotificationBell() {
                           deleteSingleM.mutate({ data: { id: n.id } });
                         }}
                         disabled={deleteSingleM.isPending}
-                        className="opacity-60 transition group-hover:opacity-100 hover:text-rose-300 p-1 rounded-lg hover:bg-rose-500/20 active:scale-90"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white/70 transition sm:opacity-60 sm:group-hover:opacity-100 hover:bg-rose-500/20 hover:text-rose-300 active:scale-90"
                         title="Dismiss this notification"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-4 w-4" />
                         <span className="sr-only">Clear notification</span>
                       </button>
                     </div>

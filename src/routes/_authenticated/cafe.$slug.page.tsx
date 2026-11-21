@@ -12,6 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ImageUploader } from "@/components/ImageUploader";
+import { DeleteCafeButton } from "@/components/DeleteCafeButton";
+import { QueryBoundary } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/page")({
   head: () => ({
@@ -50,7 +53,27 @@ type Theme = { mode?: string; accent?: string; bg?: string; font?: string; logo?
 function PageEditor() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load public page settings">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requireOwner>
+      <PageEditorContent />
+    </CafeAccessGuard>
+  );
+}
+
+function PageEditorContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
 
   const getPage = useServerFn(getCafePage);
@@ -96,7 +119,13 @@ function PageEditor() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || pageQ.isError || !cafeId) {
+    return (
+      <QueryBoundary queries={[cafeQ, pageQ]} loading={!cafeQ.isError && !pageQ.isError && !cafeId} errorTitle="Couldn't load public page settings">
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -126,7 +155,8 @@ function PageEditor() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+    <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
         <div className="space-y-1"><Label>Tagline</Label><Input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="The fastest rigs in town" /></div>
         <div className="space-y-1">
@@ -344,6 +374,21 @@ function PageEditor() {
           </div>
         )}
       </aside>
+      </div>
+
+      <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-5 backdrop-blur">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-display text-base font-bold text-destructive">Danger zone</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Permanently delete <span className="font-medium text-foreground">{cafe?.name ?? slug}</span> and all its stations, bookings, sessions, customers, and records.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <DeleteCafeButton cafeId={cafeId} slug={slug} name={cafe?.name ?? slug} />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

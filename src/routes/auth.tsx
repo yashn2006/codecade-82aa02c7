@@ -192,27 +192,30 @@ function AuthPage() {
 
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-dvh overflow-x-clip bg-background text-foreground">
       <AuroraBackground intensity="immersive" />
       {/* Scanline noise */}
       <div className="pointer-events-none fixed inset-0 -z-10 opacity-[0.08] mix-blend-overlay"
            style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,0.6) 2px 3px)" }} />
 
       {/* Top nav */}
-      <div className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-8 sm:py-5">
-        <div className="flex items-center gap-3">
+      <div
+        className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pb-3 sm:px-8 sm:py-5"
+        style={{ paddingTop: "max(env(safe-area-inset-top), 1rem)" }}
+      >
+        <div className="flex items-center gap-3 min-w-0">
           <BrandLockup size={30} />
         </div>
         <Link
           to="/"
-          className="inline-flex min-h-[40px] items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition hover:text-foreground"
+          className="inline-flex min-h-[44px] shrink-0 items-center rounded-xl border border-white/10 bg-white/[0.04] px-3.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition hover:text-foreground"
         >
           ← Home
         </Link>
       </div>
 
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-80px)] max-w-7xl items-center gap-8 px-5 pb-16 sm:px-8 lg:grid-cols-[1.05fr_1fr]">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100dvh-76px)] max-w-7xl items-center gap-8 px-4 pb-[max(env(safe-area-inset-bottom),2.5rem)] sm:px-8 lg:grid-cols-[1.05fr_1fr]">
         {/* LEFT — cinematic hero */}
         <HeroPanel />
 
@@ -329,7 +332,7 @@ function AuthPage() {
                     key={m}
                     type="button"
                     onClick={() => setMode(m)}
-                    className={`relative min-h-[40px] px-4 py-2 text-xs font-semibold uppercase tracking-wider transition ${
+                    className={`relative min-h-[44px] px-4 py-2 text-xs font-semibold uppercase tracking-wider transition ${
                       mode === m ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -411,10 +414,12 @@ function AuthPage() {
                     <FieldShell icon={<User className="h-4 w-4" />}>
                       <Input
                         id="fullName"
+                        name="name"
+                        autoComplete="name"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="Your name (optional)"
-                        className="h-12 border-0 bg-transparent pl-10 focus-visible:ring-0"
+                        className="h-12 border-0 bg-transparent pl-10 text-base focus-visible:ring-0"
                       />
                     </FieldShell>
                   </motion.div>
@@ -434,19 +439,21 @@ function AuthPage() {
                       <span className="inline-flex h-12 shrink-0 items-center gap-1 rounded-xl border border-border/70 bg-background/60 px-3 font-mono text-xs text-muted-foreground">
                         🇮🇳 +91
                       </span>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <FieldShell icon={<Phone className="h-4 w-4" />}>
                           <Input
                             id="phone"
+                            name="tel"
                             type="tel"
                             inputMode="numeric"
+                            autoComplete="tel-national"
                             value={phone}
                             onChange={(e) => {
                               const d = e.target.value.replace(/\D/g, "").slice(0, 10);
                               setPhone(d.length > 5 ? `${d.slice(0, 5)} ${d.slice(5)}` : d);
                             }}
                             placeholder="98765 43210"
-                            className="h-12 w-full border-0 bg-transparent pl-10 focus-visible:ring-0"
+                            className="h-12 w-full border-0 bg-transparent pl-10 text-base focus-visible:ring-0"
                           />
                         </FieldShell>
                       </div>
@@ -462,11 +469,15 @@ function AuthPage() {
                 <FieldShell icon={<Mail className="h-4 w-4" />} valid={email.length > 0 && emailValid}>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@cafe.in"
-                    className="h-12 border-0 bg-transparent pl-10 focus-visible:ring-0"
+                    className="h-12 border-0 bg-transparent pl-10 pr-9 text-base focus-visible:ring-0"
                   />
                 </FieldShell>
               </div>
@@ -476,7 +487,7 @@ function AuthPage() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
                     {mode === "signin" && (
-                      <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                      <Link to="/forgot-password" className="inline-flex min-h-[36px] items-center px-1 text-xs text-primary hover:underline">
                         Forgot?
                       </Link>
                     )}
@@ -484,17 +495,18 @@ function AuthPage() {
                   <FieldShell icon={<Lock className="h-4 w-4" />}>
                     <Input
                       id="password"
+                      name="password"
                       type={showPw ? "text" : "password"}
+                      autoComplete={mode === "signin" ? "current-password" : "new-password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="h-12 border-0 bg-transparent pl-10 pr-12 focus-visible:ring-0"
+                      className="h-12 border-0 bg-transparent pl-10 pr-12 text-base focus-visible:ring-0"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPw((s) => !s)}
-                      onTouchEnd={(e) => { e.preventDefault(); setShowPw((s) => !s); }}
-                      className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition hover:text-foreground active:bg-white/5"
+                      className="absolute right-1 top-1/2 z-10 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition hover:text-foreground active:bg-white/5"
                       aria-label={showPw ? "Hide password" : "Show password"}
                     >
                       {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -552,14 +564,21 @@ function AuthPage() {
 
             </form>
 
-            <div className="mt-5 text-center text-sm text-muted-foreground">
+            <div className="mt-4 text-center text-sm text-muted-foreground">
               {mode === "forgot" ? (
-                <button onClick={() => setMode("signin")} className="text-primary hover:underline">← Back to sign in</button>
+                <button type="button" onClick={() => setMode("signin")} className="inline-flex min-h-[40px] items-center px-2 text-primary hover:underline">← Back to sign in</button>
               ) : mode === "signin" ? (
-                <>New here? <button onClick={() => setMode("signup")} className="text-primary hover:underline">Create an account</button></>
+                <>New here? <button type="button" onClick={() => setMode("signup")} className="inline-flex min-h-[40px] items-center px-1 text-primary hover:underline">Create an account</button></>
               ) : (
-                <>Already an operator? <button onClick={() => setMode("signin")} className="text-primary hover:underline">Sign in</button></>
+                <>Already an operator? <button type="button" onClick={() => setMode("signin")} className="inline-flex min-h-[40px] items-center px-1 text-primary hover:underline">Sign in</button></>
               )}
+            </div>
+
+            <div className="mt-1 text-center text-xs text-muted-foreground">
+              Café floor team?{" "}
+              <Link to="/staff-login" className="inline-flex min-h-[40px] items-center px-1 font-medium text-primary hover:underline">
+                Staff login →
+              </Link>
             </div>
 
             <div className="mt-6 flex items-center justify-center gap-4 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
@@ -706,7 +725,7 @@ function TiltCard({ children, shake }: { children: React.ReactNode; shake: boole
       onMouseLeave={isTouch ? undefined : () => { mx.set(0); my.set(0); }}
     >
       {/* Conic glow */}
-      <div className="pointer-events-none absolute -inset-4 rounded-[2rem] opacity-70 blur-2xl"
+      <div className="pointer-events-none absolute -inset-4 hidden rounded-[2rem] opacity-70 blur-2xl sm:block"
            style={{ background: "conic-gradient(from 120deg at 50% 50%, oklch(0.74 0.21 15 / 0.45), oklch(0.7 0.26 335 / 0.35), oklch(0.65 0.25 295 / 0.45), oklch(0.74 0.21 15 / 0.45))" }} />
       <motion.div
         animate={shake ? { x: [0, -10, 10, -8, 8, -4, 0] } : { x: 0 }}
@@ -715,7 +734,7 @@ function TiltCard({ children, shake }: { children: React.ReactNode; shake: boole
         className="relative rounded-[1.6rem] p-px"
       >
         <div className="rounded-[1.6rem] p-px" style={{ background: "linear-gradient(135deg, oklch(0.74 0.21 15 / 0.7), oklch(0.65 0.25 295 / 0.5) 50%, oklch(0.7 0.26 335 / 0.6))" }}>
-          <div className="relative overflow-hidden rounded-[1.55rem] bg-card/70 p-7 backdrop-blur-2xl sm:p-9">
+          <div className="relative overflow-hidden rounded-[1.55rem] bg-card/85 p-5 backdrop-blur-2xl sm:bg-card/70 sm:p-9">
             {/* Animated grid */}
             <div className="pointer-events-none absolute inset-0 opacity-[0.07]"
                  style={{ backgroundImage: "linear-gradient(oklch(0.74 0.21 15 / 1) 1px, transparent 1px), linear-gradient(90deg, oklch(0.74 0.21 15 / 1) 1px, transparent 1px)", backgroundSize: "28px 28px", maskImage: "radial-gradient(circle at 30% 0%, black, transparent 70%)" }} />
@@ -874,7 +893,7 @@ async function routeByRole(navigate: ReturnType<typeof useNavigate>) {
       return;
     }
     const path = await getDashboardPathForUser(user);
-    navigate({ to: path, replace: true });
+    navigate({ to: path as never, replace: true });
   } catch {
     navigate({ to: "/redirecting", replace: true });
   }

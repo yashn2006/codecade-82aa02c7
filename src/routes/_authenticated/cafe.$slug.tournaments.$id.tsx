@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmModal } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
@@ -26,10 +28,30 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/tournaments/$id
 });
 
 function BracketPage() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load tournament bracket">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requireOwner>
+      <BracketPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function BracketPageContent() {
   const { slug, id } = Route.useParams();
   const nav = useNavigate();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const lT = useServerFn(listTournaments);
   const lR = useServerFn(listRegistrations);
   const lM = useServerFn(listMatches);
@@ -89,11 +111,21 @@ function BracketPage() {
   const t = (tournament ?? {}) as { paid_out_at?: string | null; winner_team?: string | null; prize_pool?: number; payout_amount?: number };
   const paidOut = !!t.paid_out_at;
 
+  if (cafeQ.isError || tournQ.isError || matchQ.isError) {
+    return (
+      <QueryBoundary queries={[cafeQ, tournQ, matchQ]} errorTitle="Couldn't load tournament bracket">
+        {null}
+      </QueryBoundary>
+    );
+  }
+
   return (
     <div>
       <button onClick={() => nav({ to: "/cafe/$slug/tournaments", params: { slug } })} className="mb-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3 w-3" /> All tournaments
       </button>
+
+      <QueryErrorBanner queries={[regsQ, cusQ]} title="Some roster details couldn't refresh" />
 
       {!tournament ? (
         <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />

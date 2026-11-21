@@ -6,6 +6,8 @@ export const listSessions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id);
     const { data: rows, error } = await context.supabase
       .from("sessions")
       .select("*, customers(id, full_name, phone, email, wallet_balance), devices(name, hourly_rate, type)")
@@ -30,6 +32,8 @@ export const startSession = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "start_sessions");
     const { data: dev } = await context.supabase
       .from("devices").select("status").eq("id", data.device_id).single();
     if (dev?.status === "in_use") throw new Error("Device already in use");
@@ -51,6 +55,21 @@ export const startSession = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     await context.supabase.from("devices").update({ status: "in_use" }).eq("id", data.device_id);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.cafe_id,
+      actorId: context.userId,
+      action: "session.started",
+      resourceType: "session",
+      resourceId: row.id,
+      meta: {
+        device_id: data.device_id,
+        customer_id: data.customer_id ?? null,
+        planned_minutes: data.planned_minutes ?? null,
+        payment_method: data.payment_method ?? null,
+      },
+    });
     return row;
   });
 
@@ -61,6 +80,9 @@ export const extendSession = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), add_minutes: z.number().int().min(5).max(720) }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("sessions", data.id);
+    await assertCafeAccess(context.userId, cafeId, "start_sessions");
     const { data: s, error: se } = await context.supabase
       .from("sessions")
       .select("planned_minutes")
@@ -79,6 +101,9 @@ export const suspendSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("sessions", data.id);
+    await assertCafeAccess(context.userId, cafeId, "end_sessions");
     const { data: s } = await context.supabase
       .from("sessions").select("paused_at, device_id").eq("id", data.id).single();
     if (!s) throw new Error("Session not found");
@@ -98,6 +123,9 @@ export const resumeSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("sessions", data.id);
+    await assertCafeAccess(context.userId, cafeId, ["start_sessions", "end_sessions"]);
     const { data: s } = await context.supabase
       .from("sessions").select("paused_at, paused_ms, device_id").eq("id", data.id).single();
     if (!s) throw new Error("Session not found");
@@ -124,6 +152,9 @@ export const assignSessionCustomer = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), customer_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("sessions", data.id);
+    await assertCafeAccess(context.userId, cafeId, "start_sessions");
     const { error } = await context.supabase
       .from("sessions").update({ customer_id: data.customer_id }).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -137,6 +168,9 @@ export const setSessionNotes = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), notes: z.string().max(2000) }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("sessions", data.id);
+    await assertCafeAccess(context.userId, cafeId);
     const { error } = await context.supabase
       .from("sessions").update({ notes: data.notes }).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -147,6 +181,9 @@ export const listSessionAlerts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ session_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("sessions", data.session_id);
+    await assertCafeAccess(context.userId, cafeId);
     const { data: rows, error } = await context.supabase
       .from("session_alerts")
       .select("id, message, channel, created_at")
@@ -168,6 +205,8 @@ export const logSessionAlert = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id);
     const { error } = await context.supabase.from("session_alerts").insert(data);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -178,6 +217,17 @@ export const customerSessionStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ customer_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: cust } = await supabaseAdmin
+      .from("customers")
+      .select("cafe_id, user_id")
+      .eq("id", data.customer_id)
+      .maybeSingle();
+    if (!cust) throw new Error("Customer not found");
+    if (cust.user_id !== context.userId) {
+      const { assertCafeAccess } = await import("@/lib/staff-access.server");
+      await assertCafeAccess(context.userId, cust.cafe_id);
+    }
     const { data: rows, error } = await context.supabase
       .from("sessions")
       .select("duration_minutes, amount, status")
@@ -195,6 +245,9 @@ export const endSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("sessions", data.id);
+    await assertCafeAccess(context.userId, cafeId, "end_sessions");
     const { data: s, error: se } = await context.supabase
       .from("sessions")
       .select("started_at, device_id, customer_id, cafe_id, paused_at, paused_ms, amount_paid, devices(hourly_rate)")
@@ -203,7 +256,7 @@ export const endSession = createServerFn({ method: "POST" })
     if (se || !s) throw new Error(se?.message ?? "Session not found");
 
     const row = s as unknown as {
-      started_at: string; device_id: string; customer_id: string | null;
+      started_at: string; device_id: string; customer_id: string | null; cafe_id: string;
       paused_at?: string | null; paused_ms?: number | null; amount_paid?: number | null;
       devices: { hourly_rate?: number } | null;
     };
@@ -245,5 +298,23 @@ export const endSession = createServerFn({ method: "POST" })
 
     await context.supabase.from("devices")
       .update({ status: "available", suspend_until: null }).eq("id", row.device_id);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: row.cafe_id,
+      actorId: context.userId,
+      action: "session.ended",
+      resourceType: "session",
+      resourceId: data.id,
+      meta: {
+        device_id: row.device_id,
+        customer_id: row.customer_id,
+        minutes,
+        amount,
+        membership_minutes: membershipMinutes,
+        refund,
+        due,
+      },
+    });
     return { ok: true, minutes, amount, membershipMinutes, refund, due };
   });

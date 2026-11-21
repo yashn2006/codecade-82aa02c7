@@ -18,12 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogIcon,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { BookingDetailDialog, type BookingRow } from "@/components/BookingDetailDialog";
 import { ConfirmModal, DepositModal } from "@/components/ConfirmDialog";
+import { useCafeAccess } from "@/hooks/useCafeAccess";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/bookings")({
   head: () => ({
@@ -53,8 +55,12 @@ const dayLabel = (s: string) =>
 function BookingsPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
+  const { can } = useCafeAccess(cafeId);
+  const canBook = can("create_bookings");
+  const canWallet = can("manage_wallet");
 
   const list = useServerFn(listBookings);
   const setStatus = useServerFn(updateBookingStatus);
@@ -139,14 +145,20 @@ function BookingsPage() {
     return { upcoming: u.sort(asc), today: t.sort(asc), past: p.sort((a, b) => -asc(a, b)) };
   }, [rows]);
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || !cafeId) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafeId} errorTitle="Couldn't load bookings">
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   const Actions = ({ b }: { b: (typeof rows)[number] }) => {
     const dep = b as { deposit_amount?: number; deposit_paid?: boolean };
     const customerName = (b.customers as { full_name?: string } | null)?.full_name ?? null;
     return (
       <div className="flex flex-wrap items-center gap-1.5">
-        {b.status === "pending" && (
+        {canBook && b.status === "pending" && (
           <>
             <Button size="icon" variant="ghost" className="h-8 w-8" title="Confirm"
               onClick={() => setM.mutate({ data: { id: b.id, status: "confirmed" } })}>
@@ -158,7 +170,7 @@ function BookingsPage() {
             </Button>
           </>
         )}
-        {(b.status === "confirmed" || b.status === "pending") && (
+        {canBook && (b.status === "confirmed" || b.status === "pending") && (
           <>
             <Button size="icon" variant="ghost" className="h-8 w-8" title="Mark no-show"
               onClick={() => setConfirmAction({
@@ -169,26 +181,30 @@ function BookingsPage() {
               })}>
               <UserX className="h-4 w-4 text-amber-400" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" title="Cancel & refund"
-              onClick={() => setConfirmAction({
-                title: "Cancel booking & refund deposit?",
-                description: "This cancels the reservation and refunds any paid deposit back to the customer's wallet.",
-                confirmLabel: "Cancel & Refund",
-                onConfirm: () => cxlM.mutateAsync({ data: { id: b.id } }),
-              })}>
-              <Undo2 className="h-4 w-4 text-rose-400" />
-            </Button>
+            {(!dep.deposit_paid || canWallet) && (
+              <Button size="icon" variant="ghost" className="h-8 w-8" title="Cancel & refund"
+                onClick={() => setConfirmAction({
+                  title: "Cancel booking & refund deposit?",
+                  description: "This cancels the reservation and refunds any paid deposit back to the customer's wallet.",
+                  confirmLabel: "Cancel & Refund",
+                  onConfirm: () => cxlM.mutateAsync({ data: { id: b.id } }),
+                })}>
+                <Undo2 className="h-4 w-4 text-rose-400" />
+              </Button>
+            )}
           </>
         )}
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 gap-1 rounded-lg text-xs"
-          onClick={() => setDepositTarget({ id: b.id, initialAmount: dep.deposit_amount ?? 0, customerName })}
-        >
-          <IndianRupee className="h-3 w-3" /> Deposit
-        </Button>
-        {dep.deposit_paid && (
+        {canWallet && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 rounded-lg text-xs"
+            onClick={() => setDepositTarget({ id: b.id, initialAmount: dep.deposit_amount ?? 0, customerName })}
+          >
+            <IndianRupee className="h-3 w-3" /> Deposit
+          </Button>
+        )}
+        {canWallet && dep.deposit_paid && (
           <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs text-emerald-400"
             onClick={() => setConfirmAction({
               title: "Refund deposit to wallet?",
@@ -288,10 +304,19 @@ function BookingsPage() {
       </div>
 
       <div className="mt-4 space-y-6">
-        {q.isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-20 rounded-2xl" />)}
-          </div>
+        <QueryErrorBanner queries={[devicesQ, customersQ, supportQ]} title="Some booking data couldn't refresh" />
+        {q.isError || q.isLoading ? (
+          <QueryBoundary
+            queries={[q]}
+            errorTitle="Couldn't load bookings"
+            loadingFallback={
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-20 rounded-2xl" />)}
+              </div>
+            }
+          >
+            {null}
+          </QueryBoundary>
         ) : tab === "upcoming" ? (
           upcoming.length === 0 ? (
             <EmptyState icon={CalendarRange} title="Nothing booked ahead" description="Future reservations will show up here." />
@@ -356,15 +381,18 @@ function BookingsPage() {
       </div>
 
       {/* FAB */}
-      <button
-        onClick={() => setOpen(true)}
-        className="btn-glow-magenta fixed bottom-[84px] right-4 z-30 inline-flex h-12 sm:h-14 items-center gap-2 rounded-full px-4 sm:px-5 text-[13px] sm:text-[14px] font-bold text-primary-foreground transition hover:brightness-110 sm:right-5 sm:bottom-8"
-        style={{ background: "var(--gradient-brand-hot)" }}
-      >
-        <Plus className="h-5 w-5" /> New booking
-      </button>
+      {canBook && (
+        <button
+          onClick={() => setOpen(true)}
+          className="btn-glow-magenta fixed bottom-[84px] right-4 z-30 inline-flex h-12 sm:h-14 items-center gap-2 rounded-full px-4 sm:px-5 text-[13px] sm:text-[14px] font-bold text-primary-foreground transition hover:brightness-110 sm:right-5 sm:bottom-8"
+          style={{ background: "var(--gradient-brand-hot)" }}
+        >
+          <Plus className="h-5 w-5" /> New booking
+        </button>
+      )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      {canBook && (
+        <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogIcon><CalendarRange className="h-5 w-5" /></DialogIcon>
@@ -431,25 +459,28 @@ function BookingsPage() {
           </form>
         </DialogContent>
       </Dialog>
+      )}
 
       <BookingDetailDialog booking={detail} open={!!detail} onOpenChange={(o) => !o && setDetail(null)} cafeId={cafeId} />
 
-      <DepositModal
-        open={!!depositTarget}
-        onOpenChange={(o) => !o && setDepositTarget(null)}
-        initialAmount={depositTarget?.initialAmount ?? 0}
-        customerName={depositTarget?.customerName}
-        onSubmit={async ({ amount, mode }) => {
-          if (!depositTarget) return;
-          if (amount > 0 && mode === "wallet") {
-            await payM.mutateAsync({ data: { id: depositTarget.id, amount } });
-          } else {
-            await depositM.mutateAsync({
-              data: { id: depositTarget.id, deposit_amount: amount, deposit_paid: amount > 0 },
-            });
-          }
-        }}
-      />
+      {canWallet && (
+        <DepositModal
+          open={!!depositTarget}
+          onOpenChange={(o) => !o && setDepositTarget(null)}
+          initialAmount={depositTarget?.initialAmount ?? 0}
+          customerName={depositTarget?.customerName}
+          onSubmit={async ({ amount, mode }) => {
+            if (!depositTarget) return;
+            if (amount > 0 && mode === "wallet") {
+              await payM.mutateAsync({ data: { id: depositTarget.id, amount } });
+            } else {
+              await depositM.mutateAsync({
+                data: { id: depositTarget.id, deposit_amount: amount, deposit_paid: amount > 0 },
+              });
+            }
+          }}
+        />
+      )}
 
       <ConfirmModal
         open={!!confirmAction}

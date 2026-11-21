@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarPlus, Loader2, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogIcon } from "@/components/ui/dialog";
-import { CustomerSelector, type CustomerDraft, type FloorCustomer } from "./CustomerSelector";
+import { CustomerSelector, type FloorCustomer } from "./CustomerSelector";
 import { findBookingConflict, fmtTime, type FloorBooking, type FloorDevice } from "@/lib/live-floor";
 
 const DURATIONS = [30, 60, 90, 120, 180, 240];
@@ -16,21 +16,23 @@ function nextSlot(): { date: string; time: string } {
   };
 }
 
-export type BookingSubmit = { draft: CustomerDraft; scheduledAt: string; minutes: number };
+export type BookingSubmit = { customer: FloorCustomer | null; scheduledAt: string; minutes: number };
 
 export function BookingDialog({
-  open, device, code, customers, bookings, busy, onClose, onSubmit,
+  cafeId, open, device, code, customers, bookings, busy, canCreateCustomer = true, onClose, onSubmit,
 }: {
+  cafeId: string;
   open: boolean;
   device: FloorDevice | null;
   code: string;
   customers: FloorCustomer[];
   bookings: FloorBooking[];
   busy: boolean;
+  canCreateCustomer?: boolean;
   onClose: () => void;
   onSubmit: (v: BookingSubmit) => void;
 }) {
-  const [draft, setDraft] = useState<CustomerDraft>(null);
+  const [customer, setCustomer] = useState<FloorCustomer | null>(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [minutes, setMinutes] = useState(60);
@@ -39,7 +41,7 @@ export function BookingDialog({
   useEffect(() => {
     if (!open) return;
     const s = nextSlot();
-    setDraft(null); setDate(s.date); setTime(s.time); setMinutes(60); setTried(false);
+    setCustomer(null); setDate(s.date); setTime(s.time); setMinutes(60); setTried(false);
   }, [open, device?.id]);
 
   const formattedTime = time ? (time.length === 5 ? `${time}:00` : time) : "";
@@ -50,9 +52,7 @@ export function BookingDialog({
   );
   const total = device ? Math.ceil((device.hourly_rate * minutes) / 60) : 0;
 
-  const customerError =
-    !draft ? "Pick a customer or add a new one." :
-    draft.kind === "new" && !draft.full_name.trim() ? "Enter the customer's name." : null;
+  const customerError = !customer ? "Pick a customer or add a new one." : null;
   const timeError =
     !Number.isFinite(startMs) ? "Choose a date and start time." :
     startMs < Date.now() - 5 * 60000 ? "Start time is in the past." : null;
@@ -65,7 +65,7 @@ export function BookingDialog({
     e.preventDefault();
     setTried(true);
     if (error || busy || !device) return;
-    onSubmit({ draft, scheduledAt: new Date(startMs).toISOString(), minutes });
+    onSubmit({ customer, scheduledAt: new Date(startMs).toISOString(), minutes });
   };
 
   return (
@@ -81,7 +81,15 @@ export function BookingDialog({
         <form onSubmit={submit} className="space-y-4">
           <section className="space-y-1.5">
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-lf-dim">Customer *</div>
-            <CustomerSelector customers={customers} value={draft} onChange={setDraft} invalid={tried && !!customerError} autoFocus />
+            <CustomerSelector
+              cafeId={cafeId}
+              customers={customers}
+              value={customer}
+              onChange={setCustomer}
+              invalid={tried && !!customerError}
+              canCreateCustomer={canCreateCustomer}
+              autoFocus
+            />
           </section>
 
           <section className="grid grid-cols-2 gap-2.5">

@@ -40,8 +40,8 @@ function SetupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={run} className="w-full max-w-lg glass rounded-2xl p-8 space-y-4">
+    <div className="flex min-h-dvh items-center justify-center px-4 py-8 overflow-x-clip">
+      <form onSubmit={run} className="w-full max-w-lg glass rounded-2xl p-5 sm:p-8 space-y-4">
         <Shield className="h-12 w-12 text-magenta" />
         <h1 className="font-display text-3xl font-bold">One-time setup</h1>
         <p className="text-sm text-muted-foreground">

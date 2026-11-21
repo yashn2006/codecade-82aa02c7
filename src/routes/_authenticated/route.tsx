@@ -1,12 +1,37 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { createFileRoute, Outlet, redirect, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getCachedUser, getSupabaseUserReady } from "@/lib/auth-routing";
+import { getCachedRoles, getCachedUser, getSupabaseUserReady, getUserRoles } from "@/lib/auth-routing";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { BrandLockup } from "@/components/Brand";
+import { ErrorState } from "@/components/ErrorState";
+import { reportLovableError } from "@/lib/lovable-error-reporting";
+
+function isStaffOnlyRoles(roles: Set<string> | null) {
+  return Boolean(roles && roles.has("cafe_staff") && !roles.has("cafe_owner") && !roles.has("super_admin"));
+}
 
 function AuthenticatedLayout() {
-  useIdleLogout(30 * 60 * 1000);
+  const [staffIdle, setStaffIdle] = useState(() => {
+    const u = getCachedUser();
+    const r = u ? getCachedRoles(u.id) : null;
+    return isStaffOnlyRoles(r);
+  });
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const u = await getSupabaseUserReady();
+      if (!u || !active) return;
+      const roles = await getUserRoles(u.id);
+      if (active) setStaffIdle(isStaffOnlyRoles(roles));
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useIdleLogout(staffIdle ? 8 * 60 * 60 * 1000 : 30 * 60 * 1000);
   const queryClient = useQueryClient();
   const primed = useRef(false);
 
@@ -52,10 +77,37 @@ function AuthPending() {
   );
 }
 
+function AuthErrorComponent({ error, reset }: ErrorComponentProps) {
+  const router = useRouter();
+  useEffect(() => {
+    reportLovableError(error, { boundary: "authenticated_route_error_component" });
+  }, [error]);
+
+  const desc = import.meta.env.DEV && error instanceof Error && error.message
+    ? error.message
+    : "We couldn't finish loading this section. Please try again.";
+
+  return (
+    <div className="mx-auto flex min-h-[60vh] max-w-lg items-center justify-center px-4">
+      <div className="w-full">
+        <ErrorState
+          title="This section couldn't load"
+          description={desc}
+          onRetry={() => {
+            router.invalidate();
+            reset();
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   pendingMs: 0,
   pendingComponent: AuthPending,
+  errorComponent: AuthErrorComponent,
   beforeLoad: () => {
     // Already signed in this tab → resolve synchronously so section clicks
     // never flash the full-screen veil.

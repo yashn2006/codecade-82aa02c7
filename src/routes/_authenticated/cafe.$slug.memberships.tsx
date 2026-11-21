@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -32,7 +34,27 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/memberships")({
 function MembershipsPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load memberships">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requireOwner>
+      <MembershipsPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function MembershipsPageContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
   const list = useServerFn(listMemberships);
   const create = useServerFn(createMembership);
@@ -55,7 +77,13 @@ function MembershipsPage() {
   const [grantTo, setGrantTo] = useState<null | { id: string; name: string }>(null);
   const [deleteTarget, setDeleteTarget] = useState<null | { id: string; name: string }>(null);
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || !cafeId) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafeId} errorTitle="Couldn't load memberships">
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   return (
     <div>
@@ -99,11 +127,10 @@ function MembershipsPage() {
       </div>
 
       <div className="mt-4">
-        {q.isLoading ? (
-          <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
-        ) : (q.data?.length ?? 0) === 0 ? (
-          <EmptyState icon={Crown} title="No memberships yet" description="Create your first pre-paid hours plan." />
-        ) : (
+        <QueryBoundary queries={[q]} errorTitle="Couldn't load membership plans">
+          {(q.data?.length ?? 0) === 0 ? (
+            <EmptyState icon={Crown} title="No memberships yet" description="Create your first pre-paid hours plan." />
+          ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(q.data ?? []).map((m) => (
               <div key={m.id} className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
@@ -130,12 +157,14 @@ function MembershipsPage() {
               </div>
             ))}
           </div>
-        )}
+          )}
+        </QueryBoundary>
       </div>
 
       <Dialog open={!!grantTo} onOpenChange={(v) => !v && setGrantTo(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Grant {grantTo?.name}</DialogTitle></DialogHeader>
+          <QueryErrorBanner queries={[customersQ]} title="Couldn't load customers" />
           <div className="max-h-72 overflow-y-auto rounded-xl border border-border/40">
             {(customersQ.data ?? []).length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">No customers</div>

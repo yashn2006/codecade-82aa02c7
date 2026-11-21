@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -35,7 +37,27 @@ const STATUSES = ["available", "in_use", "reserved", "suspended", "maintenance"]
 function DevicesPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load devices">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requirePerm="manage_devices">
+      <DevicesPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function DevicesPageContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
   const list = useServerFn(listDevices);
   const create = useServerFn(createDevice);
@@ -70,7 +92,13 @@ function DevicesPage() {
     onSuccess: () => { toast.success("Deleted"); refresh(); },
   });
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || !cafeId) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafeId} errorTitle="Couldn't load devices">
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   return (
     <div>
@@ -118,11 +146,10 @@ function DevicesPage() {
       </div>
 
       <div className="mt-4">
-        {q.isLoading ? (
-          <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
-        ) : !q.data || q.data.length === 0 ? (
-          <EmptyState icon={Cpu} title="No devices yet" description="Add your first PC, console, or VR rig." />
-        ) : (
+        <QueryBoundary queries={[q]} errorTitle="Couldn't load devices">
+          {!q.data || q.data.length === 0 ? (
+            <EmptyState icon={Cpu} title="No devices yet" description="Add your first PC, console, or VR rig." />
+          ) : (
           <div className="min-w-0 max-w-full overflow-x-auto rounded-lg border border-border/60 bg-card/30 backdrop-blur">
             <table className="min-w-[600px] w-full text-sm">
               <thead className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
@@ -151,7 +178,8 @@ function DevicesPage() {
               </tbody>
             </table>
           </div>
-        )}
+          )}
+        </QueryBoundary>
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
@@ -297,6 +325,7 @@ function DeviceControlDialog({ cafeId, device, onClose }: { cafeId: string; devi
 
         <div>
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Recent commands</div>
+          <QueryErrorBanner queries={[cmdQ]} title="Couldn't load command queue" />
           <div className="max-h-56 space-y-1 overflow-y-auto">
             {(cmdQ.data ?? []).length === 0 ? (
               <div className="rounded-md border border-dashed border-border/40 p-3 text-center text-xs text-muted-foreground">No commands yet</div>

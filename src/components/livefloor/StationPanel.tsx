@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  X, Wrench, CalendarPlus, CheckCircle2, Plus, Pause, Play, Square, LogIn, Ban, Search, UserPlus, Loader2, Cpu,
+  X, Wrench, CalendarPlus, CheckCircle2, Plus, Pause, Play, Square, LogIn, Ban, Loader2, Cpu,
   Save, Clock, IndianRupee,
 } from "lucide-react";
 import heroImg from "@/assets/livefloor/station-hero.jpg";
 import { STATION_ART_SIZE, stationArt } from "./station-art";
 import { LiveClock, SessionProgress, StatusBadge, TYPE_ICON, toneStyle } from "./StationCard";
-import { findExistingMatch, type CustomerDraft, type FloorCustomer } from "./CustomerSelector";
+import { CustomerSelector, type FloorCustomer } from "./CustomerSelector";
 import { useNow } from "@/hooks/useNow";
 import {
   STATUS_META, TYPE_LABEL, elapsedMs, fmtTime, initials, maintenanceReason, maskPhone, normalizeStatus, runningBill,
@@ -24,8 +24,8 @@ const PACKAGES: { label: string; minutes: number }[] = [
 
 export type PanelHandlers = {
   onClose: () => void;
-  onStart: (draft: Exclude<CustomerDraft, null> | null, minutes: number) => void;
-  onAssign: (draft: Exclude<CustomerDraft, null>) => void;
+  onStart: (customer: FloorCustomer | null, minutes: number) => void;
+  onAssign: (customer: FloorCustomer) => void;
   onExtend: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -60,9 +60,19 @@ function PanelAction({ icon: Icon, label, onClick, tone, disabled }: {
   );
 }
 
+export type PanelPerms = {
+  start?: boolean;
+  end?: boolean;
+  book?: boolean;
+  devices?: boolean;
+  customers?: boolean;
+  revenue?: boolean;
+};
+
 export function StationPanel({
-  slug, device, code, session, booking, customers, playingOn, busy, handlers,
+  cafeId, slug, device, code, session, booking, customers, playingOn, busy, perms, handlers,
 }: {
+  cafeId: string;
   slug: string;
   device: FloorDevice;
   code: string;
@@ -72,55 +82,55 @@ export function StationPanel({
   /** customer id → station code where they're currently playing */
   playingOn: Map<string, string>;
   busy: boolean;
+  perms?: PanelPerms;
   handlers: PanelHandlers;
 }) {
+  const p = {
+    start: perms?.start ?? true,
+    end: perms?.end ?? true,
+    book: perms?.book ?? true,
+    devices: perms?.devices ?? true,
+    customers: perms?.customers ?? true,
+    revenue: perms?.revenue ?? true,
+  };
   const status = normalizeStatus(device.status);
   const Icon = TYPE_ICON[device.type] ?? Cpu;
   const running = status === "in_use" && !!session;
   const pausedSession = status === "suspended" && !!session;
   const hasSession = running || pausedSession;
-  const canAssign = status === "available" || hasSession;
+  const canAssign = (status === "available" || hasSession) && p.start;
   const who = session?.customers ?? booking?.customers ?? null;
 
-  const [tab, setTab] = useState<"select" | "manual">("select");
-  const [q, setQ] = useState("");
-  const [pickedId, setPickedId] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [picked, setPicked] = useState<FloorCustomer | null>(null);
   const [minutes, setMinutes] = useState(60);
   const [tried, setTried] = useState(false);
 
-  const results = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    const digits = s.replace(/\D/g, "");
-    const list = !s ? customers : customers.filter((c) =>
-      (c.full_name ?? "").toLowerCase().includes(s) ||
-      (digits.length >= 3 && (c.phone ?? "").replace(/\D/g, "").includes(digits)),
-    );
-    return list.slice(0, 30);
-  }, [customers, q]);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    setNowMs(Date.now());
+    if (!booking || booking.status !== "confirmed") return;
+    const target = new Date(booking.scheduled_at).getTime();
+    const diff = target - Date.now();
+    if (diff <= 0) return;
+    const t = window.setTimeout(() => setNowMs(Date.now()), Math.min(diff + 50, 2_147_483_647));
+    return () => window.clearTimeout(t);
+  }, [booking]);
 
-  const manualDraft: CustomerDraft = { kind: "new", full_name: name, phone };
-  const dup = tab === "manual" ? findExistingMatch(manualDraft, customers) : null;
-  const picked = pickedId ? customers.find((c) => c.id === pickedId) ?? null : null;
+  const arrivedBooking =
+    !hasSession &&
+    status !== "maintenance" &&
+    !!booking &&
+    booking.status === "confirmed" &&
+    new Date(booking.scheduled_at).getTime() <= nowMs;
 
-  const draft: Exclude<CustomerDraft, null> | null =
-    tab === "select"
-      ? picked ? { kind: "existing", customer: picked } : null
-      : dup ? { kind: "existing", customer: dup }
-      : name.trim() ? { kind: "new", full_name: name.trim(), phone: phone.trim() } : null;
-
-  const assignError = hasSession && !draft
-    ? tab === "select" ? "Pick a customer from the list." : "Enter the customer's name."
-    : tab === "manual" && !name.trim() && phone.trim() ? "Enter the customer's name." : null;
-
+  const assignError = hasSession && !picked ? "Pick or add a customer first." : null;
   const estimate = minutes > 0 ? Math.ceil((device.hourly_rate * minutes) / 60) : null;
 
   const save = () => {
     setTried(true);
     if (busy || assignError) return;
-    if (status === "available") handlers.onStart(draft, minutes);
-    else if (hasSession && draft) handlers.onAssign(draft);
+    if (status === "available") handlers.onStart(picked, minutes);
+    else if (hasSession && picked) handlers.onAssign(picked);
   };
 
   const tone = STATUS_META[status].tone;
@@ -167,13 +177,13 @@ export function StationPanel({
               </div>
             ) : (
               <div className="font-mono text-[11px] text-lf-text">
-                {status === "reserved" && booking ? `Booked for ${fmtTime(booking.scheduled_at)}` : device.zone ?? "Main floor"}
+                {(status === "reserved" || arrivedBooking) && booking ? `Booked for ${fmtTime(booking.scheduled_at)}` : device.zone ?? "Main floor"}
               </div>
             )}
             <div className="text-right">
-              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-lf-dim">{hasSession ? "Bill" : "Rate"}</div>
+              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-lf-dim">{hasSession && p.revenue ? "Bill" : "Rate"}</div>
               <div className="font-mono text-[15px] font-bold text-lf-text">
-                {hasSession ? <RunningBill session={session!} rate={device.hourly_rate} /> : `₹${device.hourly_rate}/hr`}
+                {hasSession && p.revenue ? <RunningBill session={session!} rate={device.hourly_rate} /> : `₹${device.hourly_rate}/hr`}
               </div>
             </div>
           </div>
@@ -185,39 +195,41 @@ export function StationPanel({
       <div className="grid grid-cols-3 gap-2 px-4 pt-3">
         {running ? (
           <>
-            <PanelAction icon={Plus} label="+30 min" tone="var(--lf-run)" onClick={handlers.onExtend} disabled={busy} />
-            <PanelAction icon={Pause} label="Pause" tone="var(--lf-paused)" onClick={handlers.onPause} disabled={busy} />
-            <PanelAction icon={Square} label="End session" tone="var(--lf-danger)" onClick={handlers.onEnd} disabled={busy} />
+            {p.start && <PanelAction icon={Plus} label="+30 min" tone="var(--lf-run)" onClick={handlers.onExtend} disabled={busy} />}
+            {p.end && <PanelAction icon={Pause} label="Pause" tone="var(--lf-paused)" onClick={handlers.onPause} disabled={busy} />}
+            {p.end && <PanelAction icon={Square} label="End session" tone="var(--lf-danger)" onClick={handlers.onEnd} disabled={busy} />}
           </>
         ) : pausedSession ? (
           <>
-            <PanelAction icon={Play} label="Resume" tone="var(--lf-run)" onClick={handlers.onResume} disabled={busy} />
-            <PanelAction icon={Square} label="End session" tone="var(--lf-danger)" onClick={handlers.onEnd} disabled={busy} />
-            <PanelAction icon={Wrench} label="Maintenance" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled={busy} />
+            {(p.start || p.end) && <PanelAction icon={Play} label="Resume" tone="var(--lf-run)" onClick={handlers.onResume} disabled={busy} />}
+            {p.end && <PanelAction icon={Square} label="End session" tone="var(--lf-danger)" onClick={handlers.onEnd} disabled={busy} />}
+            {p.devices && <PanelAction icon={Wrench} label="Maintenance" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled={busy} />}
           </>
-        ) : status === "reserved" ? (
+        ) : status === "reserved" || arrivedBooking ? (
           <>
-            <PanelAction icon={LogIn} label="Check in" tone="var(--lf-run)" onClick={handlers.onCheckIn} disabled={busy} />
-            <PanelAction icon={Ban} label={booking ? "Cancel booking" : "Release"} tone="var(--lf-danger)" onClick={handlers.onCancelBooking} disabled={busy} />
-            <PanelAction icon={Wrench} label="Maintenance" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled={busy} />
+            {p.start && <PanelAction icon={arrivedBooking ? Play : LogIn} label={arrivedBooking ? "Start session" : "Check in"} tone="var(--lf-run)" onClick={handlers.onCheckIn} disabled={busy} />}
+            {p.book && <PanelAction icon={Ban} label={booking ? "Cancel booking" : "Release"} tone="var(--lf-danger)" onClick={handlers.onCancelBooking} disabled={busy} />}
+            {p.devices && <PanelAction icon={Wrench} label="Maintenance" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled={busy} />}
           </>
         ) : status === "maintenance" ? (
-          <>
-            <PanelAction icon={Wrench} label="In repair" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled />
-            <PanelAction icon={CalendarPlus} label="Mark as booked" tone="var(--lf-booked)" onClick={handlers.onBook} disabled />
-            <PanelAction icon={CheckCircle2} label="Mark available" tone="var(--lf-run)" onClick={handlers.onAvailable} disabled={busy} />
-          </>
+          p.devices ? (
+            <>
+              <PanelAction icon={Wrench} label="In repair" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled />
+              <PanelAction icon={CalendarPlus} label="Mark as booked" tone="var(--lf-booked)" onClick={handlers.onBook} disabled />
+              <PanelAction icon={CheckCircle2} label="Mark available" tone="var(--lf-run)" onClick={handlers.onAvailable} disabled={busy} />
+            </>
+          ) : null
         ) : status === "suspended" ? (
           <>
-            <PanelAction icon={Wrench} label="Maintenance" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled={busy} />
-            <PanelAction icon={CalendarPlus} label="Mark as booked" tone="var(--lf-booked)" onClick={handlers.onBook} disabled={busy} />
-            <PanelAction icon={CheckCircle2} label="Mark available" tone="var(--lf-run)" onClick={handlers.onAvailable} disabled={busy} />
+            {p.devices && <PanelAction icon={Wrench} label="Maintenance" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled={busy} />}
+            {p.book && <PanelAction icon={CalendarPlus} label="Mark as booked" tone="var(--lf-booked)" onClick={handlers.onBook} disabled={busy} />}
+            {p.devices && <PanelAction icon={CheckCircle2} label="Mark available" tone="var(--lf-run)" onClick={handlers.onAvailable} disabled={busy} />}
           </>
         ) : (
           <>
-            <PanelAction icon={Wrench} label="Maintenance" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled={busy} />
-            <PanelAction icon={CalendarPlus} label="Mark as booked" tone="var(--lf-booked)" onClick={handlers.onBook} disabled={busy} />
-            <PanelAction icon={Pause} label="Pause station" tone="var(--lf-paused)" onClick={handlers.onPause} disabled={busy} />
+            {p.devices && <PanelAction icon={Wrench} label="Maintenance" tone="var(--lf-maint)" onClick={handlers.onMaintenance} disabled={busy} />}
+            {p.book && <PanelAction icon={CalendarPlus} label="Mark as booked" tone="var(--lf-booked)" onClick={handlers.onBook} disabled={busy} />}
+            {p.devices && <PanelAction icon={Pause} label="Pause station" tone="var(--lf-paused)" onClick={handlers.onPause} disabled={busy} />}
           </>
         )}
       </div>
@@ -225,7 +237,7 @@ export function StationPanel({
       {/* current user */}
       <div className="mt-4 border-t border-lf-line px-4 pt-3.5">
         <div className="text-[13px] font-bold">Current user</div>
-        {who && (hasSession || status === "reserved") ? (
+        {who && (hasSession || status === "reserved" || arrivedBooking) ? (
           <div className="mt-2 flex items-center gap-3 rounded-xl border border-lf-line bg-lf-bg/60 p-2.5">
             <span className="lf-avatar" style={{ ["--tone" as string]: tone }}>{initials(who.full_name ?? "?")}</span>
             <div className="min-w-0 flex-1">
@@ -249,70 +261,17 @@ export function StationPanel({
       {/* assign */}
       {canAssign && (
         <div className="mt-4 flex min-h-0 flex-1 flex-col border-t border-lf-line px-4 pt-3.5">
-          <div className="text-[13px] font-bold">{hasSession ? "Change / assign user" : "Assign user & start"}</div>
-          <div className="lf-tabs mt-2" role="tablist">
-            <button type="button" role="tab" aria-selected={tab === "select"} data-on={tab === "select"} onClick={() => setTab("select")}>Select user</button>
-            <button type="button" role="tab" aria-selected={tab === "manual"} data-on={tab === "manual"} onClick={() => setTab("manual")}>Manual entry</button>
-          </div>
+          <div className="mb-2 text-[13px] font-bold">{hasSession ? "Change / assign user" : "Assign user & start"}</div>
 
-          {tab === "select" ? (
-            <>
-              <div className="relative mt-2">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-lf-dim" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search user…" aria-label="Search customers" className="lf-input h-9 pl-8" />
-              </div>
-              <div className="lf-scroll mt-2 max-h-[220px] min-h-[80px] space-y-1 overflow-y-auto pr-1" role="radiogroup" aria-label="Customers">
-                {results.map((c) => {
-                  const on = pickedId === c.id;
-                  const at = playingOn.get(c.id);
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      data-on={on}
-                      onClick={() => setPickedId(on ? null : c.id)}
-                      className="lf-user-row"
-                    >
-                      <span className="lf-avatar lf-avatar-sm" style={{ ["--tone" as string]: at ? "var(--lf-maint)" : "var(--lf-violet)" }}>
-                        {initials(c.full_name ?? "?")}
-                        <span className="lf-presence" data-busy={!!at} />
-                      </span>
-                      <span className="min-w-0 flex-1 text-left">
-                        <span className="block truncate text-[12.5px] font-semibold text-lf-text">{c.full_name ?? "Customer"}</span>
-                        <span className="block truncate text-[10.5px]" style={{ color: at ? "var(--lf-maint)" : "var(--lf-run)" }}>
-                          {at ? `In game · ${at}` : `Wallet ₹${Number(c.wallet_balance ?? 0).toLocaleString("en-IN")}`}
-                        </span>
-                      </span>
-                      <span className="lf-radio" aria-hidden />
-                    </button>
-                  );
-                })}
-                {results.length === 0 && (
-                  <div className="rounded-lg border border-dashed border-lf-line px-3 py-2 text-[12px] text-lf-dim">
-                    No customer matches “{q}”.{" "}
-                    <button type="button" className="font-semibold text-lf-text underline" onClick={() => { setTab("manual"); setName(q); }}>
-                      Add them
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="mt-2 space-y-2">
-              <input className="lf-input" placeholder="Full name *" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} aria-label="Customer name" />
-              <input className="lf-input" placeholder="Phone (optional)" inputMode="tel" value={phone} maxLength={20} onChange={(e) => setPhone(e.target.value)} aria-label="Customer phone" />
-              {dup && (
-                <div className="rounded-lg border border-lf-booked/40 bg-lf-booked/10 px-2.5 py-1.5 text-[11.5px]">
-                  This phone belongs to <b>{dup.full_name}</b> — we'll use that customer.
-                </div>
-              )}
-              {!dup && name.trim() && (
-                <div className="flex items-center gap-1.5 text-[11px] text-lf-dim"><UserPlus className="h-3 w-3" /> A new customer will be added.</div>
-              )}
-            </div>
-          )}
+          <CustomerSelector
+            cafeId={cafeId}
+            customers={customers}
+            value={picked}
+            onChange={setPicked}
+            playingOn={playingOn}
+            canCreateCustomer={p.customers}
+            listClassName="max-h-[210px]"
+          />
 
           {status === "available" && (
             <div className="mt-3">
@@ -349,9 +308,9 @@ export function StationPanel({
           )}
 
           <div className="mt-auto pb-4 pt-3">
-            <button type="button" onClick={save} disabled={busy || (hasSession && !draft)} className="lf-btn lf-btn-primary lf-save h-11 w-full text-[13px]">
+            <button type="button" onClick={save} disabled={busy || (hasSession && !picked)} className="lf-btn lf-btn-primary lf-save h-11 w-full text-[13px]">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : status === "available" ? <Play className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-              {busy ? "Working…" : status === "available" ? (draft ? "Start session" : "Start as walk-in") : "Save changes"}
+              {busy ? "Working…" : status === "available" ? (picked ? "Start session" : "Start as walk-in") : "Save changes"}
             </button>
           </div>
         </div>

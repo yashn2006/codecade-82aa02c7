@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/analytics")({
   head: () => ({
@@ -51,18 +53,40 @@ type SessionRow = {
 function AnalyticsPage() {
   const { slug } = getRouteApi("/_authenticated/cafe/$slug/analytics").useParams();
   const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load analytics">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requirePerm="view_revenue">
+      <AnalyticsPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function AnalyticsPageContent() {
+  const { slug } = getRouteApi("/_authenticated/cafe/$slug/analytics").useParams();
+  const getCafe = useServerFn(getCafeBySlug);
   const lDev = useServerFn(listDevices);
   const lSes = useServerFn(listSessions);
 
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
-  const { data: devices = [] } = useQuery({
+  const devicesQ = useQuery({
     queryKey: ["devices", cafeId], queryFn: () => lDev({ data: { cafe_id: cafeId! } }), enabled: !!cafeId,
   });
-  const { data: sessions = [] } = useQuery({
+  const sessionsQ = useQuery({
     queryKey: ["sessions", cafeId], queryFn: () => lSes({ data: { cafe_id: cafeId! } }),
     enabled: !!cafeId, refetchInterval: 5000,
   });
+  const devices = devicesQ.data ?? [];
+  const sessions = sessionsQ.data ?? [];
 
   const [range, setRange] = useState<RangeId>("7d");
   const [deviceFilter, setDeviceFilter] = useState<string>("all");
@@ -77,6 +101,18 @@ function AnalyticsPage() {
       return true;
     });
   }, [sessions, cutoffMs, deviceFilter]);
+
+  if (cafeQ.isError || devicesQ.isError || sessionsQ.isError || !cafeId) {
+    return (
+      <QueryBoundary
+        queries={[cafeQ, devicesQ, sessionsQ]}
+        loading={!cafeQ.isError && !devicesQ.isError && !sessionsQ.isError && (!cafeId || devicesQ.isLoading || sessionsQ.isLoading)}
+        errorTitle="Couldn't load analytics"
+      >
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   return (
     <div className="space-y-6">

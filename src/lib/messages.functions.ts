@@ -22,11 +22,15 @@ export const sendOwnerMessage = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    // Owner can only tag a cafe they own.
     if (data.cafe_id) {
-      const { data: c } = await context.supabase
-        .from("cafes").select("id").eq("id", data.cafe_id).eq("owner_id", context.userId).maybeSingle();
-      if (!c) throw new Error("Not your café");
+      const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+      await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
+    } else {
+      const [{ data: isOwner }, admin] = await Promise.all([
+        context.supabase.rpc("has_role", { _user_id: context.userId, _role: "cafe_owner" }),
+        isSuperAdmin(context),
+      ]);
+      if (!isOwner && !admin) throw new Error("You don't have permission");
     }
     const { error } = await context.supabase.from("owner_messages").insert({
       sender_id: context.userId,
@@ -96,7 +100,7 @@ export const sendAdminMessage = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: cafe, error: cErr } = await supabaseAdmin
       .from("cafes")
-      .select("id, owner_id, name")
+      .select("id, owner_id, name, slug")
       .eq("id", data.cafe_id)
       .single();
     if (cErr || !cafe?.owner_id) throw new Error(cErr?.message ?? "Cafe not found");
@@ -117,7 +121,7 @@ export const sendAdminMessage = createServerFn({ method: "POST" })
       kind: "admin_message",
       title: `CoreCade: ${data.subject}`,
       body: data.body.slice(0, 240),
-      link: "/owner",
+      link: cafe.slug ? `/cafe/${cafe.slug}/support#messages` : "/owner",
     });
     return { ok: true };
   });
@@ -201,6 +205,8 @@ export const logManualRevenue = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
     const { data: id, error } = await context.supabase.rpc("record_revenue", {
       _cafe_id: data.cafe_id,
       _amount: Math.round(data.amount_rupees * 100),
@@ -209,5 +215,20 @@ export const logManualRevenue = createServerFn({ method: "POST" })
       _note: data.note ?? null,
     });
     if (error) throw new Error(error.message);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.cafe_id,
+      actorId: context.userId,
+      action: "revenue.manual_logged",
+      resourceType: "revenue",
+      resourceId: id as string,
+      meta: {
+        amount_rupees: data.amount_rupees,
+        kind: data.kind,
+        source: data.source,
+        note: data.note ?? null,
+      },
+    });
     return { id: id as string };
   });

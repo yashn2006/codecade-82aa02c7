@@ -221,7 +221,7 @@ export function TerminalContact() {
                   ref={inputRef}
                   type={current.type}
                   onKeyDown={handleKey}
-                  className="flex-1 border-0 bg-transparent p-0 text-[13px] text-emerald-100 outline-none ring-0 placeholder:text-white/20 focus:outline-none focus:ring-0"
+                  className="flex-1 border-0 bg-transparent p-0 text-base sm:text-[13px] text-emerald-100 outline-none ring-0 placeholder:text-white/20 focus:outline-none focus:ring-0"
                   placeholder=""
                   autoComplete="off"
                   spellCheck={false}

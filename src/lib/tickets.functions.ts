@@ -44,6 +44,7 @@ async function canManageCafeTickets(
     .select("id")
     .eq("cafe_id", cafeId)
     .eq("staff_user_id", userId)
+    .eq("is_active", true)
     .maybeSingle();
   return { ok: Boolean(staff), cafe };
 }

@@ -53,13 +53,13 @@ function ResetPassword() {
   );
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4 py-12 overflow-hidden">
+    <div className="relative flex min-h-dvh items-center justify-center px-4 py-10 pb-[max(env(safe-area-inset-bottom),2.5rem)] overflow-x-clip">
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-background via-background to-background">
         <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-violet/20 blur-3xl" />
       </div>
 
-      <form onSubmit={onSubmit} className="w-full max-w-md glass rounded-3xl p-8 space-y-5 border border-white/10 shadow-2xl">
+      <form onSubmit={onSubmit} className="w-full max-w-md glass rounded-3xl p-5 sm:p-8 space-y-5 border border-white/10 shadow-2xl">
         <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-primary/80">
           <ShieldCheck className="h-4 w-4" /> Secure reset
         </div>
@@ -77,10 +77,11 @@ function ResetPassword() {
               id="password" name="password"
               type={show ? "text" : "password"} minLength={8} required
               value={pw} onChange={(e) => setPw(e.target.value)}
-              className="h-12 pr-10" autoFocus autoComplete="new-password"
+              className="h-12 pr-12 text-base" autoComplete="new-password"
             />
             <button type="button" onClick={() => setShow(s => !s)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              aria-label={show ? "Hide password" : "Show password"}
+              className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground">
               {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
@@ -102,7 +103,7 @@ function ResetPassword() {
           <Input
             id="password2" type={show ? "text" : "password"} minLength={8} required
             value={pw2} onChange={(e) => setPw2(e.target.value)}
-            className="h-12" autoComplete="new-password"
+            className="h-12 text-base" autoComplete="new-password"
           />
         </div>
 
@@ -122,7 +123,7 @@ function ResetPassword() {
         </Button>
 
         <p className="text-center text-xs text-muted-foreground">
-          Remembered it? <Link to="/auth" className="text-primary hover:underline">Back to sign in</Link>
+          Remembered it? <Link to="/auth" className="inline-flex min-h-[40px] items-center px-1 text-primary hover:underline">Back to sign in</Link>
         </p>
       </form>
     </div>

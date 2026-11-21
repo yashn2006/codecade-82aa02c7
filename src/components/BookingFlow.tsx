@@ -315,7 +315,7 @@ export function BookingFlow({
       }}
     >
       <DialogContent
-        className="w-[96vw] sm:max-w-4xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[88dvh] border-primary/30 bg-[#0c0a15] p-0 overflow-hidden rounded-3xl shadow-[0_50px_120px_-20px_oklch(0.6_0.3_330/0.4)] [&>button]:hidden"
+        className="w-full max-sm:h-[92dvh] max-sm:max-h-[92dvh] max-sm:p-0 [&>span]:hidden sm:w-[96vw] sm:max-w-4xl sm:max-h-[88dvh] border-primary/30 bg-[#0c0a15] p-0 overflow-hidden sm:rounded-3xl shadow-[0_50px_120px_-20px_oklch(0.6_0.3_330/0.4)] [&>button]:hidden"
         style={{ perspective: 1400 }}
       >
         <DialogTitle className="sr-only">Reserve Battle Rig at {cafe.name}</DialogTitle>
@@ -345,7 +345,7 @@ export function BookingFlow({
           />
         </div>
 
-        <div className="relative z-10 flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[88dvh]">
+        <div className="relative z-10 flex flex-col h-[92dvh] max-h-[92dvh] sm:h-auto sm:max-h-[88dvh]">
           {/* Header */}
           <div className="mobile-keep-blur border-b border-white/10 px-4 sm:px-6 py-3.5 sm:py-4 backdrop-blur-xl bg-black/55">
             <div className="flex items-center justify-between gap-3">
@@ -520,15 +520,15 @@ export function BookingFlow({
                     ) : viewMode === "floor" ? (
                       /* TACTICAL ARENA FLOOR MATRIX VIEW */
                       <div className="space-y-4">
-                        <div className="rounded-2xl border border-white/10 bg-black/40 p-5">
-                          <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
+                        <div className="rounded-2xl border border-white/10 bg-black/40 p-3 sm:p-5">
+                          <div className="mb-3 sm:mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
                             <div className="flex items-center gap-2">
                               <span className="h-2 w-2 rounded-full bg-emerald-400" />
                               <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-white">
                                 Arena Battle Floor Map
                               </span>
                             </div>
-                            <div className="flex items-center gap-3 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <span className="h-2 w-2 rounded-full bg-emerald-400" /> Free
                               </span>
@@ -690,7 +690,7 @@ export function BookingFlow({
                     </div>
 
                     {/* 14-Day Calendar Strip */}
-                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+                    <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7 sm:gap-2">
                       {next14.map((d) => {
                         const isSelected = fmtDate(d) === fmtDate(date);
                         const isToday = fmtDate(d) === fmtDate(new Date());
@@ -706,7 +706,7 @@ export function BookingFlow({
                               setTime(null);
                             }}
                             className={cn(
-                              "relative flex flex-col items-center rounded-xl border p-3 transition-all",
+                              "relative flex flex-col items-center rounded-xl border p-2 sm:p-3 transition-all",
                               isSelected
                                 ? "border-primary bg-primary/20 text-white shadow-[0_0_20px_oklch(0.7_0.26_335/0.8)]"
                                 : "border-white/10 bg-white/5 text-muted-foreground hover:border-white/20 hover:text-white",
@@ -720,7 +720,7 @@ export function BookingFlow({
                             >
                               {d.toLocaleDateString("en-IN", { weekday: "short" })}
                             </span>
-                            <span className="my-1 font-display text-2xl font-black text-white">
+                            <span className="my-0.5 sm:my-1 font-display text-xl sm:text-2xl font-black text-white">
                               {d.getDate()}
                             </span>
                             <span className="font-mono text-[9px] uppercase">
@@ -734,7 +734,7 @@ export function BookingFlow({
                     </div>
 
                     {/* Duration Preset Chips */}
-                    <div className="rounded-2xl border border-white/10 bg-black/40 p-5">
+                    <div className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5">
                       <div className="mb-3 flex items-center justify-between">
                         <div className="font-mono text-[10px] uppercase tracking-widest text-primary">
                           Session Duration
@@ -751,7 +751,7 @@ export function BookingFlow({
                             type="button"
                             onClick={() => setDuration(dur)}
                             className={cn(
-                              "rounded-xl border px-4 py-2 font-mono text-xs font-bold transition",
+                              "min-h-[42px] rounded-xl border px-4 py-2 font-mono text-xs font-bold transition",
                               duration === dur
                                 ? "border-primary bg-primary text-white shadow"
                                 : "border-white/10 bg-white/5 text-muted-foreground hover:border-white/20 hover:text-white",
@@ -997,7 +997,10 @@ export function BookingFlow({
           </div>
 
           {/* Dialog Footer Actions */}
-          <div className="mobile-keep-blur flex items-center justify-between gap-2 border-t border-white/10 bg-black/55 px-4 py-3 sm:px-6 sm:py-4 backdrop-blur-xl">
+          <div
+            className="mobile-keep-blur flex items-center justify-between gap-2 border-t border-white/10 bg-black/55 px-4 pt-3 sm:px-6 sm:py-4 backdrop-blur-xl"
+            style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
+          >
             <Button
               variant="ghost"
               size="sm"

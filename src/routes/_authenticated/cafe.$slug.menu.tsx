@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -40,7 +42,27 @@ type MItem = {
 function MenuPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load menu">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requirePerm="manage_menu">
+      <MenuPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function MenuPageContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
 
   const list = useServerFn(listMenu);
@@ -73,7 +95,13 @@ function MenuPage() {
   const [catOpen, setCatOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "category" | "item"; id: string; name: string } | null>(null);
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || q.isError || !cafeId) {
+    return (
+      <QueryBoundary queries={[cafeQ, q]} loading={!cafeQ.isError && !q.isError && !cafeId} errorTitle="Couldn't load menu">
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   const cats = q.data?.categories ?? [];
   const items = (q.data?.items ?? []) as MItem[];
@@ -159,7 +187,9 @@ function MenuPage() {
         </div>
       )}
 
-      {items.length === 0 ? (
+      {q.isLoading ? (
+        <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
+      ) : items.length === 0 ? (
         <EmptyState icon={UtensilsCrossed} title="No menu items" description="Add snacks, drinks, combos. They'll show in POS and on your public page." />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

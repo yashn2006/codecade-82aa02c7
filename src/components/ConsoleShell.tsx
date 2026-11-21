@@ -63,6 +63,9 @@ export function ConsoleShell({
   children,
   intensity = "default",
   banner,
+  hideHubLink = false,
+  hidePasswordLink = false,
+  userLabel,
 }: {
   badge: string;
   title: string;
@@ -73,12 +76,16 @@ export function ConsoleShell({
   intensity?: "default" | "hero" | "immersive";
   /** Slim sticky strip rendered directly under the header (trial notices etc). */
   banner?: ReactNode;
+  hideHubLink?: boolean;
+  hidePasswordLink?: boolean;
+  userLabel?: string;
 }) {
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [open, setOpen] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [effectsPref, setEffectsPref] = useState<"liquid" | "crisp">("liquid");
   const [motionPref, setMotionPref] = useState<"smooth" | "reduced">("smooth");
   const mainRef = useRef<HTMLElement>(null);
@@ -136,7 +143,60 @@ export function ConsoleShell({
   useEffect(() => {
     setOpen(false);
     mainRef.current?.scrollTo({ top: 0 });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0 });
+    }
   }, [path, hash]);
+
+  // Hide floating mobile dock when soft keyboard or text input is active on small screens
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isTextField = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      if (el.isContentEditable) return true;
+      const tag = el.tagName;
+      if (tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (tag === "INPUT") {
+        const type = (el as HTMLInputElement).type;
+        return !["checkbox", "radio", "button", "submit", "reset", "file", "range", "color"].includes(type);
+      }
+      return false;
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      if (window.innerWidth < 1024 && isTextField(e.target)) {
+        setKeyboardOpen(true);
+      }
+    };
+    const onFocusOut = () => {
+      window.setTimeout(() => {
+        if (!isTextField(document.activeElement)) {
+          setKeyboardOpen(false);
+        }
+      }, 60);
+    };
+    const vv = window.visualViewport;
+    const onResize = () => {
+      if (!vv || window.innerWidth >= 1024) {
+        setKeyboardOpen(false);
+        return;
+      }
+      if (vv.height < window.innerHeight * 0.78) {
+        setKeyboardOpen(true);
+      } else if (!isTextField(document.activeElement)) {
+        setKeyboardOpen(false);
+      }
+    };
+
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    vv?.addEventListener("resize", onResize);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+      vv?.removeEventListener("resize", onResize);
+    };
+  }, []);
 
   // Quietly preload sibling route JS chunks while idle so sidebar/dock clicks feel instantaneous.
   useEffect(() => {
@@ -248,21 +308,27 @@ export function ConsoleShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeNav, path, hash, title]);
 
-  // Lock page scroll while the "More" sheet is open.
+  // Lock page scroll and bind Escape key while the "More" sheet is open.
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
     };
   }, [open]);
 
-  const avatar = (email[0] ?? "?").toUpperCase();
+  const displayAccount = userLabel || email;
+  const avatar = (displayAccount[0] ?? "?").toUpperCase();
 
   return (
     <>
-    <div className="relative h-dvh w-full max-w-full overflow-hidden bg-background text-foreground flex flex-col lg:flex-row">
+    <div className="relative min-h-dvh w-full max-w-full overflow-x-clip lg:h-dvh lg:overflow-hidden bg-background text-foreground flex flex-col lg:flex-row">
       <AuroraBackground intensity={intensity} />
       <CommandPalette />
 
@@ -344,7 +410,7 @@ export function ConsoleShell({
               {avatar}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[11px] font-medium">{email || "—"}</div>
+              <div className="truncate text-[11px] font-medium">{displayAccount || "—"}</div>
             </div>
             <button
               onClick={signOut}
@@ -358,11 +424,11 @@ export function ConsoleShell({
         </div>
       </aside>
 
-      {/* ============ Main Center Container (Scrolls independently) ============ */}
-      <div className="relative flex min-w-0 w-full max-w-full flex-1 h-dvh flex-col overflow-hidden">
-        {/* Header bar — pinned at top of center column */}
+      {/* ============ Main Center Container ============ */}
+      <div className="relative flex min-w-0 w-full max-w-full flex-1 min-h-dvh flex-col overflow-x-clip lg:h-dvh lg:overflow-hidden">
+        {/* Header bar — sticky on mobile document flow, pinned on desktop */}
         <header
-          className="mobile-header mobile-keep-blur shrink-0 z-30 w-full max-w-full min-h-[54px] liquid-glass-header grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 lg:grid-cols-[1fr_auto_1fr] lg:h-[54px] lg:py-0 sm:px-4"
+          className="mobile-header mobile-keep-blur sticky top-0 shrink-0 z-30 w-full max-w-full min-h-[54px] liquid-glass-header grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 lg:relative lg:grid-cols-[1fr_auto_1fr] lg:h-[54px] lg:py-0 sm:px-4"
           style={{
             paddingTop: "max(env(safe-area-inset-top), 0.375rem)",
           }}
@@ -412,13 +478,17 @@ export function ConsoleShell({
 
           <div className="hidden min-w-0 items-center justify-center lg:flex lg:justify-self-center">
             <div className="inline-flex max-w-[44vw] items-center gap-2 overflow-hidden px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.25)] backdrop-blur-md text-xs font-medium">
-              <Link
-                to={(path.startsWith("/admin") ? "/admin" : path.startsWith("/portal") ? "/portal" : "/owner") as never}
-                className="text-muted-foreground hover:text-white transition flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap shrink-0"
-              >
-                {path.startsWith("/admin") ? "Admin HQ" : path.startsWith("/portal") ? "Gamer Portal" : "Owner Hub"}
-              </Link>
-              <ChevronRight className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+              {!hideHubLink && (
+                <>
+                  <Link
+                    to={(path.startsWith("/admin") ? "/admin" : path.startsWith("/portal") ? "/portal" : "/owner") as never}
+                    className="text-muted-foreground hover:text-white transition flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap shrink-0"
+                  >
+                    {path.startsWith("/admin") ? "Admin HQ" : path.startsWith("/portal") ? "Gamer Portal" : "Owner Hub"}
+                  </Link>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+                </>
+              )}
               <span className="font-bold text-foreground max-w-[180px] truncate">{title}</span>
               {currentLabel && currentLabel !== title && (
                 <>
@@ -440,7 +510,7 @@ export function ConsoleShell({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    title={email || "Account"}
+                    title={displayAccount || "Account"}
                     aria-label="Account menu"
                     className="grid h-10 w-10 place-items-center rounded-full p-1 transition hover:opacity-90 active:scale-95"
                   >
@@ -451,7 +521,7 @@ export function ConsoleShell({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-60">
                   <DropdownMenuLabel>
-                    <div className="truncate text-xs font-semibold">{email || "Signed in"}</div>
+                    <div className="truncate text-xs font-semibold">{displayAccount || "Signed in"}</div>
                     <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                       {badge}
                     </div>
@@ -476,11 +546,13 @@ export function ConsoleShell({
                       </Link>
                     )}
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/reset-password">
-                      <KeyRound className="mr-2 h-4 w-4" /> Change password
-                    </Link>
-                  </DropdownMenuItem>
+                  {!hidePasswordLink && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/reset-password">
+                        <KeyRound className="mr-2 h-4 w-4" /> Change password
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={(e) => {
@@ -502,10 +574,10 @@ export function ConsoleShell({
             </div>
           ) : null}
 
-          {/* Main content — independently scrollable center viewport */}
+          {/* Main content — native document flow on mobile, independent viewport on desktop */}
           <main
             ref={mainRef}
-            className="dashboard-content flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden overscroll-y-contain px-3.5 pb-28 pt-3.5 sm:px-6 lg:px-8 lg:pb-12"
+            className="dashboard-content flex-1 min-w-0 w-full max-w-full overflow-x-clip px-3.5 pb-[calc(max(env(safe-area-inset-bottom),8px)+5.25rem)] pt-3.5 sm:px-6 lg:overflow-y-auto lg:overscroll-y-contain lg:px-8 lg:pb-12"
           >
             <PageTransition routeKey={normalizeHash(hash) ? `${path}#${normalizeHash(hash)}` : path}>{children}</PageTransition>
           </main>
@@ -513,12 +585,15 @@ export function ConsoleShell({
       </div>
 
       {/* soft fade so content melts under the floating dock */}
-      <div
-        aria-hidden
-        className="mobile-dock-fade pointer-events-none fixed inset-x-0 bottom-0 z-30 h-24 lg:hidden"
-      />
+      {!keyboardOpen && (
+        <div
+          aria-hidden
+          className="mobile-dock-fade pointer-events-none fixed inset-x-0 bottom-0 z-30 h-24 lg:hidden"
+        />
+      )}
 
       {/* ============ Mobile floating dock ============ */}
+      {!keyboardOpen && (
       <nav
         className="fixed inset-x-0 bottom-0 z-40 w-full max-w-full px-2 sm:px-3 lg:hidden"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
@@ -580,6 +655,7 @@ export function ConsoleShell({
           })}
         </div>
       </nav>
+      )}
 
       {/* ============ "More" sheet ============ */}
       <AnimatePresence>
@@ -594,6 +670,8 @@ export function ConsoleShell({
               className="mobile-keep-blur fixed inset-0 z-[60] bg-background/70 backdrop-blur-sm lg:hidden"
             />
             <motion.aside
+              role="dialog"
+              aria-modal="true"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -650,7 +728,7 @@ export function ConsoleShell({
                       {avatar}
                     </span>
                     <div className="min-w-0">
-                      <div className="truncate text-xs font-semibold text-white">{email || "Signed in"}</div>
+                      <div className="truncate text-xs font-semibold text-white">{displayAccount || "Signed in"}</div>
                       <div className="font-mono text-[9px] uppercase tracking-wider text-emerald-300">Session active</div>
                     </div>
                   </div>
@@ -747,14 +825,16 @@ export function ConsoleShell({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
-                  <Link
-                    to="/reset-password"
-                    onClick={() => setOpen(false)}
-                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-white/90 transition active:scale-[0.98]"
-                  >
-                    <KeyRound className="h-4 w-4 text-primary" /> Password
-                  </Link>
+                <div className={cn("grid gap-2.5", hidePasswordLink ? "grid-cols-1" : "grid-cols-2")}>
+                  {!hidePasswordLink && (
+                    <Link
+                      to="/reset-password"
+                      onClick={() => setOpen(false)}
+                      className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-white/90 transition active:scale-[0.98]"
+                    >
+                      <KeyRound className="h-4 w-4 text-primary" /> Password
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

@@ -8,6 +8,8 @@ import { getCafeReports } from "@/lib/reports.functions";
 import { Sparkline } from "@/components/Sparkline";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 import { downloadCsv } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/reports")({
@@ -18,8 +20,28 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/reports")({
 function ReportsPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load reports">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requirePerm="view_revenue">
+      <ReportsPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function ReportsPageContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
   const getReports = useServerFn(getCafeReports);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
 
   const [range, setRange] = useState<"7d" | "30d" | "90d">("30d");
   const { from, to } = useMemo(() => {
@@ -30,13 +52,24 @@ function ReportsPage() {
   }, [range]);
 
   const cafeId = cafe?.id as string | undefined;
-  const { data } = useQuery({
+  const reportsQ = useQuery({
     queryKey: ["reports", cafeId, range],
     queryFn: () => getReports({ data: { cafe_id: cafeId!, from, to } }),
     enabled: !!cafeId,
   });
+  const data = reportsQ.data;
 
-  if (!cafeId || !data) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || reportsQ.isError || !cafeId || !data) {
+    return (
+      <QueryBoundary
+        queries={[cafeQ, reportsQ]}
+        loading={!cafeQ.isError && !reportsQ.isError && (!cafeId || !data)}
+        errorTitle="Couldn't load reports"
+      >
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   const exportSessions = () => {
     downloadCsv(`${slug}-sessions-${range}.csv`, data.sessionsRaw.map((s: any) => ({

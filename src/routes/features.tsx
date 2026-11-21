@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Gamepad2, CalendarRange, Wallet, Users, Trophy, BarChart3, Store, ShieldCheck,
   Smartphone, QrCode, Bell, Zap, Layers, Clock, CreditCard, Boxes, MessageCircle, Star, ArrowRight,
+  Menu, X,
 } from "lucide-react";
 import { BrandLockup, BrandShowcase } from "@/components/Brand";
 
@@ -50,30 +52,107 @@ const playerFeatures = [
 ];
 
 function FeaturesPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileMenuOpen]);
+
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="relative min-h-dvh overflow-x-clip bg-background">
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] bg-[radial-gradient(circle_at_50%_0%,oklch(0.6_0.24_315/0.25),transparent_65%)]" />
 
       {/* Sticky Top Glass Header */}
-      <header className="mobile-keep-blur sticky top-0 z-40 border-b border-white/[0.08] bg-background/75 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <BrandLockup size={30} badge="Platform" to="/" />
-          <div className="flex items-center gap-2 sm:gap-3">
+      <header
+        className="mobile-keep-blur sticky top-0 z-40 border-b border-white/[0.08] bg-background/80 backdrop-blur-xl"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3.5 py-2.5 sm:px-6 sm:py-3">
+          <BrandLockup size={28} badge="Platform" to="/" />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <Link
               to="/discover"
-              className="hidden rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:text-white sm:inline-flex"
+              className="hidden min-h-[42px] items-center rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:text-white sm:inline-flex"
             >
               Discover Arenas
             </Link>
             <Link
               to="/auth"
-              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-lg transition hover:opacity-95"
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-lg transition hover:opacity-95 sm:px-4"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
               Get Started <ArrowRight className="h-3.5 w-3.5" />
             </Link>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/15 bg-white/[0.06] text-foreground transition active:scale-95 sm:hidden"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
           </div>
         </div>
+
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-30 bg-black/45 sm:hidden"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-hidden
+              />
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.14 }}
+                className="mobile-keep-blur relative z-40 border-t border-white/10 bg-[#0d091d]/95 px-4 py-3 backdrop-blur-2xl sm:hidden"
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                  >
+                    <span>Home</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                  </Link>
+                  <Link
+                    to="/discover"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                  >
+                    <span>Arenas</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                  </Link>
+                  <Link
+                    to="/auth"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                  >
+                    <span>Sign in</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                  </Link>
+                  <Link
+                    to="/staff-login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                  >
+                    <span>Staff PIN</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                  </Link>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20">

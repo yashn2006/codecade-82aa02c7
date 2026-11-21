@@ -15,6 +15,8 @@ export const listMemberships = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
     const { data: rows, error } = await context.supabase
       .from("memberships")
       .select("*")
@@ -28,6 +30,8 @@ export const createMembership = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => MembershipInput.parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
     const { error, data: row } = await context.supabase
       .from("memberships").insert(data).select().single();
     if (error) throw new Error(error.message);
@@ -40,6 +44,9 @@ export const updateMembership = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), patch: MembershipInput.partial() }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("memberships", data.id);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId);
     const { error } = await context.supabase
       .from("memberships").update(data.patch).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -50,6 +57,9 @@ export const deleteMembership = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("memberships", data.id);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId);
     const { error } = await context.supabase.from("memberships").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -64,6 +74,9 @@ export const grantMembership = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("memberships", data.membership_id);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId);
     const { data: m, error: mErr } = await context.supabase
       .from("memberships").select("hours_included, validity_days").eq("id", data.membership_id).single();
     if (mErr || !m) throw new Error(mErr?.message ?? "Membership not found");
@@ -82,6 +95,8 @@ export const listCustomerMemberships = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
     const { data: rows, error } = await context.supabase
       .from("customer_memberships")
       .select("id, customer_id, starts_at, ends_at, hours_remaining, customers!inner(full_name, cafe_id), memberships(name, hours_included)")

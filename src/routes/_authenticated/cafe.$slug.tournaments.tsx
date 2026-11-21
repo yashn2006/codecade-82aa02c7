@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -39,7 +41,27 @@ type T = {
 function TournamentsPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load tournaments">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requireOwner>
+      <TournamentsPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function TournamentsPageContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
 
   const list = useServerFn(listTournaments);
@@ -73,7 +95,13 @@ function TournamentsPage() {
     enabled: !!view,
   });
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || q.isError || !cafeId) {
+    return (
+      <QueryBoundary queries={[cafeQ, q]} loading={!cafeQ.isError && !q.isError && !cafeId} errorTitle="Couldn't load tournaments">
+        {null}
+      </QueryBoundary>
+    );
+  }
   const rows = (q.data ?? []) as T[];
 
   return (
@@ -86,7 +114,9 @@ function TournamentsPage() {
       </div>
 
       <div className="mt-4">
-        {rows.length === 0 ? (
+        {q.isLoading ? (
+          <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
+        ) : rows.length === 0 ? (
           <EmptyState icon={Trophy} title="No tournaments" description="Run weekend brackets and fill seats fast." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -203,6 +233,7 @@ function TournamentsPage() {
             <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="paid" /> Paid</label>
             <Button type="submit" size="sm">Add</Button>
           </form>
+          <QueryErrorBanner queries={[regsQ]} title="Couldn't load registrations" />
           <div className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-border/40">
             {(regsQ.data ?? []).length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">No registrations</div>

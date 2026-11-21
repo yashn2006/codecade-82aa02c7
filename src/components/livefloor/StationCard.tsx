@@ -1,4 +1,4 @@
-import { memo, type CSSProperties } from "react";
+import { memo, useEffect, useState, type CSSProperties } from "react";
 import {
   MonitorPlay, Gamepad2, Headset, Car, Cpu, Play, CalendarPlus, Eye, Plus, LogIn, Wrench, CheckCircle2, RotateCcw,
 } from "lucide-react";
@@ -61,12 +61,20 @@ export function SessionProgress({ session }: { session: FloorSession }) {
   );
 }
 
+export type StationPerms = {
+  start?: boolean;
+  end?: boolean;
+  book?: boolean;
+  devices?: boolean;
+};
+
 type CardProps = {
   device: FloorDevice;
   code: string;
   session?: FloorSession;
   booking?: FloorBooking;
   selected: boolean;
+  perms?: StationPerms;
   onSelect: (id: string) => void;
   onAction: (id: string, action: StationAction) => void;
 };
@@ -86,8 +94,26 @@ function ActionBtn({ onClick, icon: Icon, label, variant = "ghost" }: {
   );
 }
 
+function useBookingArrived(booking?: FloorBooking): boolean {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    setNowMs(Date.now());
+    if (!booking || booking.status !== "confirmed") return;
+    const start = new Date(booking.scheduled_at).getTime();
+    const diff = start - Date.now();
+    if (diff <= 0) return;
+    const t = window.setTimeout(() => setNowMs(Date.now()), Math.min(diff + 50, 2_147_483_647));
+    return () => window.clearTimeout(t);
+  }, [booking?.id, booking?.status, booking?.scheduled_at]);
+
+  if (!booking || booking.status !== "confirmed") return false;
+  const start = new Date(booking.scheduled_at).getTime();
+  const end = start + (booking.duration_minutes || 0) * 60_000;
+  return start <= nowMs && end > nowMs;
+}
+
 export const StationCard = memo(function StationCard({
-  device, code, session, booking, selected, onSelect, onAction,
+  device, code, session, booking, selected, perms, onSelect, onAction,
 }: CardProps) {
   const status = normalizeStatus(device.status);
   const Icon = TYPE_ICON[device.type] ?? Cpu;
@@ -97,6 +123,14 @@ export const StationCard = memo(function StationCard({
   const act = (a: StationAction) => onAction(device.id, a);
   const reason = status === "maintenance" ? maintenanceReason(device) : null;
   const pausedSession = status === "suspended" && !!session;
+  const arrivedRaw = useBookingArrived(booking);
+  const arrived = !running && !pausedSession && status !== "maintenance" && arrivedRaw;
+  const p = {
+    start: perms?.start ?? true,
+    end: perms?.end ?? true,
+    book: perms?.book ?? true,
+    devices: perms?.devices ?? true,
+  };
 
   return (
     <div
@@ -140,6 +174,14 @@ export const StationCard = memo(function StationCard({
             </div>
             <div className="mt-2"><SessionProgress session={session!} /></div>
           </>
+        ) : arrived && booking ? (
+          <>
+            <div className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--lf-run)" }}>
+              Confirmed booking · {fmtTime(booking.scheduled_at)}
+            </div>
+            <div className="mt-1 truncate text-[13px] font-semibold text-lf-text">{who ?? "Reserved"}</div>
+            <div className="font-mono text-[10px] text-lf-dim">{booking.duration_minutes} min</div>
+          </>
         ) : status === "reserved" ? (
           <>
             <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-dim">
@@ -180,24 +222,48 @@ export const StationCard = memo(function StationCard({
         {running ? (
           <>
             <ActionBtn onClick={() => act("details")} icon={Eye} label="Session" variant="tone" />
-            <ActionBtn onClick={() => act("extend")} icon={Plus} label="30m" />
+            {p.start && <ActionBtn onClick={() => act("extend")} icon={Plus} label="30m" />}
           </>
+        ) : arrived ? (
+          p.start ? (
+            <ActionBtn onClick={() => act("checkin")} icon={Play} label="Start session" variant="primary" />
+          ) : (
+            <ActionBtn onClick={() => act("details")} icon={Eye} label="Details" />
+          )
         ) : status === "available" ? (
-          <>
-            <ActionBtn onClick={() => act("start")} icon={Play} label="Start" variant="primary" />
-            <ActionBtn onClick={() => act("book")} icon={CalendarPlus} label="Book" />
-          </>
+          p.start || p.book ? (
+            <>
+              {p.start && <ActionBtn onClick={() => act("start")} icon={Play} label="Start" variant="primary" />}
+              {p.book && <ActionBtn onClick={() => act("book")} icon={CalendarPlus} label="Book" />}
+            </>
+          ) : (
+            <ActionBtn onClick={() => act("details")} icon={Eye} label="Details" />
+          )
         ) : status === "reserved" ? (
-          <ActionBtn onClick={() => act("checkin")} icon={LogIn} label="Check in" variant="tone" />
+          p.start ? (
+            <ActionBtn onClick={() => act("checkin")} icon={LogIn} label="Check in" variant="tone" />
+          ) : (
+            <ActionBtn onClick={() => act("details")} icon={Eye} label="Details" />
+          )
         ) : status === "maintenance" ? (
-          <ActionBtn onClick={() => act("resolve")} icon={CheckCircle2} label="Mark available" variant="tone" />
+          p.devices ? (
+            <ActionBtn onClick={() => act("resolve")} icon={CheckCircle2} label="Mark available" variant="tone" />
+          ) : (
+            <ActionBtn onClick={() => act("details")} icon={Eye} label="Details" />
+          )
         ) : pausedSession ? (
-          <ActionBtn onClick={() => act("resume")} icon={RotateCcw} label="Resume" variant="tone" />
-        ) : (
+          p.start || p.end ? (
+            <ActionBtn onClick={() => act("resume")} icon={RotateCcw} label="Resume" variant="tone" />
+          ) : (
+            <ActionBtn onClick={() => act("details")} icon={Eye} label="Session" variant="tone" />
+          )
+        ) : p.devices ? (
           <>
             <ActionBtn onClick={() => act("resolve")} icon={CheckCircle2} label="Available" variant="tone" />
             <ActionBtn onClick={() => act("maintenance")} icon={Wrench} label="Repair" />
           </>
+        ) : (
+          <ActionBtn onClick={() => act("details")} icon={Eye} label="Details" />
         )}
       </div>
     </div>
@@ -205,18 +271,29 @@ export const StationCard = memo(function StationCard({
 });
 
 export const StationRow = memo(function StationRow({
-  device, code, session, booking, selected, onSelect, onAction,
+  device, code, session, booking, selected, perms, onSelect, onAction,
 }: CardProps) {
   const status = normalizeStatus(device.status);
   const Icon = TYPE_ICON[device.type] ?? Cpu;
   const running = status === "in_use" && !!session;
+  const pausedSession = status === "suspended" && !!session;
+  const arrivedRaw = useBookingArrived(booking);
+  const arrived = !running && !pausedSession && status !== "maintenance" && arrivedRaw;
   const who = session?.customers?.full_name ?? booking?.customers?.full_name ?? null;
-  const primary: { a: StationAction; label: string } | null =
+  const p = {
+    start: perms?.start ?? true,
+    end: perms?.end ?? true,
+    book: perms?.book ?? true,
+    devices: perms?.devices ?? true,
+  };
+  const primary: { a: StationAction; label: string } =
     running ? { a: "details", label: "Session" }
-    : status === "available" ? { a: "start", label: "Start" }
-    : status === "reserved" ? { a: "checkin", label: "Check in" }
-    : status === "maintenance" ? { a: "resolve", label: "Resolve" }
-    : session ? { a: "resume", label: "Resume" } : { a: "resolve", label: "Available" };
+    : arrived ? (p.start ? { a: "checkin", label: "Start session" } : { a: "details", label: "Details" })
+    : status === "available" ? (p.start ? { a: "start", label: "Start" } : p.book ? { a: "book", label: "Book" } : { a: "details", label: "Details" })
+    : status === "reserved" ? (p.start ? { a: "checkin", label: "Check in" } : { a: "details", label: "Details" })
+    : status === "maintenance" ? (p.devices ? { a: "resolve", label: "Resolve" } : { a: "details", label: "Details" })
+    : session ? ((p.start || p.end) ? { a: "resume", label: "Resume" } : { a: "details", label: "Session" })
+    : (p.devices ? { a: "resolve", label: "Available" } : { a: "details", label: "Details" });
 
   return (
     <div
@@ -242,7 +319,7 @@ export const StationRow = memo(function StationRow({
       </div>
       <div className="lf-row-hide font-mono text-[12px]">
         {running ? <LiveClock session={session!} className="text-lf-run" />
-          : status === "reserved" && booking ? fmtTime(booking.scheduled_at)
+          : (status === "reserved" || arrived) && booking ? fmtTime(booking.scheduled_at)
           : <span className="text-lf-dim">—</span>}
       </div>
       <div className="lf-row-hide font-mono text-[12px] text-lf-dim">₹{device.hourly_rate}/hr</div>
@@ -250,7 +327,7 @@ export const StationRow = memo(function StationRow({
         type="button"
         onClick={(e) => { e.stopPropagation(); onAction(device.id, primary.a); }}
         onKeyDown={(e) => e.stopPropagation()}
-        className={`lf-btn ${primary.a === "start" ? "lf-btn-primary" : "lf-btn-tone"}`}
+        className={`lf-btn ${primary.a === "start" || arrived ? "lf-btn-primary" : "lf-btn-tone"}`}
       >
         {primary.label}
       </button>

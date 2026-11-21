@@ -45,7 +45,7 @@ function Landing() {
     }
   }, []);
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-dvh overflow-x-clip">
       <Header />
       <Hero />
       <Marquee />
@@ -64,13 +64,31 @@ function Landing() {
 function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 200], [0, -2]);
   const blur = useTransform(scrollY, [0, 200], [12, 22]);
   const filter = useTransform(blur, (v) => `blur(${v}px) saturate(1.2)`);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileMenuOpen]);
+
   return (
-    <motion.header style={{ y }} className="sticky top-0 z-50">
-      <div className="mx-auto mt-2.5 sm:mt-4 max-w-7xl px-3 sm:px-6">
+    <header
+      className="sticky top-0 z-50"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden
+        />
+      )}
+      <div className="relative z-50 mx-auto mt-2.5 sm:mt-4 max-w-7xl px-3 sm:px-6">
         <div className="relative">
           {/* Outer glow halo */}
           <div
@@ -92,7 +110,7 @@ function Header() {
               <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,oklch(0.18_0.04_300_/_0.55),oklch(0.1_0.02_300_/_0.75))]" aria-hidden />
               <div className="absolute inset-x-8 -top-px h-px bg-gradient-to-r from-transparent via-primary/80 to-transparent" aria-hidden />
 
-              <div className="relative shrink-0">
+              <div className="relative min-w-0 shrink-0">
                 <BrandLockup size={30} />
               </div>
 
@@ -118,7 +136,7 @@ function Header() {
                 </Link>
               </div>
 
-              <div className="relative flex items-center gap-2">
+              <div className="relative flex items-center gap-2 shrink-0">
                 <MagneticSignIn />
                 <button
                   type="button"
@@ -142,7 +160,7 @@ function Header() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98 }}
               transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-              className="mobile-keep-blur mt-2 overflow-hidden rounded-2xl border border-white/15 bg-[#0e0a1f]/90 p-3 shadow-[0_24px_60px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-2xl md:hidden"
+              className="mobile-keep-blur relative z-50 mt-2 overflow-hidden rounded-2xl border border-white/15 bg-[#0e0a1f]/95 p-3 shadow-[0_24px_60px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-2xl md:hidden"
             >
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -162,32 +180,53 @@ function Header() {
                   </a>
                 ))}
               </div>
-              <Link
-                to="/discover"
-                onClick={() => setMobileMenuOpen(false)}
-                className="mt-2 flex min-h-[46px] w-full items-center justify-between rounded-xl border border-fuchsia-400/35 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/15 to-blue-500/15 px-4 text-sm font-semibold text-white transition active:scale-[0.98]"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Gamepad2 className="h-4 w-4 text-fuchsia-300" />
-                  Discover Gaming Arenas
-                </span>
-                <ArrowRight className="h-4 w-4 text-fuchsia-300" />
-              </Link>
+              <div className="mt-2 grid grid-cols-1 gap-2">
+                <Link
+                  to="/discover"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex min-h-[46px] w-full items-center justify-between rounded-xl border border-fuchsia-400/35 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/15 to-blue-500/15 px-4 text-sm font-semibold text-white transition active:scale-[0.98]"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Gamepad2 className="h-4 w-4 text-fuchsia-300" />
+                    Discover Gaming Arenas
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-fuchsia-300" />
+                </Link>
+                <Link
+                  to="/staff-login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-white/90 transition active:scale-[0.98]"
+                >
+                  <span>Staff Floor PIN Login</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-primary/80" />
+                </Link>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </motion.header>
+    </header>
   );
 }
 
 function MagneticSignIn() {
   const [dashboardPath, setDashboardPath] = useState<string | null>(null);
+  const [canHover, setCanHover] = useState(false);
   const ref = useRef<HTMLAnchorElement>(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const x = useSpring(mx, { stiffness: 200, damping: 15 });
   const y = useSpring(my, { stiffness: 200, damping: 15 });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
+      const update = () => setCanHover(mq.matches);
+      update();
+      mq.addEventListener?.("change", update);
+      return () => mq.removeEventListener?.("change", update);
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -203,25 +242,24 @@ function MagneticSignIn() {
   }, []);
 
   const target = dashboardPath ?? "/auth";
-  const label = dashboardPath ? "Go to Dashboard" : "Sign in";
 
   return (
     <Link
       ref={ref}
       to={target as any}
       search={(dashboardPath ? undefined : { mode: "signin" }) as any}
-      onMouseMove={(e) => {
+      onMouseMove={!canHover ? undefined : (e) => {
         const r = ref.current?.getBoundingClientRect();
         if (!r) return;
         mx.set(((e.clientX - (r.left + r.width / 2)) / r.width) * 18);
         my.set(((e.clientY - (r.top + r.height / 2)) / r.height) * 14);
       }}
-      onMouseLeave={() => { mx.set(0); my.set(0); }}
-      className="group relative"
+      onMouseLeave={!canHover ? undefined : () => { mx.set(0); my.set(0); }}
+      className="group relative inline-flex"
     >
       <motion.span
-        style={{ x, y }}
-        className="relative inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground"
+        style={canHover ? { x, y } : undefined}
+        className="relative inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:px-4 sm:text-sm font-semibold text-primary-foreground"
       >
         <span
           className="absolute inset-0 rounded-xl opacity-90 transition group-hover:opacity-100"
@@ -229,15 +267,24 @@ function MagneticSignIn() {
           aria-hidden
         />
         <span
-          className="absolute -inset-2 rounded-2xl opacity-60 blur-xl transition group-hover:opacity-90"
+          className="absolute -inset-2 hidden rounded-2xl opacity-60 blur-xl transition group-hover:opacity-90 sm:block"
           style={{ background: "radial-gradient(circle, oklch(0.74 0.21 15 / 0.7), transparent 70%)" }}
           aria-hidden
         />
         <span className="absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
           <span className="absolute -inset-y-2 -left-1/2 w-1/2 rotate-12 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 transition-all duration-700 group-hover:left-[120%] group-hover:opacity-100" />
         </span>
-        <span className="relative">{label}</span>
-        <ArrowRight className="relative h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+        <span className="relative whitespace-nowrap">
+          {dashboardPath ? (
+            <>
+              <span className="hidden sm:inline">Go to Dashboard</span>
+              <span className="sm:hidden">Dashboard</span>
+            </>
+          ) : (
+            "Sign in"
+          )}
+        </span>
+        <ArrowRight className="relative h-3.5 w-3.5 shrink-0 transition group-hover:translate-x-0.5" />
       </motion.span>
     </Link>
   );

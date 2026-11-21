@@ -17,6 +17,8 @@ export const getCafeReports = createServerFn({ method: "GET" })
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { cafe_id, from, to } = data;
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, cafe_id, "view_revenue");
     const [sessions, pos, memberships, tournaments, customers, devices] = await Promise.all([
       context.supabase.from("sessions")
         .select("id, amount, duration_minutes, started_at, ended_at, customer_id, device_id, devices(name, type), customers(full_name)")

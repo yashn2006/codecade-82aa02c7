@@ -59,15 +59,15 @@ function PublicTournamentPage() {
   const full = registered >= tournament.capacity;
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-dvh overflow-x-clip pb-[max(env(safe-area-inset-bottom),1.5rem)]">
       <AuroraBackground />
 
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <Link to="/c/$slug" params={{ slug }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-3 w-3" /> {cafe.name}
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
+        <Link to="/c/$slug" params={{ slug }} className="inline-flex min-h-[44px] items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-3.5 w-3.5" /> {cafe.name}
         </Link>
 
-        <div className="relative mt-4 overflow-hidden rounded-3xl border border-border/60 bg-card/60 p-6 backdrop-blur-xl sm:p-10">
+        <div className="relative mt-2 overflow-hidden rounded-3xl border border-border/60 bg-card/70 p-5 backdrop-blur-xl sm:p-10">
           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary/30 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-accent/30 blur-3xl" />
 
@@ -118,11 +118,11 @@ function PublicTournamentPage() {
               >
                 <div className="space-y-1">
                   <Label className="text-xs">Team / player name</Label>
-                  <Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Phantom Squad" required maxLength={80} className="h-11" />
+                  <Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Phantom Squad" required maxLength={80} className="h-11 text-base" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Phone / email</Label>
-                  <Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="+91 98765 43210" required maxLength={80} className="h-11" />
+                  <Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="+91 98765 43210" required maxLength={80} className="h-11 text-base" />
                 </div>
                 <div className="flex items-end">
                   <Button type="submit" disabled={m.isPending} className="h-11 w-full gap-2 sm:w-auto" style={{ background: "var(--gradient-brand-hot)" }}>

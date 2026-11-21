@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ScrollText, User, Clock } from "lucide-react";
+import { ScrollText, Clock } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listAuditLogs } from "@/lib/audit.functions";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/audit")({
   head: () => ({
@@ -18,42 +20,164 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/audit")({
   component: AuditPage,
 });
 
+const ACTION_VERBS: Record<string, string> = {
+  "booking.confirmed": "confirmed booking",
+  "booking.cancelled": "cancelled booking",
+  "booking.no_show": "marked booking as no-show",
+  "booking.completed": "completed booking",
+  "booking.ended_early": "ended booking early",
+  "booking.pending": "moved booking to pending",
+  "session.started": "started session",
+  "session.ended": "ended session",
+  "wallet.topped_up": "topped up wallet",
+  "wallet.adjusted": "adjusted wallet balance",
+  "wallet.topup_rejected": "rejected wallet top-up",
+  "pos.order_refunded": "refunded POS order",
+  "revenue.manual_logged": "logged manual income entry",
+  "staff.added": "added staff member",
+  "staff.removed": "removed staff member",
+  "device.price_changed": "changed device price",
+  "cafe.settings_updated": "updated café settings",
+  "cafe.maintenance_updated": "updated maintenance schedule",
+  "cafe.page_updated": "updated public café page",
+};
+
+type AuditRow = {
+  id: string;
+  actor_id?: string | null;
+  actor_email?: string | null;
+  action: string;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  meta?: Record<string, unknown> | null;
+  created_at: string;
+};
+
+function formatWho(e: AuditRow): string {
+  return e.actor_email || (e.actor_id ? `User ${e.actor_id.slice(0, 8)}` : "System");
+}
+
+function formatAction(action: string): string {
+  return ACTION_VERBS[action] ?? action.replace(/\./g, " ");
+}
+
+function formatTarget(e: AuditRow): string {
+  const m = (e.meta ?? {}) as Record<string, unknown>;
+  const nameHint =
+    (typeof m.customer === "string" && m.customer) ||
+    (typeof m.email === "string" && m.email) ||
+    (typeof m.name === "string" && m.name) ||
+    (typeof m.receipt_no === "string" && m.receipt_no) ||
+    null;
+
+  const type = e.resource_type ? e.resource_type.replace(/_/g, " ") : "item";
+  const shortId = e.resource_id ? `#${e.resource_id.slice(0, 8)}` : "";
+  if (nameHint) return `${type} (${nameHint})`;
+  return shortId ? `${type} ${shortId}` : type;
+}
+
+function formatDetails(e: AuditRow): string | null {
+  const m = (e.meta ?? {}) as Record<string, unknown>;
+  const parts: string[] = [];
+  if (typeof m.amount_rupees === "number") parts.push(`₹${m.amount_rupees}`);
+  else if (typeof m.amount === "number") parts.push(`₹${m.amount}`);
+  if (typeof m.previous_rate === "number" && typeof m.new_rate === "number") {
+    parts.push(`₹${m.previous_rate}/hr → ₹${m.new_rate}/hr`);
+  }
+  if (typeof m.minutes === "number") parts.push(`${m.minutes} min`);
+  if (typeof m.planned_minutes === "number") parts.push(`${m.planned_minutes} min`);
+  if (typeof m.reason === "string" && m.reason) parts.push(`"${m.reason}"`);
+  else if (typeof m.note === "string" && m.note) parts.push(`"${m.note}"`);
+  if (Array.isArray(m.updated_fields) && m.updated_fields.length > 0) {
+    parts.push(`fields: ${m.updated_fields.join(", ")}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 function AuditPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load audit log">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requireOwner>
+      <AuditPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function AuditPageContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
   const list = useServerFn(listAuditLogs);
   const q = useQuery({ queryKey: ["audit", cafeId], queryFn: () => list({ data: { cafe_id: cafeId!, limit: 200 } }), enabled: !!cafeId });
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || !cafeId) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafeId} errorTitle="Couldn't load audit log">
+        {null}
+      </QueryBoundary>
+    );
+  }
+
+  const rows = (q.data ?? []) as AuditRow[];
 
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">Latest 200 events. Every staff/owner action is logged here.</div>
+        <div className="text-sm text-muted-foreground">Latest 200 events. Every staff and owner action is logged here.</div>
       </div>
-      {q.isLoading ? (
-        <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
-      ) : (q.data?.length ?? 0) === 0 ? (
-        <EmptyState icon={ScrollText} title="No events yet" description="Audit events will appear here as your team works." />
-      ) : (
+      <QueryBoundary queries={[q]} errorTitle="Couldn't load audit log">
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={ScrollText}
+            title="No audit activity yet"
+            description="Actions like bookings, sessions, wallet adjustments, refunds, staff changes, and café settings updates will appear here automatically."
+          />
+        ) : (
         <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
-          {(q.data ?? []).map((e) => (
-            <div key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border/40 px-4 py-2.5 text-xs last:border-0 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-              <div className="font-mono text-muted-foreground"><Clock className="mr-1 inline h-3 w-3" />{new Date(e.created_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</div>
-              <div className="col-span-2 row-start-2 min-w-0 break-words sm:col-span-1 sm:row-auto">
-                <span className="font-medium">{e.action}</span>
-                {e.resource_type && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">{e.resource_type}{e.resource_id ? `:${e.resource_id.slice(0, 8)}` : ""}</span>}
-                {e.meta && Object.keys(e.meta as object).length > 0 && (
-                  <span className="ml-2 truncate font-mono text-[10px] text-muted-foreground">{JSON.stringify(e.meta).slice(0, 80)}</span>
-                )}
+          {rows.map((e) => {
+            const who = formatWho(e);
+            const didWhat = formatAction(e.action);
+            const toWhat = formatTarget(e);
+            const when = new Date(e.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+            const details = formatDetails(e);
+
+            return (
+              <div
+                key={e.id}
+                className="flex flex-col gap-1 border-b border-border/40 px-4 py-3 text-xs last:border-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+              >
+                <div className="min-w-0 flex-1 leading-relaxed">
+                  <span className="font-semibold text-foreground">{who}</span>{" "}
+                  <span className="text-foreground/90">{didWhat}</span>{" "}
+                  <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] text-primary">
+                    {toWhat}
+                  </span>
+                  {details ? (
+                    <span className="ml-2 text-muted-foreground">· {details}</span>
+                  ) : null}
+                </div>
+                <div className="shrink-0 font-mono text-[11px] text-muted-foreground tabular-nums">
+                  <Clock className="mr-1 inline h-3 w-3" />
+                  {when}
+                </div>
               </div>
-              <div className="text-right text-muted-foreground"><User className="mr-1 inline h-3 w-3" />{e.actor_email ?? e.actor_id?.slice(0, 8) ?? "—"}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      )}
+        )}
+      </QueryBoundary>
     </div>
   );
 }

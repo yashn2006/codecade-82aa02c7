@@ -34,7 +34,7 @@ function NotFoundComponent() {
       if (user) {
         setHasSession(true);
         const path = await getDashboardPathForUser(user);
-        if (!cancelled) router.navigate({ to: path, replace: true });
+        if (!cancelled) router.navigate({ to: path as never, replace: true });
         return;
       }
       setChecked(true);
@@ -78,17 +78,58 @@ function NotFoundComponent() {
   );
 }
 
+let lastAuthRetryAt = 0;
+const AUTH_RETRY_COOLDOWN_MS = 15_000;
+
+function makeErrorRefId(input: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `CC-${(hash >>> 0).toString(36).toUpperCase().padStart(6, "0").slice(0, 6)}`;
+}
+
 function ErrorComponent(props: ErrorComponentProps) {
   const error = props.error as Error;
   const reset = props.reset;
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
-
   const message = error?.message || String(error);
+  const isJwtAuthError = /unauthorized|401|jwt/i.test(message);
   const isAuthIssue = /supabase|fetch|network|auth|jwt|unauthorized/i.test(message);
+  const refId = makeErrorRefId(message);
+
+  const [retryingAuth, setRetryingAuth] = useState(() => {
+    if (!isJwtAuthError) return false;
+    return Date.now() - lastAuthRetryAt > AUTH_RETRY_COOLDOWN_MS;
+  });
+
+  useEffect(() => {
+    reportLovableError(error, { boundary: "tanstack_root_error_component", refId });
+  }, [error, refId]);
+
+  useEffect(() => {
+    if (!retryingAuth) return;
+    lastAuthRetryAt = Date.now();
+    let cancelled = false;
+    (async () => {
+      try {
+        await supabase.auth.refreshSession();
+      } catch {
+        /* ignore refresh error; fallback UI will display */
+      }
+      if (cancelled) return;
+      router.invalidate();
+      reset();
+      window.setTimeout(() => {
+        if (!cancelled) setRetryingAuth(false);
+      }, 400);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [retryingAuth, router, reset]);
 
   const handleHardReset = async () => {
     try {
@@ -108,18 +149,37 @@ function ErrorComponent(props: ErrorComponentProps) {
     if (typeof window !== "undefined") window.location.replace("/auth");
   };
 
+  if (retryingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-muted-foreground">
+            Refreshing session…
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-lg text-center">
         <h1 className="text-xl font-semibold tracking-tight">Something glitched</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {isAuthIssue
-            ? "We couldn't reach Supabase from this deployment. Your sign-in session may be stale."
-            : "We hit an unexpected error. Try again or head home."}
+            ? "Your sign-in session couldn't be verified right now. Refresh your session or sign back in."
+            : "We hit an unexpected error. Try again or head back home."}
         </p>
-        <pre className="mt-3 max-h-40 overflow-auto rounded-md border border-border bg-muted/30 p-3 text-left text-[11px] leading-relaxed text-muted-foreground">
-          {message}
-        </pre>
+        {import.meta.env.DEV ? (
+          <pre className="mt-3 max-h-40 overflow-auto rounded-md border border-border bg-muted/30 p-3 text-left text-[11px] leading-relaxed text-muted-foreground">
+            {message}
+          </pre>
+        ) : (
+          <div className="mt-3 inline-flex items-center rounded-md border border-border/60 bg-muted/30 px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
+            Reference ID: {refId}
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -152,8 +212,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      {
+        name: "viewport",
+        content:
+          "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content",
+      },
       { name: "theme-color", content: "#0a0613" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "format-detection", content: "telephone=no" },
       { title: "CoreCade — The Operating System for Gaming Cafés" },
       {
         name: "description",
@@ -236,7 +304,7 @@ function RootComponent() {
       const user = await getSupabaseUserReady(1200);
       if (!user) return;
       const dest = await getDashboardPathForUser(user);
-      router.navigate({ to: dest, replace: true });
+      router.navigate({ to: dest as never, replace: true });
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {

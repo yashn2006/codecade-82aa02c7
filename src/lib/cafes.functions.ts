@@ -46,9 +46,21 @@ export const toggleCafeActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), is_active: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+    await assertCafeOwnerOrAdmin(context.userId, data.id);
     const { error } = await context.supabase
       .from("cafes").update({ is_active: data.is_active }).eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.id,
+      actorId: context.userId,
+      action: "cafe.settings_updated",
+      resourceType: "cafe",
+      resourceId: data.id,
+      meta: { is_active: data.is_active },
+    });
     return { ok: true };
   });
 
@@ -65,6 +77,8 @@ export const setCafeMaintenance = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+    await assertCafeOwnerOrAdmin(context.userId, data.id);
     // RLS on cafes already restricts to owner; super admin bypasses via has_role policy.
     const { error } = await context.supabase
       .from("cafes")
@@ -75,6 +89,20 @@ export const setCafeMaintenance = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.id,
+      actorId: context.userId,
+      action: "cafe.maintenance_updated",
+      resourceType: "cafe",
+      resourceId: data.id,
+      meta: {
+        starts_at: data.starts_at,
+        ends_at: data.ends_at,
+        message: data.message,
+      },
+    });
     return { ok: true };
   });
 
@@ -82,6 +110,8 @@ export const getCafeMaintenance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.id);
     const { data: row, error } = await context.supabase
       .from("cafes")
       .select("maintenance_starts_at, maintenance_ends_at, maintenance_message")
@@ -102,7 +132,12 @@ export const getCafeBySlug = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!cafe) throw new Error("Café not found");
-    return cafe;
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    const access = await assertCafeAccess(context.userId, cafe.id);
+    return {
+      ...cafe,
+      staff_code: access.isOwnerOrAdmin ? (cafe as { staff_code?: string | null }).staff_code ?? null : null,
+    };
   });
 
 export const createCafe = createServerFn({ method: "POST" })
@@ -193,11 +228,30 @@ export const updateCafe = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+    const patchKeys = Object.keys(data.patch);
+    const floorGridOnly =
+      patchKeys.length > 0 && patchKeys.every((k) => k === "floor_cols" || k === "floor_rows");
+    if (floorGridOnly) {
+      await assertCafeAccess(context.userId, data.id, "manage_devices");
+    } else {
+      await assertCafeOwnerOrAdmin(context.userId, data.id);
+    }
     const { error } = await context.supabase
       .from("cafes")
       .update(data.patch)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.id,
+      actorId: context.userId,
+      action: "cafe.settings_updated",
+      resourceType: "cafe",
+      resourceId: data.id,
+      meta: { updated_fields: Object.keys(data.patch), ...data.patch },
+    });
     return { ok: true };
   });
 
@@ -278,6 +332,8 @@ export const ownerDeleteCafe = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
+    await assertCafeOwnerOrAdmin(context.userId, data.id);
     const { data: cafe, error: getErr } = await context.supabase
       .from("cafes")
       .select("id, slug, owner_id, name")

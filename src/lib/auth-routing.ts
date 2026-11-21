@@ -2,7 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { redirect } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase/client";
 
-export type DashboardPath = "/admin" | "/owner" | "/portal";
+export type DashboardPath = "/admin" | "/owner" | "/portal" | `/cafe/${string}`;
 
 const SUPER_ADMIN_EMAILS = ["giganexa2026@gmail.com", "yashnandi77@gmail.com"];
 const ROLE_TTL_MS = 5 * 60_000;
@@ -90,7 +90,22 @@ export function dashboardPathFor(user: User, roles: Set<string>): DashboardPath 
 }
 
 export async function getDashboardPathForUser(user: User): Promise<DashboardPath> {
-  return dashboardPathFor(user, await getUserRoles(user.id));
+  const roles = await getUserRoles(user.id);
+  const base = dashboardPathFor(user, roles);
+  if (base !== "/portal") return base;
+
+  const { data: staffRow } = await supabase
+    .from("staff_permissions")
+    .select("cafe_id, cafes!inner(slug)")
+    .eq("staff_user_id", user.id)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const slug = (staffRow?.cafes as { slug?: string } | null)?.slug;
+  if (slug) return `/cafe/${slug}`;
+  return "/portal";
 }
 
 export function isSuperAdmin(user: User, roles: Set<string>) {
@@ -101,7 +116,7 @@ export function isSuperAdmin(user: User, roles: Set<string>) {
   );
 }
 
-type GuardTarget = "/auth" | "/portal" | null;
+type GuardTarget = DashboardPath | "/auth" | null;
 
 /**
  * Route guard for beforeLoad. Returns synchronously (no pending state, no
@@ -109,20 +124,25 @@ type GuardTarget = "/auth" | "/portal" | null;
  * to an async check on a cold load.
  */
 export function guardRoute(
-  check: (user: User, roles: Set<string>) => GuardTarget,
+  check: (user: User, roles: Set<string>) => GuardTarget | Promise<GuardTarget>,
 ): void | Promise<void> {
   const user = getCachedUser();
   const roles = user ? getCachedRoles(user.id) : null;
   if (user && roles) {
-    const to = check(user, roles);
-    if (to) throw redirect({ to });
+    const res = check(user, roles);
+    if (res instanceof Promise) {
+      return res.then((to) => {
+        if (to) throw redirect({ to: to as never });
+      });
+    }
+    if (res) throw redirect({ to: res as never });
     return;
   }
   return (async () => {
     const u = await getSupabaseUserReady();
     if (!u) throw redirect({ to: "/auth" });
     const r = await getUserRoles(u.id);
-    const to = check(u, r);
-    if (to) throw redirect({ to });
+    const to = await check(u, r);
+    if (to) throw redirect({ to: to as never });
   })();
 }

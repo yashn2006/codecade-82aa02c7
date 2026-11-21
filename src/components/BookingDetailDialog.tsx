@@ -29,6 +29,7 @@ import {
   payBookingDeposit,
   markBookingDeposit,
 } from "@/lib/bookings.functions";
+import { useCafeAccess } from "@/hooks/useCafeAccess";
 
 export type BookingRow = {
   id: string;
@@ -67,6 +68,9 @@ export function BookingDetailDialog({
 }) {
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: ["bookings", cafeId] });
+  const { can } = useCafeAccess(cafeId);
+  const canBook = can("create_bookings");
+  const canWallet = can("manage_wallet");
 
   const setStatus = useServerFn(updateBookingStatus);
   const cxlRef = useServerFn(cancelBookingWithRefund);
@@ -249,37 +253,39 @@ export function BookingDetailDialog({
                 )}
               </span>
             </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={() => setDepositOpen(true)}
-              >
-                Set deposit
-              </Button>
-              {dep.paid && (
+            {canWallet && (
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="h-8 gap-1 text-xs text-emerald-400"
-                  onClick={() =>
-                    setConfirmAction({
-                      title: "Refund deposit to wallet?",
-                      description: `Return ₹${dep.amount} back to ${b.customers?.full_name ?? "the customer"}'s wallet.`,
-                      confirmLabel: "Refund Deposit",
-                      onConfirm: () => refM.mutateAsync({ data: { id: b.id } }),
-                    })
-                  }
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={() => setDepositOpen(true)}
                 >
-                  <Wallet className="h-3 w-3" /> Refund
+                  Set deposit
                 </Button>
-              )}
-            </div>
+                {dep.paid && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 gap-1 text-xs text-emerald-400"
+                    onClick={() =>
+                      setConfirmAction({
+                        title: "Refund deposit to wallet?",
+                        description: `Return ₹${dep.amount} back to ${b.customers?.full_name ?? "the customer"}'s wallet.`,
+                        confirmLabel: "Refund Deposit",
+                        onConfirm: () => refM.mutateAsync({ data: { id: b.id } }),
+                      })
+                    }
+                  >
+                    <Wallet className="h-3 w-3" /> Refund
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            {b.status === "pending" && (
+            {canBook && b.status === "pending" && (
               <>
                 <Button
                   size="sm"
@@ -298,7 +304,7 @@ export function BookingDetailDialog({
                 </Button>
               </>
             )}
-            {active && (
+            {canBook && active && (
               <>
                 <Button
                   size="sm"
@@ -346,24 +352,26 @@ export function BookingDetailDialog({
                 >
                   <UserX className="h-4 w-4" /> No-show
                 </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="col-span-2 gap-1"
-                  onClick={() =>
-                    setConfirmAction({
-                      title: "Cancel & refund deposit?",
-                      description: "Cancels this booking and refunds any paid deposit to the customer's wallet.",
-                      confirmLabel: "Cancel & Refund",
-                      onConfirm: () => cxlM.mutateAsync({ data: { id: b.id } }),
-                    })
-                  }
-                >
-                  <Undo2 className="h-4 w-4" /> Cancel & refund
-                </Button>
+                {(!dep.paid || canWallet) && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="col-span-2 gap-1"
+                    onClick={() =>
+                      setConfirmAction({
+                        title: "Cancel & refund deposit?",
+                        description: "Cancels this booking and refunds any paid deposit to the customer's wallet.",
+                        confirmLabel: "Cancel & Refund",
+                        onConfirm: () => cxlM.mutateAsync({ data: { id: b.id } }),
+                      })
+                    }
+                  >
+                    <Undo2 className="h-4 w-4" /> Cancel & refund
+                  </Button>
+                )}
               </>
             )}
-            {b.status === "no_show" && (
+            {canBook && b.status === "no_show" && (
               <Button
                 size="sm"
                 variant="destructive"

@@ -23,6 +23,8 @@ export const listDevices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id);
     // Auto-expire suspensions opportunistically (best-effort, ignore errors).
     await context.supabase.rpc("expire_device_suspensions").then(() => {}, () => {});
     const { data: rows, error } = await context.supabase
@@ -38,6 +40,8 @@ export const createDevice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => DeviceInput.parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_devices");
     const { error, data: row } = await context.supabase
       .from("devices")
       .insert(data)
@@ -56,11 +60,41 @@ export const updateDevice = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("devices", data.id);
+    await assertCafeAccess(context.userId, cafeId, "manage_devices");
+    const rateChanged = data.patch.hourly_rate !== undefined;
+    const prev = rateChanged
+      ? (
+          await context.supabase
+            .from("devices")
+            .select("cafe_id, name, hourly_rate")
+            .eq("id", data.id)
+            .maybeSingle()
+        ).data
+      : null;
+
     const { error } = await context.supabase
       .from("devices")
       .update(data.patch)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    if (rateChanged && prev && prev.hourly_rate !== data.patch.hourly_rate) {
+      const { writeAudit } = await import("@/lib/audit.server");
+      await writeAudit({
+        cafeId: prev.cafe_id,
+        actorId: context.userId,
+        action: "device.price_changed",
+        resourceType: "device",
+        resourceId: data.id,
+        meta: {
+          name: data.patch.name ?? prev.name,
+          previous_rate: prev.hourly_rate,
+          new_rate: data.patch.hourly_rate,
+        },
+      });
+    }
     return { ok: true };
   });
 
@@ -68,6 +102,9 @@ export const deleteDevice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("devices", data.id);
+    await assertCafeAccess(context.userId, cafeId, "manage_devices");
     const { error } = await context.supabase.from("devices").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -89,6 +126,25 @@ export const setDeviceStatus = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: dev } = await supabaseAdmin
+      .from("devices")
+      .select("cafe_id, status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!dev) throw new Error("Device not found");
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    const needsDeviceAdmin =
+      data.status === "maintenance" ||
+      data.status === "suspended" ||
+      dev.status === "maintenance" ||
+      dev.status === "suspended" ||
+      data.notes !== undefined;
+    await assertCafeAccess(
+      context.userId,
+      dev.cafe_id,
+      needsDeviceAdmin ? "manage_devices" : ["manage_devices", "create_bookings", "start_sessions"],
+    );
     const patch: Record<string, unknown> = { status: data.status };
     if (data.status === "suspended" && data.suspend_minutes) {
       patch.suspend_until = new Date(Date.now() + data.suspend_minutes * 60_000).toISOString();
@@ -112,6 +168,9 @@ export const placeDevice = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("devices", data.id);
+    await assertCafeAccess(context.userId, cafeId, "manage_devices");
     const { error } = await context.supabase
       .from("devices")
       .update({ pos_x: data.pos_x, pos_y: data.pos_y })

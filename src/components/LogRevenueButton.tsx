@@ -44,16 +44,16 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="gap-1.5 min-h-[42px] sm:min-h-[36px] sm:h-9 w-full sm:w-auto text-xs font-semibold rounded-xl border-white/10 hover:bg-white/10 whitespace-nowrap">
           <IndianRupee className="h-3.5 w-3.5 shrink-0" />
-          Log payment
+          Add manual income entry
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ReceiptText className="h-4 w-4" /> Log a manual payment
+            <ReceiptText className="h-4 w-4" /> Add manual income entry
           </DialogTitle>
           <DialogDescription>
-            Cash, UPI QR, card swipe — anything that didn't go through checkout.
+            Use this only for money received outside CoreCade (e.g. cash from a tournament entry). Session and POS payments are recorded automatically.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -137,7 +137,7 @@ export function LogRevenueButton({ cafeId }: { cafeId: string }) {
               className="min-h-[42px] w-full sm:w-auto"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
-              {m.isPending ? "Logging…" : "Log payment"}
+              {m.isPending ? "Saving…" : "Save income entry"}
             </Button>
           </DialogFooter>
         </form>

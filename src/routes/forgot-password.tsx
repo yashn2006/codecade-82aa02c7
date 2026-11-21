@@ -62,22 +62,25 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-dvh overflow-x-clip bg-background text-foreground">
       <AuroraBackground intensity="immersive" />
 
-      <div className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-        <BrandLockup size={32} />
-        <Link to="/auth" className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground">
+      <div
+        className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pb-3 sm:px-8 sm:py-5"
+        style={{ paddingTop: "max(env(safe-area-inset-top), 1rem)" }}
+      >
+        <BrandLockup size={30} />
+        <Link to="/auth" className="inline-flex min-h-[44px] items-center font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground transition hover:text-foreground">
           ← back to sign in
         </Link>
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center px-5 pb-16">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-76px)] max-w-md items-center px-4 pb-[max(env(safe-area-inset-bottom),2.5rem)]">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full rounded-[1.6rem] border border-border/60 bg-card/70 p-7 backdrop-blur-2xl sm:p-9"
+          className="w-full rounded-[1.6rem] border border-border/60 bg-card/85 p-5 backdrop-blur-2xl sm:bg-card/70 sm:p-9"
         >
           <AnimatePresence mode="wait" initial={false}>
             {!sent ? (
@@ -106,12 +109,13 @@ function ForgotPassword() {
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="fp-email"
+                      name="email"
                       type="email"
-                      autoFocus
+                      autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@cafe.in"
-                      className="h-12 pl-10"
+                      className="h-12 pl-10 text-base"
                     />
                   </div>
                 </div>

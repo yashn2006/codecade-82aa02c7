@@ -6,6 +6,8 @@ export const listBookings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id);
     const { data: rows, error } = await context.supabase
       .from("bookings")
       .select("id, scheduled_at, duration_minutes, status, device_id, customer_id, deposit_amount, deposit_paid, no_show_at, customers(full_name, phone), devices(name, type)")
@@ -26,12 +28,15 @@ export const updateBookingStatus = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
 
-    // Fetch booking details before update so we can notify the customer
+    // Fetch booking details before update so we can authorize and notify the customer
     const { data: booking } = await supabaseAdmin
       .from("bookings")
       .select("id, cafe_id, scheduled_at, cafes(name), customers(user_id, full_name)")
       .eq("id", data.id)
       .maybeSingle();
+    if (!booking?.cafe_id) throw new Error("Booking not found");
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, booking.cafe_id, "create_bookings");
 
     const patch: Record<string, unknown> = { status: data.status };
     if (data.status === "no_show") patch.no_show_at = new Date().toISOString();
@@ -70,6 +75,20 @@ export const updateBookingStatus = createServerFn({ method: "POST" })
       }
     }
 
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: booking?.cafe_id,
+      actorId: context.userId,
+      action: `booking.${data.status}`,
+      resourceType: "booking",
+      resourceId: data.id,
+      meta: {
+        status: data.status,
+        customer: (booking?.customers as { full_name?: string } | null)?.full_name ?? null,
+        scheduled_at: booking?.scheduled_at ?? null,
+      },
+    });
+
     return { ok: true };
   });
 
@@ -83,6 +102,9 @@ export const markBookingDeposit = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("bookings", data.id);
+    await assertCafeAccess(context.userId, cafeId, "manage_wallet");
     const { error } = await context.supabase
       .from("bookings")
       .update({ deposit_amount: data.deposit_amount, deposit_paid: data.deposit_paid })
@@ -103,11 +125,8 @@ export const createBookingForCustomer = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    // authorize: owner/staff/super_admin
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
-    const { data: cafe } = await context.supabase.from("cafes").select("owner_id").eq("id", data.cafe_id).single();
-    const { data: staff } = await context.supabase.from("staff_permissions").select("id").eq("cafe_id", data.cafe_id).eq("staff_user_id", context.userId).maybeSingle();
-    if (!isAdmin && cafe?.owner_id !== context.userId && !staff) throw new Error("Forbidden");
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "create_bookings");
 
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
@@ -245,6 +264,9 @@ export const payBookingDeposit = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), amount: z.number().int().min(1) }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("bookings", data.id);
+    await assertCafeAccess(context.userId, cafeId, "manage_wallet");
     const { error } = await context.supabase.rpc("pay_booking_deposit", {
       _booking_id: data.id, _amount: data.amount,
     });
@@ -256,6 +278,9 @@ export const refundBookingDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("bookings", data.id);
+    await assertCafeAccess(context.userId, cafeId, "manage_wallet");
     const { error } = await context.supabase.rpc("refund_booking_deposit", { _booking_id: data.id });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -265,11 +290,37 @@ export const cancelBookingWithRefund = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: booking } = await supabaseAdmin
+      .from("bookings")
+      .select("cafe_id, deposit_amount, deposit_paid, scheduled_at")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!booking?.cafe_id) throw new Error("Booking not found");
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, booking.cafe_id, "create_bookings");
+    if (booking.deposit_paid) {
+      await assertCafeAccess(context.userId, booking.cafe_id, "manage_wallet");
+    }
     // Refund first (no-op if not paid)
     await context.supabase.rpc("refund_booking_deposit", { _booking_id: data.id });
     const { error } = await context.supabase
       .from("bookings").update({ status: "cancelled" }).eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: booking?.cafe_id,
+      actorId: context.userId,
+      action: "booking.cancelled",
+      resourceType: "booking",
+      resourceId: data.id,
+      meta: {
+        refunded: !!booking?.deposit_paid,
+        deposit_amount: booking?.deposit_amount ?? 0,
+        scheduled_at: booking?.scheduled_at ?? null,
+      },
+    });
     return { ok: true };
   });
 
@@ -277,6 +328,9 @@ export const extendBooking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), add_minutes: z.number().int().min(5).max(240) }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("bookings", data.id);
+    await assertCafeAccess(context.userId, cafeId, "create_bookings");
     const { data: b, error: e1 } = await context.supabase.from("bookings").select("duration_minutes").eq("id", data.id).single();
     if (e1) throw new Error(e1.message);
     const next = (b?.duration_minutes ?? 0) + data.add_minutes;
@@ -289,8 +343,30 @@ export const endBookingEarly = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("bookings", data.id);
+    await assertCafeAccess(context.userId, cafeId, "create_bookings");
+    const { data: booking } = await context.supabase
+      .from("bookings")
+      .select("cafe_id, scheduled_at, duration_minutes")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await context.supabase.from("bookings").update({ status: "completed" }).eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: booking?.cafe_id,
+      actorId: context.userId,
+      action: "booking.ended_early",
+      resourceType: "booking",
+      resourceId: data.id,
+      meta: {
+        status: "completed",
+        scheduled_at: booking?.scheduled_at ?? null,
+        duration_minutes: booking?.duration_minutes ?? null,
+      },
+    });
     return { ok: true };
   });
 

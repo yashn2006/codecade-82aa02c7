@@ -37,7 +37,7 @@ function AdminRevenue() {
         <StatCard icon={Building2} label="Active cafés" value={d?.topCafes.length ?? 0} accent="violet" delay={0.15} />
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border/60 bg-card/40 p-4 sm:p-5 backdrop-blur">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Daily revenue · last 30 days</div>
@@ -50,10 +50,10 @@ function AdminRevenue() {
           : <Sparkline data={d!.daily.map((x) => ({ d: x.date, v: x.revenue }))} />}
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border/60 bg-card/40 p-4 sm:p-5 backdrop-blur">
         <div className="mb-3 font-display text-xl font-bold">Top cafés by revenue</div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[460px] text-sm">
             <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground">
               <tr><th className="py-2">Café</th><th>City</th><th>Sessions</th><th>Orders</th><th className="text-right">Revenue</th></tr>
             </thead>

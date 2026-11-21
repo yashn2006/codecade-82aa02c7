@@ -22,6 +22,7 @@ import {
   X,
   ChevronRight,
   Sparkles,
+  Menu,
 } from "lucide-react";
 import { listPublicCafes } from "@/lib/discover.functions";
 import { supabase } from "@/lib/supabase/client";
@@ -100,6 +101,7 @@ function DiscoverPage() {
 
   const [signedIn, setSignedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const isMobile = useIsMobile();
 
@@ -110,6 +112,10 @@ function DiscoverPage() {
     });
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        return;
+      }
       if (e.key === "/" && document.activeElement !== searchInputRef.current) {
         e.preventDefault();
         searchInputRef.current?.focus();
@@ -156,7 +162,7 @@ function DiscoverPage() {
   const activeSessionsCount = useMemo(() => cafes.reduce((sum, c) => sum + (c.active_sessions ?? 0), 0), [cafes]);
 
   return (
-    <div className="relative min-h-screen bg-[#07060d] text-foreground antialiased selection:bg-primary selection:text-white">
+    <div className="relative min-h-dvh overflow-x-clip bg-[#07060d] text-foreground antialiased selection:bg-primary selection:text-white">
       {/* Background Cyber Atmosphere */}
       <div
         className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center opacity-30 mix-blend-screen filter blur-[2px]"
@@ -169,12 +175,15 @@ function DiscoverPage() {
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(244,63,94,0.18),rgba(255,255,255,0))]" />
       <div className="pointer-events-none fixed inset-0 z-0 bg-grid-pattern opacity-[0.03]" />
 
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-dvh flex-col">
         {/* Top Navbar */}
-        <header className="mobile-keep-blur sticky top-0 z-40 border-b border-white/[0.08] bg-[#07060d]/80 backdrop-blur-xl transition-all">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 sm:py-3.5 lg:px-8">
-            <div className="flex items-center gap-6">
-              <BrandLockup size={30} badge="Arenas" to="/" />
+        <header
+          className="mobile-keep-blur sticky top-0 z-40 border-b border-white/[0.08] bg-[#07060d]/85 backdrop-blur-xl transition-all"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3.5 py-2.5 sm:px-6 sm:py-3.5 lg:px-8">
+            <div className="flex min-w-0 items-center gap-6">
+              <BrandLockup size={28} badge="Arenas" to="/" />
               <div className="hidden items-center gap-2 border-l border-white/10 pl-6 text-xs text-muted-foreground md:flex">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -186,10 +195,10 @@ function DiscoverPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
               <Link
                 to="/features"
-                className="hidden text-xs font-semibold text-muted-foreground transition hover:text-white sm:block"
+                className="hidden text-xs font-semibold text-muted-foreground transition hover:text-white md:block"
               >
                 Features
               </Link>
@@ -197,24 +206,25 @@ function DiscoverPage() {
                 <Link to="/portal">
                   <Button
                     size="sm"
-                    className="min-h-[40px] gap-2 text-xs font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+                    className="min-h-[42px] gap-1.5 px-3 text-xs font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5 sm:px-3.5"
                     style={{ background: "var(--gradient-brand-hot)" }}
                   >
-                    <Compass className="h-3.5 w-3.5" />
-                    <span>Gamer Portal</span>
+                    <Compass className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">Gamer Portal</span>
+                    <span className="sm:hidden">Portal</span>
                   </Button>
                 </Link>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Link to="/auth">
-                    <Button variant="ghost" size="sm" className="min-h-[40px] text-xs text-white/80 hover:bg-white/10 hover:text-white">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Link to="/auth" className="hidden sm:inline-flex">
+                    <Button variant="ghost" size="sm" className="min-h-[42px] text-xs text-white/80 hover:bg-white/10 hover:text-white">
                       Sign in
                     </Button>
                   </Link>
                   <Link to="/auth">
                     <Button
                       size="sm"
-                      className="min-h-[40px] text-xs font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5"
+                      className="min-h-[42px] px-3 text-xs font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5"
                       style={{ background: "var(--gradient-brand-hot)" }}
                     >
                       Join Free
@@ -222,8 +232,71 @@ function DiscoverPage() {
                   </Link>
                 </div>
               )}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen((v) => !v)}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/15 bg-white/[0.06] text-foreground transition active:scale-95 md:hidden"
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileMenuOpen}
+              >
+                {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              </button>
             </div>
           </div>
+
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30 bg-black/45 md:hidden"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-hidden
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.14 }}
+                  className="mobile-keep-blur relative z-40 border-t border-white/10 bg-[#0d091d]/95 px-4 py-3 backdrop-blur-2xl md:hidden"
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      to="/"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                    >
+                      <span>Home</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                    </Link>
+                    <Link
+                      to="/features"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                    >
+                      <span>Features</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                    </Link>
+                    <Link
+                      to="/auth"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                    >
+                      <span>{signedIn ? "Account" : "Sign in"}</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                    </Link>
+                    <Link
+                      to="/staff-login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                    >
+                      <span>Staff PIN</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                    </Link>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </header>
 
         {/* HERO SECTION */}
@@ -304,14 +377,15 @@ function DiscoverPage() {
                   ref={searchInputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search arena name, locality, or gaming hardware (press '/' to focus)..."
-                  className="h-12 border-0 bg-transparent text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0 sm:text-base"
+                  placeholder="Search arena name, city, or hardware..."
+                  className="h-12 border-0 bg-transparent text-base placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
                 {query && (
                   <button
                     type="button"
                     onClick={() => setQuery("")}
-                    className="mr-2 rounded-lg p-1.5 text-muted-foreground hover:bg-white/10 hover:text-white"
+                    aria-label="Clear search"
+                    className="mr-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-white/10 hover:text-white"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -471,7 +545,7 @@ function DiscoverPage() {
         {/* Quick Peek Drawer / Modal */}
         {quickPeekCafe && (
           <Dialog open={!!quickPeekCafe} onOpenChange={(open) => !open && setQuickPeekCafe(null)}>
-            <DialogContent className="max-w-xl border-white/15 bg-[#0e0c1a] p-0 text-foreground overflow-hidden">
+            <DialogContent className="max-w-xl border-white/15 bg-[#0e0c1a] p-0 max-sm:p-0 [&>span]:hidden text-foreground overflow-hidden">
               <div className="relative h-48 w-full overflow-hidden bg-black/60">
                 <img
                   src={quickPeekCafe.cover_url || stationHeroImg}
@@ -480,7 +554,7 @@ function DiscoverPage() {
                   onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = stationHeroImg; }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0e0c1a] via-black/40 to-transparent" />
-                <div className="absolute bottom-4 left-6 right-6">
+                <div className="absolute bottom-4 left-5 right-5 sm:left-6 sm:right-6">
                   <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-primary">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     <span>Verified CoreCade Partner</span>
@@ -491,7 +565,7 @@ function DiscoverPage() {
                 </div>
               </div>
 
-              <div className="space-y-4 p-6">
+              <div className="space-y-4 p-4 sm:p-6">
                 <div className="flex items-start gap-2 text-xs text-muted-foreground">
                   <MapPin className="h-4 w-4 shrink-0 text-primary mt-0.5" />
                   <span>{quickPeekCafe.address || [quickPeekCafe.city, quickPeekCafe.state].filter(Boolean).join(", ") || "Location details on arrival"}</span>
@@ -504,36 +578,36 @@ function DiscoverPage() {
                 )}
 
                 <div className="grid grid-cols-3 gap-2 py-2">
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-2.5 sm:p-3 text-center">
                     <div className="font-mono text-[10px] text-muted-foreground uppercase">Rate</div>
-                    <div className="mt-0.5 font-display text-lg font-bold text-emerald-400">₹{quickPeekCafe.min_rate ?? 80}/hr</div>
+                    <div className="mt-0.5 font-display text-base sm:text-lg font-bold text-emerald-400">₹{quickPeekCafe.min_rate ?? 80}/hr</div>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-2.5 sm:p-3 text-center">
                     <div className="font-mono text-[10px] text-muted-foreground uppercase">Total Rigs</div>
-                    <div className="mt-0.5 font-display text-lg font-bold text-white">{quickPeekCafe.device_count ?? 16}</div>
+                    <div className="mt-0.5 font-display text-base sm:text-lg font-bold text-white">{quickPeekCafe.device_count ?? 16}</div>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-center">
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-2.5 sm:p-3 text-center">
                     <div className="font-mono text-[10px] text-muted-foreground uppercase">Status</div>
-                    <div className="mt-0.5 font-display text-lg font-bold text-primary">
+                    <div className="mt-0.5 font-display text-base sm:text-lg font-bold text-primary">
                       {quickPeekCafe.free_count ?? 12} Free
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
                   <Button
                     onClick={() => {
                       const c = quickPeekCafe;
                       setQuickPeekCafe(null);
                       setSelectedCafeForBooking(c);
                     }}
-                    className="flex-1 h-12 text-xs font-bold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+                    className="flex-1 min-h-[46px] text-xs font-bold text-white shadow-lg transition-transform hover:-translate-y-0.5"
                     style={{ background: "var(--gradient-brand-hot)" }}
                   >
                     <Zap className="h-4 w-4 mr-1.5" /> Book Station Now
                   </Button>
                   <Link to="/c/$slug" params={{ slug: quickPeekCafe.slug }} className="flex-1">
-                    <Button variant="outline" className="w-full h-12 border-white/15 text-xs font-semibold">
+                    <Button variant="outline" className="w-full min-h-[46px] border-white/15 text-xs font-semibold">
                       Full Arena Page →
                     </Button>
                   </Link>
@@ -686,14 +760,14 @@ function ArenaCard({
             <button
               type="button"
               onClick={onQuickPeek}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition"
+              className="min-h-[40px] rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition"
             >
               Details
             </button>
             <Button
               size="sm"
               onClick={onBookDirect}
-              className="gap-1.5 text-xs font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+              className="min-h-[40px] gap-1.5 px-3.5 text-xs font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
               <span>Book</span>

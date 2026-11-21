@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { PrintableStatement, type StatementTx } from "@/components/PrintableStatement";
+import { LogRevenueButton } from "@/components/LogRevenueButton";
+import { CafeAccessGuard, useCafeAccess } from "@/hooks/useCafeAccess";
 import { cn } from "@/lib/utils";
 
 type RzpOpts = {
@@ -89,8 +92,29 @@ export const Route = createFileRoute("/_authenticated/cafe/$slug/wallet")({
 function WalletPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load wallets">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requirePerm="manage_wallet">
+      <WalletPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function WalletPageContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
+  const { isOwnerOrAdmin } = useCafeAccess(cafeId);
 
   const lCus = useServerFn(listCustomers);
   const lTx = useServerFn(listWalletTransactions);
@@ -232,7 +256,17 @@ function WalletPage() {
     enabled: !!statementFor,
   });
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || customersQ.isError || !cafeId) {
+    return (
+      <QueryBoundary
+        queries={[cafeQ, customersQ]}
+        loading={!cafeQ.isError && !customersQ.isError && !cafeId}
+        errorTitle="Couldn't load wallets"
+      >
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   async function downloadCSV() {
     try {
@@ -254,6 +288,7 @@ function WalletPage() {
 
   return (
     <div className="space-y-6">
+      <QueryErrorBanner queries={[txQ, reqsQ, stmtTxQ]} title="Some wallet activity couldn't refresh" />
       {/* KPI Overview */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="liquid-glass-card rounded-2xl border border-white/10 p-4">
@@ -289,6 +324,21 @@ function WalletPage() {
           </div>
         </div>
       </div>
+
+      {/* Manual income */}
+      {isOwnerOrAdmin && (
+        <section className="liquid-glass-card flex flex-col gap-3 rounded-2xl border border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="font-display text-sm font-bold tracking-tight text-foreground">Manual income</h2>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              Use this only for money received outside CoreCade (e.g. cash from a tournament entry). Session and POS payments are recorded automatically.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <LogRevenueButton cafeId={cafeId} />
+          </div>
+        </section>
+      )}
 
       {/* Pending UPI Verification Queue */}
       {pendingRequests.length > 0 && (

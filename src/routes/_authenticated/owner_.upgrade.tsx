@@ -28,7 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
 import { myBilling, ownerCreateUpgradePayment } from "@/lib/billing.functions";
-import { guardRoute } from "@/lib/auth-routing";
+import { getDashboardPathForUser, guardRoute } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/_authenticated/owner_/upgrade")({
   ssr: false,
@@ -39,7 +39,11 @@ export const Route = createFileRoute("/_authenticated/owner_/upgrade")({
     ],
   }),
   beforeLoad: () =>
-    guardRoute((_user, roles) => (roles.has("cafe_owner") || roles.has("super_admin") ? null : "/portal")),
+    guardRoute(async (user, roles) => {
+      if (roles.has("cafe_owner") || roles.has("super_admin")) return null;
+      if (roles.has("cafe_staff")) return await getDashboardPathForUser(user);
+      return "/portal";
+    }),
   component: OwnerUpgradePage,
 });
 

@@ -158,7 +158,7 @@ function PublicCafePage() {
 
   return (
     <div
-      className={`relative min-h-screen overflow-x-hidden antialiased ${isLight ? "text-neutral-900" : "text-white"}`}
+      className={`relative min-h-dvh overflow-x-clip antialiased ${isLight ? "text-neutral-900" : "text-white"}`}
       style={{ background: bg }}
     >
       {/* Ambient backdrop — driven by theme accent */}
@@ -170,16 +170,21 @@ function PublicCafePage() {
 
 
       {/* Top nav */}
-      <header className="sticky top-0 z-40">
+      <header
+        className="sticky top-0 z-40"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div className="mx-auto mt-2.5 sm:mt-3 max-w-6xl px-3 sm:px-4">
-          <div className="mobile-keep-blur flex items-center justify-between gap-2 rounded-2xl border border-white/12 bg-[#0b0820]/75 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl sm:px-4 sm:py-2.5">
-            <BrandLockup size={28} to="/discover" />
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Link to="/discover"><Button size="sm" variant="ghost" className="min-h-[40px] border border-white/15 bg-transparent px-2.5 text-xs text-white hover:bg-white/10 sm:px-3">Arenas</Button></Link>
+          <div className="mobile-keep-blur flex items-center justify-between gap-2 rounded-2xl border border-white/12 bg-[#0b0820]/80 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl sm:px-4 sm:py-2.5">
+            <div className="min-w-0">
+              <BrandLockup size={28} to="/discover" />
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <Link to="/discover"><Button size="sm" variant="ghost" className="min-h-[42px] border border-white/15 bg-transparent px-2.5 text-xs text-white hover:bg-white/10 sm:px-3">Arenas</Button></Link>
               {signedIn ? (
-                <Link to="/portal"><Button size="sm" className="min-h-[40px] border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-3 text-xs text-white">Portal</Button></Link>
+                <Link to="/portal"><Button size="sm" className="min-h-[42px] border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-3 text-xs text-white">Portal</Button></Link>
               ) : (
-                <Link to="/auth"><Button size="sm" className="min-h-[40px] border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-3 text-xs text-white">Sign in</Button></Link>
+                <Link to="/auth"><Button size="sm" className="min-h-[42px] border-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 px-3 text-xs text-white">Sign in</Button></Link>
               )}
             </div>
           </div>
@@ -406,9 +411,10 @@ function PublicCafePage() {
       {/* STICKY BOOKING BAR */}
       {!inMaintenance && (
         <div
-          className="mobile-keep-blur safe-b fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-between gap-3 px-4"
+          className="mobile-keep-blur fixed inset-x-0 bottom-0 z-40 flex min-h-16 items-center justify-between gap-3 px-4 pt-2"
           style={{
-            background: "rgba(8,5,20,0.86)",
+            paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)",
+            background: "rgba(8,5,20,0.88)",
             backdropFilter: "blur(24px) saturate(180%)",
             WebkitBackdropFilter: "blur(24px) saturate(180%)",
             borderTop: "1px solid rgba(255,255,255,0.12)",
@@ -485,16 +491,18 @@ function Lightbox({ images, index, onClose, onIndex }: {
       className="fixed inset-0 z-[100] grid place-items-center bg-black/95 p-4 backdrop-blur-xl"
       onClick={onClose}
     >
-      <button onClick={onClose} className="absolute right-5 top-5 rounded-full border border-white/20 bg-white/10 p-2 text-white transition hover:bg-white/20">
+      <button onClick={onClose} aria-label="Close gallery" className="inline-flex h-11 w-11 items-center justify-center absolute right-4 top-4 rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20">
         <X className="h-5 w-5" />
       </button>
       <button
         onClick={(e) => { e.stopPropagation(); onIndex((index - 1 + images.length) % images.length); }}
-        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-white/10 p-2 text-white transition hover:bg-white/20 sm:left-8"
+        aria-label="Previous image"
+        className="inline-flex h-11 w-11 items-center justify-center absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 sm:left-8"
       ><ChevronLeft className="h-6 w-6" /></button>
       <button
         onClick={(e) => { e.stopPropagation(); onIndex((index + 1) % images.length); }}
-        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-white/10 p-2 text-white transition hover:bg-white/20 sm:right-8"
+        aria-label="Next image"
+        className="inline-flex h-11 w-11 items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 sm:right-8"
       ><ChevronRight className="h-6 w-6" /></button>
       <motion.img
         key={index}

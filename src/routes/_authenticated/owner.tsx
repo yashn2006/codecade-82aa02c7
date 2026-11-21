@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { createCafe, getOwnerDashboard } from "@/lib/cafes.functions";
-import { guardRoute } from "@/lib/auth-routing";
+import { getDashboardPathForUser, guardRoute } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/_authenticated/owner")({
   ssr: false,
@@ -32,7 +32,11 @@ export const Route = createFileRoute("/_authenticated/owner")({
     ],
   }),
   beforeLoad: () =>
-    guardRoute((_user, roles) => (roles.has("cafe_owner") || roles.has("super_admin") ? null : "/portal")),
+    guardRoute(async (user, roles) => {
+      if (roles.has("cafe_owner") || roles.has("super_admin")) return null;
+      if (roles.has("cafe_staff")) return await getDashboardPathForUser(user);
+      return "/portal";
+    }),
   component: OwnerHub,
 });
 
@@ -283,9 +287,9 @@ function CreateCafeButton() {
           <Plus className="h-4 w-4" /> Create café
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto p-0 sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto p-0 max-sm:p-0 [&>span]:hidden sm:max-w-2xl">
         {/* Header with gradient */}
-        <div className="relative overflow-hidden rounded-t-lg border-b border-border/40 bg-card/60 px-6 pb-5 pt-6 backdrop-blur">
+        <div className="relative overflow-hidden border-b border-border/40 bg-card/60 px-4 pb-4 pt-5 sm:rounded-t-lg sm:px-6 sm:pb-5 sm:pt-6 backdrop-blur">
           <div
             className="pointer-events-none absolute -right-24 -top-20 h-48 w-48 rounded-full opacity-60 blur-[70px]"
             style={{ background: "radial-gradient(circle, oklch(0.7 0.26 335 / 0.7), transparent 70%)" }}
@@ -319,7 +323,7 @@ function CreateCafeButton() {
         </div>
 
         <form
-          className="space-y-5 px-6 py-5"
+          className="space-y-5 px-4 py-4 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:px-6 sm:py-5"
           onKeyDown={(e) => {
             // Prevent Enter from auto-submitting on earlier steps
             if (e.key === "Enter" && step < 2 && (e.target as HTMLElement).tagName !== "TEXTAREA") {

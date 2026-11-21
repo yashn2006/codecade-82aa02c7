@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
+import { CafeAccessGuard } from "@/hooks/useCafeAccess";
 import { Skeleton } from "@/components/LoadingSkeleton";
 import { StationPod } from "@/components/StationPod";
 import { toast } from "sonner";
@@ -63,6 +65,25 @@ type Device = {
 };
 
 function FloorBuilder() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load floor layout">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requirePerm="manage_devices">
+      <FloorBuilderContent />
+    </CafeAccessGuard>
+  );
+}
+
+function FloorBuilderContent() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
   const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
@@ -281,9 +302,11 @@ function FloorBuilder() {
 
   if (cafeQ.isLoading) return <Skeleton className="h-96" />;
   if (cafeQ.isError || !cafe) return <ErrorState description="Could not load this café." onRetry={() => cafeQ.refetch()} />;
+  if (devicesQ.isError) return <ErrorState title="Couldn't load stations" description="We couldn't fetch the stations for this floor plan." onRetry={() => void devicesQ.refetch()} />;
 
   return (
     <div className="space-y-5">
+      <QueryErrorBanner queries={[bookingsQ]} title="Live booking overlays couldn't refresh" />
       {/* Tactical Floor Studio Toolbar */}
       <div className="liquid-glass-card rounded-2xl border border-white/10 p-4 shadow-xl flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-3">

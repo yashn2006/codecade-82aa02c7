@@ -8,7 +8,7 @@ import {
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { SupportTickets } from "@/components/SupportTickets";
 import { cn } from "@/lib/utils";
-import { guardRoute } from "@/lib/auth-routing";
+import { getDashboardPathForUser, guardRoute } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/_authenticated/owner_/help")({
   ssr: false,
@@ -19,7 +19,11 @@ export const Route = createFileRoute("/_authenticated/owner_/help")({
     ],
   }),
   beforeLoad: () =>
-    guardRoute((_user, roles) => (roles.has("cafe_owner") || roles.has("super_admin") ? null : "/portal")),
+    guardRoute(async (user, roles) => {
+      if (roles.has("cafe_owner") || roles.has("super_admin")) return null;
+      if (roles.has("cafe_staff")) return await getDashboardPathForUser(user);
+      return "/portal";
+    }),
   component: OwnerHelp,
 });
 

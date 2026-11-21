@@ -94,7 +94,7 @@ function RedirectingPage() {
         setPhase(3);
         await sleep(260);
         if (cancelled) return;
-        navigate({ to: path, replace: true });
+        navigate({ to: path as never, replace: true });
         // If the in-app hop is somehow swallowed, force a real page load.
         hardFallback = window.setTimeout(() => {
           if (!cancelled && window.location.pathname === "/redirecting") window.location.assign(path);

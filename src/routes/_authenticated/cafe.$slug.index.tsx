@@ -10,9 +10,12 @@ import {
   listSessions, startSession, endSession, extendSession, suspendSession, resumeSession, assignSessionCustomer,
 } from "@/lib/sessions.functions";
 import { listBookings, createBookingForCustomer, updateBookingStatus } from "@/lib/bookings.functions";
-import { listCustomers, createCustomer } from "@/lib/customers.functions";
+import { listCustomers } from "@/lib/customers.functions";
 import { supabase } from "@/lib/supabase/client";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { QueryErrorBanner } from "@/components/QueryBoundary";
+import { CafeMaintenanceBar, type CafeMaintenanceInfo } from "@/components/CafeMaintenanceBar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { FloorStats, StationToolbar, type FloorView } from "@/components/livefloor/FloorHeader";
 import { FloorScene } from "@/components/livefloor/FloorScene";
@@ -21,11 +24,12 @@ import { StationPanel } from "@/components/livefloor/StationPanel";
 import { StationCard, StationRow, type StationAction } from "@/components/livefloor/StationCard";
 import { BookingDialog, type BookingSubmit } from "@/components/livefloor/BookingDialog";
 import { MaintenanceDialog } from "@/components/livefloor/MaintenanceDialog";
-import type { CustomerDraft, FloorCustomer } from "@/components/livefloor/CustomerSelector";
+import type { FloorCustomer } from "@/components/livefloor/CustomerSelector";
 import {
   MAINT_PREFIX, countByStatus, filterStations, sortStations, stationCodes, normalizeStatus,
   type FloorBooking, type FloorDevice, type FloorSession, type SortKey, type StatusFilter,
 } from "@/lib/live-floor";
+import { useCafeAccess } from "@/hooks/useCafeAccess";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/")({
   head: () => ({
@@ -61,8 +65,21 @@ function LiveFloor() {
   const wide = useWide();
 
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  const refetchCafe = cafeQ.refetch;
   const cafeId = cafe?.id as string | undefined;
+  const restricted = !!(cafe as { restricted_message?: string | null } | undefined)?.restricted_message;
+  const sub = cafe as { subscription_status?: string | null; trial_ends_at?: string | null } | undefined;
+  const trialEnded = !!(sub?.trial_ends_at && new Date(sub.trial_ends_at).getTime() < Date.now() && sub?.subscription_status !== "active");
+  const locked = restricted || trialEnded;
+  const access = useCafeAccess(cafeId);
+  const canStart = access.can("start_sessions");
+  const canEnd = access.can("end_sessions");
+  const canBook = access.can("create_bookings");
+  const canCustomers = access.can("register_customers");
+  const canDevices = access.can("manage_devices");
+  const canRevenue = access.can("view_revenue");
 
   const lDev = useServerFn(listDevices);
   const lSes = useServerFn(listSessions);
@@ -79,7 +96,7 @@ function LiveFloor() {
   });
   const bookingsQ = useQuery({
     queryKey: ["bookings", cafeId], queryFn: () => lBk({ data: { cafe_id: cafeId! } }),
-    enabled: !!cafeId, refetchInterval: 30000,
+    enabled: !!cafeId, refetchInterval: 30000, staleTime: 10000,
   });
   const customersQ = useQuery({
     queryKey: ["customers", cafeId], queryFn: () => lCus({ data: { cafe_id: cafeId! } }),
@@ -112,7 +129,12 @@ function LiveFloor() {
   const setStatus = useServerFn(setDeviceStatus);
   const book = useServerFn(createBookingForCustomer);
   const setBooking = useServerFn(updateBookingStatus);
-  const addCust = useServerFn(createCustomer);
+
+  const [minuteTick, setMinuteTick] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setMinuteTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   const devices = useMemo(() => (Array.isArray(devicesQ.data) ? devicesQ.data : []) as unknown as FloorDevice[], [devicesQ.data]);
   const sessions = useMemo(() => (Array.isArray(sessionsQ.data) ? sessionsQ.data : []) as unknown as (FloorSession & { ended_at?: string | null; amount?: number | null })[], [sessionsQ.data]);
@@ -132,6 +154,7 @@ function LiveFloor() {
   }, [sessions]);
 
   const bookingsByDevice = useMemo(() => {
+    void minuteTick;
     const now = Date.now();
     const m = new Map<string, FloorBooking>();
     if (!Array.isArray(bookings)) return m;
@@ -141,7 +164,7 @@ function LiveFloor() {
       .sort((a, b) => (a.scheduled_at || "").localeCompare(b.scheduled_at || ""));
     for (const b of live) if (b && b.device_id && !m.has(b.device_id)) m.set(b.device_id, b);
     return m;
-  }, [bookings]);
+  }, [bookings, minuteTick]);
 
   const playingOn = useMemo(() => {
     const m = new Map<string, string>();
@@ -213,32 +236,22 @@ function LiveFloor() {
     }
   }, [invalidate]);
 
-  const resolveCustomer = useCallback(async (draft: Exclude<CustomerDraft, null>): Promise<string> => {
-    if (draft.kind === "existing") return draft.customer.id;
-    const c = await addCust({ data: { cafe_id: cafeId!, full_name: draft.full_name.trim(), phone: draft.phone.trim() || null, email: null } });
-    qc.invalidateQueries({ queryKey: ["customers", cafeId] });
-    if (!c?.id) throw new Error("Could not add the customer");
-    return c.id as string;
-  }, [addCust, cafeId, qc]);
-
   const codeOf = useCallback((id: string) => codes.get(id) ?? "Station", [codes]);
 
   const ops = useMemo(() => ({
-    start: (deviceId: string, draft: Exclude<CustomerDraft, null> | null, minutes: number) => run(async () => {
-      const customerId = draft ? await resolveCustomer(draft) : undefined;
+    start: (deviceId: string, customer: FloorCustomer | null, minutes: number) => run(async () => {
       await start({ data: {
-        cafe_id: cafeId!, device_id: deviceId, customer_id: customerId ?? null,
+        cafe_id: cafeId!, device_id: deviceId, customer_id: customer?.id ?? null,
         planned_minutes: minutes > 0 ? minutes : null,
         package_name: minutes > 0 ? `${minutes} min` : null,
         payment_method: "counter",
       } });
       return `Session started on ${codeOf(deviceId)}`;
     }),
-    assign: (deviceId: string, draft: Exclude<CustomerDraft, null>) => run(async () => {
+    assign: (deviceId: string, customer: FloorCustomer) => run(async () => {
       const s = sessionsByDevice.get(deviceId);
       if (!s) throw new Error("No session is running here");
-      const customerId = await resolveCustomer(draft);
-      await assign({ data: { id: s.id, customer_id: customerId } });
+      await assign({ data: { id: s.id, customer_id: customer.id } });
       return "Player updated";
     }),
     extend: (deviceId: string) => run(async () => {
@@ -287,7 +300,7 @@ function LiveFloor() {
       await setStatus({ data: { id: deviceId, status: "available" } });
       return b ? "Booking cancelled" : `${codeOf(deviceId)} released`;
     }),
-  }), [run, resolveCustomer, start, assign, extend, suspend, resume, end, setStatus, setBooking,
+  }), [run, start, assign, extend, suspend, resume, end, setStatus, setBooking,
     cafeId, codeOf, sessionsByDevice, bookingsByDevice, devices]);
 
   const opsRef = useRef(ops);
@@ -297,13 +310,13 @@ function LiveFloor() {
   const onCardAction = useCallback((id: string, a: StationAction) => {
     const o = opsRef.current;
     if (a === "start" || a === "details") setSelectedId(id);
-    else if (a === "book") setBookingFor(id);
-    else if (a === "extend") o.extend(id);
-    else if (a === "checkin") o.checkIn(id);
-    else if (a === "resolve") o.available(id);
-    else if (a === "resume") o.resume(id);
-    else if (a === "maintenance") setMaintFor(id);
-  }, []);
+    else if (a === "book") { if (canBook) setBookingFor(id); }
+    else if (a === "extend") { if (canStart) o.extend(id); }
+    else if (a === "checkin") { if (canStart) o.checkIn(id); }
+    else if (a === "resolve") { if (canDevices) o.available(id); }
+    else if (a === "resume") { if (canStart || canEnd) o.resume(id); }
+    else if (a === "maintenance") { if (canDevices) setMaintFor(id); }
+  }, [canBook, canStart, canEnd, canDevices]);
 
   const quickStart = useCallback(() => {
     const free = devices.find((d) => normalizeStatus(d.status) === "available");
@@ -312,10 +325,9 @@ function LiveFloor() {
 
   const submitBooking = (v: BookingSubmit) => {
     const deviceId = bookingFor;
-    if (!deviceId || !v.draft) return;
-    const draft = v.draft;
+    if (!deviceId || !v.customer) return;
+    const customerId = v.customer.id;
     run(async () => {
-      const customerId = await resolveCustomer(draft);
       await book({ data: { cafe_id: cafeId!, device_id: deviceId, customer_id: customerId, scheduled_at: v.scheduledAt, duration_minutes: v.minutes } });
       const soon = new Date(v.scheduledAt).getTime() - Date.now() <= 30 * 60000;
       const d = devices.find((x) => x.id === deviceId);
@@ -340,6 +352,27 @@ function LiveFloor() {
   };
 
   // ---- render ----
+  if (cafeQ.isError || devicesQ.isError) {
+    const firstErr = cafeQ.error ?? devicesQ.error;
+    return (
+      <ErrorState
+        title="Couldn't load live floor"
+        description={
+          import.meta.env.DEV && firstErr instanceof Error && firstErr.message
+            ? firstErr.message
+            : "We couldn't load your café stations right now."
+        }
+        onRetry={() => {
+          if (cafeQ.isError) void cafeQ.refetch();
+          if (devicesQ.isError) void devicesQ.refetch();
+          if (sessionsQ.isError) void sessionsQ.refetch();
+          if (bookingsQ.isError) void bookingsQ.refetch();
+          if (customersQ.isError) void customersQ.refetch();
+        }}
+      />
+    );
+  }
+
   if (!cafeId || devicesQ.isLoading) {
     return (
       <div className="lf-root space-y-3">
@@ -356,6 +389,7 @@ function LiveFloor() {
   const panel = selected ? (
     <StationPanel
       key={selected.id}
+      cafeId={cafeId}
       slug={slug}
       device={selected}
       code={codeOf(selected.id)}
@@ -364,10 +398,18 @@ function LiveFloor() {
       customers={customers}
       playingOn={playingOn}
       busy={busy}
+      perms={{
+        start: canStart,
+        end: canEnd,
+        book: canBook,
+        devices: canDevices,
+        customers: canCustomers,
+        revenue: canRevenue,
+      }}
       handlers={{
         onClose: () => setSelectedId(null),
-        onStart: (draft, minutes) => ops.start(selected.id, draft, minutes),
-        onAssign: (draft) => ops.assign(selected.id, draft),
+        onStart: (customer, minutes) => ops.start(selected.id, customer, minutes),
+        onAssign: (customer) => ops.assign(selected.id, customer),
         onExtend: () => ops.extend(selected.id),
         onPause: () => ops.pause(selected.id),
         onResume: () => ops.resume(selected.id),
@@ -387,11 +429,24 @@ function LiveFloor() {
 
   return (
     <div className="lf-root space-y-3">
+      {access.isOwnerOrAdmin && (
+        <CafeMaintenanceBar
+          cafe={cafe as CafeMaintenanceInfo | undefined}
+          locked={locked}
+          onSaved={() => void refetchCafe()}
+        />
+      )}
+      <QueryErrorBanner
+        queries={[sessionsQ, bookingsQ, customersQ]}
+        title="Live floor status couldn't refresh cleanly"
+      />
       <FloorStats
         counts={counts}
         devices={devices}
         sessionsByDevice={sessionsByDevice}
         revenueToday={revenueToday}
+        canViewRevenue={canRevenue}
+        canQuickStart={canStart}
         onQuickStart={quickStart}
       />
       <StationToolbar
@@ -442,6 +497,7 @@ function LiveFloor() {
                   session={sessionsByDevice.get(d.id)}
                   booking={bookingsByDevice.get(d.id)}
                   selected={effectiveId === d.id}
+                  perms={{ start: canStart, end: canEnd, book: canBook, devices: canDevices }}
                   onSelect={onSelect}
                   onAction={onCardAction}
                 />
@@ -457,6 +513,7 @@ function LiveFloor() {
                   session={sessionsByDevice.get(d.id)}
                   booking={bookingsByDevice.get(d.id)}
                   selected={effectiveId === d.id}
+                  perms={{ start: canStart, end: canEnd, book: canBook, devices: canDevices }}
                   onSelect={onSelect}
                   onAction={onCardAction}
                 />
@@ -491,25 +548,31 @@ function LiveFloor() {
         </Sheet>
       )}
 
-      <BookingDialog
-        open={!!bookingDevice}
-        device={bookingDevice}
-        code={bookingDevice ? codeOf(bookingDevice.id) : ""}
-        customers={customers}
-        bookings={bookings}
-        busy={busy}
-        onClose={() => setBookingFor(null)}
-        onSubmit={submitBooking}
-      />
-      <MaintenanceDialog
-        open={!!maintDevice}
-        code={maintDevice ? codeOf(maintDevice.id) : ""}
-        name={maintDevice?.name ?? ""}
-        hasSession={!!(maintDevice && sessionsByDevice.get(maintDevice.id))}
-        busy={busy}
-        onClose={() => setMaintFor(null)}
-        onConfirm={confirmMaintenance}
-      />
+      {canBook && (
+        <BookingDialog
+          cafeId={cafeId}
+          open={!!bookingDevice}
+          device={bookingDevice}
+          code={bookingDevice ? codeOf(bookingDevice.id) : ""}
+          customers={customers}
+          bookings={bookings}
+          busy={busy}
+          canCreateCustomer={canCustomers}
+          onClose={() => setBookingFor(null)}
+          onSubmit={submitBooking}
+        />
+      )}
+      {canDevices && (
+        <MaintenanceDialog
+          open={!!maintDevice}
+          code={maintDevice ? codeOf(maintDevice.id) : ""}
+          name={maintDevice?.name ?? ""}
+          hasSession={!!(maintDevice && sessionsByDevice.get(maintDevice.id))}
+          busy={busy}
+          onClose={() => setMaintFor(null)}
+          onConfirm={confirmMaintenance}
+        />
+      )}
     </div>
   );
 }

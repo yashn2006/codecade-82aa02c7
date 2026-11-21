@@ -14,6 +14,8 @@ export const adjustWallet = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
     const { error } = await context.supabase.rpc("apply_wallet_tx", {
       _customer_id: data.customer_id,
       _cafe_id: data.cafe_id,
@@ -22,6 +24,20 @@ export const adjustWallet = createServerFn({ method: "POST" })
       _note: data.note ?? null,
     });
     if (error) throw new Error(error.message);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.cafe_id,
+      actorId: context.userId,
+      action: data.kind === "topup" && data.amount > 0 ? "wallet.topped_up" : "wallet.adjusted",
+      resourceType: "customer",
+      resourceId: data.customer_id,
+      meta: {
+        amount: data.amount,
+        kind: data.kind,
+        note: data.note ?? null,
+      },
+    });
     return { ok: true };
   });
 
@@ -34,6 +50,23 @@ export const listWalletTransactions = createServerFn({ method: "GET" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    if (data.cafe_id) {
+      await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
+    } else if (data.customer_id) {
+      const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+      const { data: cust } = await supabaseAdmin
+        .from("customers")
+        .select("cafe_id, user_id")
+        .eq("id", data.customer_id)
+        .maybeSingle();
+      if (!cust) throw new Error("Customer not found");
+      if (cust.user_id !== context.userId) {
+        await assertCafeAccess(context.userId, cust.cafe_id, "manage_wallet");
+      }
+    } else {
+      throw new Error("You don't have permission");
+    }
     let q = context.supabase
       .from("wallet_transactions")
       .select("id, amount, kind, note, created_at, customer_id, cafe_id, customers(full_name)")
@@ -50,6 +83,8 @@ export const exportWalletCSV = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
     const { data: rows, error } = await context.supabase
       .from("wallet_transactions")
       .select("created_at, amount, kind, note, customers(full_name, phone)")
@@ -73,35 +108,12 @@ export const exportWalletCSV = createServerFn({ method: "GET" })
     return { csv: header + body, count: rows?.length ?? 0 };
   });
 
-async function assertCafeAccess(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  userId: string,
-  cafeId: string,
-) {
-  const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-  const [{ data: cafe }, { data: staff }, { data: isAdmin }] = await Promise.all([
-    supabaseAdmin.from("cafes").select("id, owner_id, name, slug").eq("id", cafeId).maybeSingle(),
-    supabaseAdmin
-      .from("staff_permissions")
-      .select("id")
-      .eq("cafe_id", cafeId)
-      .eq("staff_user_id", userId)
-      .maybeSingle(),
-    supabase.rpc("has_role", { _user_id: userId, _role: "super_admin" }),
-  ]);
-  if (!cafe) throw new Error("Café not found");
-  if (cafe.owner_id !== userId && !staff && !isAdmin) {
-    throw new Error("Forbidden");
-  }
-  return cafe as { id: string; owner_id: string; name: string; slug: string };
-}
-
 export const listWalletTopupRequests = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertCafeAccess(context.supabase, context.userId, data.cafe_id);
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
       .from("wallet_topups")
@@ -127,8 +139,15 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const cafe = await assertCafeAccess(context.supabase, context.userId, data.cafe_id);
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: cafe } = await supabaseAdmin
+      .from("cafes")
+      .select("id, owner_id, name, slug")
+      .eq("id", data.cafe_id)
+      .maybeSingle();
+    if (!cafe) throw new Error("Café not found");
 
     const { data: reqRow, error: getErr } = await supabaseAdmin
       .from("wallet_topups")
@@ -182,6 +201,21 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
           link: "/portal#wallet",
         });
       }
+      const { writeAudit } = await import("@/lib/audit.server");
+      await writeAudit({
+        cafeId: cafe.id,
+        actorId: context.userId,
+        action: "wallet.topped_up",
+        resourceType: "wallet_topup",
+        resourceId: reqRow.id,
+        meta: {
+          customer_id: reqRow.customer_id,
+          customer: customer?.full_name ?? null,
+          amount: reqRow.amount,
+          utr,
+          method: "upi_proof",
+        },
+      });
       return { ok: true, status: "paid" as const };
     }
 
@@ -210,5 +244,20 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
         link: "/portal#wallet",
       });
     }
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: cafe.id,
+      actorId: context.userId,
+      action: "wallet.topup_rejected",
+      resourceType: "wallet_topup",
+      resourceId: reqRow.id,
+      meta: {
+        customer_id: reqRow.customer_id,
+        customer: customer?.full_name ?? null,
+        amount: reqRow.amount,
+        utr,
+        review_note: data.review_note ?? null,
+      },
+    });
     return { ok: true, status: "failed" as const };
   });

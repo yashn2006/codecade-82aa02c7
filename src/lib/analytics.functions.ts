@@ -6,6 +6,8 @@ export const getCafeAnalytics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "view_revenue");
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const startOfWeek = new Date(Date.now() - 7 * 86400_000);
 

@@ -13,11 +13,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { PrintableReceipt, type ReceiptOrder } from "@/components/PrintableReceipt";
+import { CafeAccessGuard, useCafeAccess } from "@/hooks/useCafeAccess";
 
 export const Route = createFileRoute("/_authenticated/cafe/$slug/pos")({
   head: () => ({
@@ -37,8 +40,31 @@ type Item = { id: string; name: string; price: number; stock: number | null; is_
 function POSPage() {
   const { slug } = Route.useParams();
   const getCafe = useServerFn(getCafeBySlug);
-  const { data: cafe } = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
+  if (cafeQ.isError || !cafe?.id) {
+    return (
+      <QueryBoundary queries={[cafeQ]} loading={!cafeQ.isError && !cafe?.id} errorTitle="Couldn't load POS">
+        {null}
+      </QueryBoundary>
+    );
+  }
+  return (
+    <CafeAccessGuard cafeId={cafe.id} slug={slug} requirePerm="generate_bills">
+      <POSPageContent />
+    </CafeAccessGuard>
+  );
+}
+
+function POSPageContent() {
+  const { slug } = Route.useParams();
+  const getCafe = useServerFn(getCafeBySlug);
+  const cafeQ = useQuery({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }) });
+  const cafe = cafeQ.data;
   const cafeId = cafe?.id;
+  const { can } = useCafeAccess(cafeId);
+  const canViewRevenue = can("view_revenue");
+  const canManageWallet = can("manage_wallet");
   const defaultGst = ((cafe as { default_gst_rate?: number } | undefined)?.default_gst_rate) ?? 0;
 
   const list = useServerFn(listMenu);
@@ -145,10 +171,18 @@ function POSPage() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
-  if (!cafeId) return <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />;
+  if (cafeQ.isError || menuQ.isError || !cafeId) {
+    return (
+      <QueryBoundary queries={[cafeQ, menuQ]} loading={!cafeQ.isError && !menuQ.isError && !cafeId} errorTitle="Couldn't load POS">
+        {null}
+      </QueryBoundary>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+    <div className="space-y-4">
+      <QueryErrorBanner queries={[sesQ, cusQ, ordersQ]} title="Some POS lists couldn't refresh" />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-2">
@@ -157,11 +191,13 @@ function POSPage() {
               <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>{c.name}</Chip>
             ))}
           </div>
-          <div className="ml-auto">
-            <Button size="sm" variant="outline" className="gap-2" onClick={() => setZOpen(true)}>
-              <FileBarChart className="h-4 w-4" /> Z-Report
-            </Button>
-          </div>
+          {canViewRevenue && (
+            <div className="ml-auto">
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setZOpen(true)}>
+                <FileBarChart className="h-4 w-4" /> Z-Report
+              </Button>
+            </div>
+          )}
         </div>
         {items.length === 0 ? (
           <div className="mt-6">
@@ -314,8 +350,8 @@ function POSPage() {
       <Dialog open={settleOpen} onOpenChange={setSettleOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle>Settle ₹{pendingOrder?.total}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-3 gap-2">
-            {(["cash", "wallet", "tab"] as const).map((m) => (
+          <div className={`grid gap-2 ${canManageWallet ? "grid-cols-3" : "grid-cols-2"}`}>
+            {(["cash", ...(canManageWallet ? (["wallet"] as const) : []), "tab"] as const).map((m) => (
               <Button key={m} variant="outline" onClick={() => pendingOrder && finish.mutate({ data: { order_id: pendingOrder.id, payment_method: m } })} className="h-16 capitalize">
                 {m === "tab" ? "Add to tab" : m}
               </Button>
@@ -346,7 +382,7 @@ function POSPage() {
         </DialogContent>
       </Dialog>
 
-      <ZReportDialog open={zOpen} onClose={() => setZOpen(false)} cafeId={cafeId} z={z} cafeName={cafe?.name ?? ""} />
+      {canViewRevenue && <ZReportDialog open={zOpen} onClose={() => setZOpen(false)} cafeId={cafeId} z={z} cafeName={cafe?.name ?? ""} />}
 
       <SplitDialog
         order={splitFor}
@@ -356,6 +392,7 @@ function POSPage() {
       />
 
       {receiptOrder && <PrintableReceipt order={receiptOrder} onClose={() => setReceiptOrder(null)} />}
+    </div>
     </div>
   );
 }
@@ -466,6 +503,9 @@ function ZReportDialog({ open, onClose, cafeId, z, cafeName }: { open: boolean; 
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 w-auto" />
           <Button size="sm" variant="outline" onClick={printZ} className="gap-2"><Printer className="h-4 w-4" /> Print</Button>
         </div>
+        {q.isError ? (
+          <ErrorState title="Couldn't load Z-Report" description="We couldn't generate the Z-Report right now." onRetry={() => void q.refetch()} />
+        ) : (
         <div id="z-print" className="space-y-3 rounded-xl border border-border/60 bg-background/30 p-4 font-mono text-xs print:bg-white print:text-black">
           <div className="text-center">
             <div className="text-sm font-bold uppercase">{cafeName} — Z-Report</div>
@@ -498,6 +538,7 @@ function ZReportDialog({ open, onClose, cafeId, z, cafeName }: { open: boolean; 
               ))}
           </div>
         </div>
+        )}
         <style>{`
           @media print {
             body * { visibility: hidden !important; }

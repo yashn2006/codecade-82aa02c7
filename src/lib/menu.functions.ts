@@ -6,6 +6,8 @@ export const listMenu = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id);
     const [cats, items] = await Promise.all([
       context.supabase.from("menu_categories").select("*").eq("cafe_id", data.cafe_id).order("sort_order"),
       context.supabase.from("menu_items").select("*").eq("cafe_id", data.cafe_id).order("name"),
@@ -26,6 +28,8 @@ export const upsertCategory = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_menu");
     const { error } = await context.supabase.from("menu_categories").upsert(data);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -35,6 +39,9 @@ export const deleteCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("menu_categories", data.id);
+    await assertCafeAccess(context.userId, cafeId, "manage_menu");
     const { error } = await context.supabase.from("menu_categories").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -57,6 +64,8 @@ export const upsertItem = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess } = await import("@/lib/staff-access.server");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_menu");
     const { error } = await context.supabase.from("menu_items").upsert(data);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -66,6 +75,9 @@ export const deleteItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
+    const cafeId = await lookupCafeId("menu_items", data.id);
+    await assertCafeAccess(context.userId, cafeId, "manage_menu");
     const { error } = await context.supabase.from("menu_items").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
