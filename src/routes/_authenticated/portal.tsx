@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -153,8 +153,33 @@ function Portal() {
   const isSuper = roles.some((r) => r.role === "super_admin");
   const ownerCafe = (ownedCafes ?? [])[0];
 
-  const hash = useRouterState({ select: (s) => (s.location.hash ?? "").replace(/^#/, "") });
+  const routerHash = useRouterState({ select: (s) => (s.location.hash ?? "").replace(/^#/, "") });
+  const [winHash, setWinHash] = useState(() =>
+    typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "",
+  );
+  useEffect(() => {
+    setWinHash(routerHash);
+  }, [routerHash]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => setWinHash(window.location.hash.replace(/^#/, ""));
+    window.addEventListener("hashchange", sync);
+    window.addEventListener("popstate", sync);
+    return () => {
+      window.removeEventListener("hashchange", sync);
+      window.removeEventListener("popstate", sync);
+    };
+  }, []);
+  const hash = winHash;
   const active: TabKey = TABS.find((t) => t.key === hash)?.key ?? "home";
+
+  const railRefs = useRef<Partial<Record<TabKey, HTMLAnchorElement | null>>>({});
+  useEffect(() => {
+    const el = railRefs.current[active];
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    }
+  }, [active]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function openBookingSupport(booking: any) {
@@ -189,10 +214,10 @@ function Portal() {
         icon: t.icon,
         to: "/portal",
         exact: true,
-        hash: t.key === "home" ? undefined : t.key,
+        hash: t.key === "home" ? "" : t.key,
       }))}
       tabs={[
-        { label: "Home", icon: Home, to: "/portal", exact: true },
+        { label: "Home", icon: Home, to: "/portal", hash: "", exact: true },
         { label: "Bookings", icon: CalendarRange, to: "/portal", hash: "bookings", exact: true },
         { label: "Wallet", icon: Wallet, to: "/portal", hash: "wallet", exact: true },
         { label: "Support", icon: LifeBuoy, to: "/portal", hash: "support", exact: true },
@@ -208,14 +233,14 @@ function Portal() {
         <div className="mb-4 flex flex-wrap gap-2">
           {isSuper && (
             <Link to="/admin">
-              <Button variant="outline" size="sm" className="min-h-[40px] border-primary/40 text-xs">
+              <Button variant="outline" size="sm" className="min-h-[44px] border-primary/40 text-xs">
                 Open Super Admin →
               </Button>
             </Link>
           )}
           {ownerCafe && (
             <Link to="/owner">
-              <Button variant="outline" size="sm" className="min-h-[40px] border-primary/40 text-xs">
+              <Button variant="outline" size="sm" className="min-h-[44px] border-primary/40 text-xs">
                 Open Owner Hub →
               </Button>
             </Link>
@@ -224,15 +249,19 @@ function Portal() {
       )}
 
       {/* Mobile horizontal quick-section rail (all 6 portal views) */}
-      <div className="mb-5 flex w-full max-w-full flex-nowrap items-center gap-2 overflow-x-auto pb-1 lg:hidden">
+      <div className="mb-5 flex w-full max-w-full snap-x flex-nowrap items-center gap-2 overflow-x-auto pb-1 lg:hidden">
         {TABS.map((t) => {
           const isTabActive = active === t.key;
           const Icon = t.icon;
           return (
             <Link
               key={t.key}
+              ref={(el) => {
+                railRefs.current[t.key] = el;
+              }}
               to="/portal"
-              hash={t.key === "home" ? undefined : t.key}
+              hash={t.key === "home" ? "" : t.key}
+              aria-current={isTabActive ? "page" : undefined}
               className={cn(
                 "flex min-h-[44px] shrink-0 snap-start items-center gap-2 rounded-2xl border px-3.5 text-xs font-semibold transition active:scale-[0.97]",
                 isTabActive
@@ -809,9 +838,9 @@ function CyberBoardingPass({
       className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0e0c1a] shadow-xl md:flex-row"
     >
       {/* Left Station Info Section */}
-      <div className="flex-1 p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+      <div className="flex-1 p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-[10px] uppercase tracking-widest text-primary">Station Pass</span>
             <span className="text-white/20">·</span>
             <button
@@ -820,7 +849,7 @@ function CyberBoardingPass({
                 navigator.clipboard.writeText(`BK-${booking.id.slice(0, 8).toUpperCase()}`);
                 toast.success("Booking ID copied to clipboard!");
               }}
-              className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 font-mono text-xs font-bold text-white transition hover:bg-white/20"
+              className="inline-flex min-h-[32px] items-center gap-1 rounded bg-white/10 px-2 py-0.5 font-mono text-xs font-bold text-white transition hover:bg-white/20"
               title="Click to copy Booking ID"
             >
               <Copy className="h-3 w-3 text-muted-foreground" />
@@ -887,7 +916,7 @@ function CyberBoardingPass({
       </div>
 
       {/* Right Ticket Stub / Check-in QR */}
-      <div className="flex flex-col justify-between border-t border-dashed border-white/20 bg-black/40 p-6 md:w-64 md:border-t-0">
+      <div className="flex flex-col justify-between border-t border-dashed border-white/20 bg-black/40 p-4 sm:p-6 md:w-64 md:border-t-0">
         <div className="text-center">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl border border-white/10 bg-white p-2">
             <QrCode className="h-full w-full text-black" />
@@ -903,14 +932,14 @@ function CyberBoardingPass({
             size="sm"
             variant="outline"
             onClick={onMessageCafe}
-            className="min-h-[38px] w-full gap-1.5 border-white/15 text-xs"
+            className="min-h-[44px] w-full gap-1.5 border-white/15 text-xs"
           >
             <MessageSquare className="h-3.5 w-3.5 text-primary" /> Message Café
           </Button>
 
           {cafe?.slug && (
             <Link to="/c/$slug" params={{ slug: cafe.slug }} className="w-full">
-              <Button size="sm" variant="outline" className="min-h-[38px] w-full border-white/15 text-xs">
+              <Button size="sm" variant="outline" className="min-h-[44px] w-full border-white/15 text-xs">
                 Café Info &amp; Menu
               </Button>
             </Link>
@@ -922,7 +951,7 @@ function CyberBoardingPass({
               variant="destructive"
               onClick={onCancel}
               disabled={isCancelling}
-              className="min-h-[38px] w-full text-xs"
+              className="min-h-[44px] w-full text-xs"
             >
               <X className="mr-1 h-3 w-3" /> Cancel Booking
             </Button>
@@ -1117,17 +1146,22 @@ function WalletTab() {
         <Button
           onClick={() => setTopupModalOpen(true)}
           disabled={customers.length === 0}
-          className="h-12 flex-1 gap-2 text-xs font-bold text-white shadow-xl transition-transform hover:-translate-y-0.5"
+          className="h-12 min-h-[44px] flex-1 gap-2 text-xs font-bold text-white shadow-xl transition-transform hover:-translate-y-0.5"
           style={{ background: "var(--gradient-brand-hot)" }}
         >
           <Plus className="h-4 w-4" /> Add Money to Wallet
         </Button>
         <Link to="/discover" className="flex-1">
-          <Button variant="outline" className="w-full h-12 text-xs font-semibold border-white/15">
+          <Button variant="outline" className="min-h-[44px] w-full h-12 text-xs font-semibold border-white/15">
             Book Arena Slot →
           </Button>
         </Link>
       </div>
+      {customers.length === 0 && (
+        <p className="mx-auto max-w-xl rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-xs text-muted-foreground">
+          Visit or book at any arena once to link your wallet and unlock online top-ups.
+        </p>
+      )}
 
       {/* Cafes Switcher if customer frequents multiple arenas */}
       {customers.length > 1 && (
@@ -1454,7 +1488,7 @@ function TournamentCyberCard({ t, note, register }: { t: any; note?: string; reg
         </Badge>
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3">
         <div>
           <span className="font-mono text-[10px] uppercase text-muted-foreground block">Prize Pool</span>
           <span className="font-display font-black text-amber-300 text-base">{inr(t.prize_pool ?? 0)}</span>
@@ -1462,7 +1496,7 @@ function TournamentCyberCard({ t, note, register }: { t: any; note?: string; reg
 
         {cafe?.slug && (
           <Link to="/c/$slug/tournaments/$id" params={{ slug: cafe.slug, id: t.id }}>
-            <Button size="sm" variant="outline" className="text-xs border-white/10">
+            <Button size="sm" variant="outline" className="min-h-[44px] px-4 text-xs border-white/10">
               {register ? "Register Team" : "View Bracket"} →
             </Button>
           </Link>
@@ -1520,7 +1554,7 @@ function ProfileTab() {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
-    window.location.href = "/auth";
+    window.location.assign("/auth");
   }
 
   return (
@@ -1546,23 +1580,24 @@ function ProfileTab() {
             },
           });
         }}
-        className="space-y-4 rounded-3xl border border-white/10 bg-card/40 p-6 backdrop-blur-xl"
+        className="space-y-4 rounded-3xl border border-white/10 bg-card/40 p-5 sm:p-6 backdrop-blur-xl"
       >
         <div className="font-mono text-[10px] uppercase tracking-widest text-primary">Identity Details</div>
         <div className="space-y-1.5">
           <Label className="text-xs">Gamer Handle / Full Name</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
+          <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} className="min-h-[44px]" />
         </div>
 
         <div className="space-y-1.5">
           <Label className="text-xs">Phone Number (For Booking SMS Confirmation)</Label>
           <div className="flex items-center gap-2">
-            <span className="rounded-md border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm">🇮🇳 +91</span>
+            <span className="flex min-h-[44px] items-center rounded-md border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm">🇮🇳 +91</span>
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
               inputMode="numeric"
               placeholder="9876543210"
+              className="min-h-[44px]"
             />
           </div>
         </div>
@@ -1570,20 +1605,20 @@ function ProfileTab() {
         <Button
           type="submit"
           disabled={updateMutation.isPending}
-          className="w-full text-xs font-bold text-white"
+          className="h-11 min-h-[44px] w-full text-xs font-bold text-white"
           style={{ background: "var(--gradient-brand-hot)" }}
         >
           {updateMutation.isPending ? "Saving Changes…" : "Update Profile"}
         </Button>
       </form>
 
-      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-card/40 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-card/40 p-4">
         <div>
           <div className="font-semibold text-sm text-white">Password & Security</div>
           <div className="text-xs text-muted-foreground">Change credentials or setup MFA</div>
         </div>
         <Link to="/reset-password">
-          <Button variant="outline" size="sm" className="text-xs border-white/10">
+          <Button variant="outline" size="sm" className="min-h-[44px] text-xs border-white/10">
             <KeyRound className="h-3.5 w-3.5 mr-1" /> Reset Password
           </Button>
         </Link>
@@ -1592,7 +1627,7 @@ function ProfileTab() {
       <Button
         variant="outline"
         onClick={() => setConfirmSignout(true)}
-        className="w-full border-destructive/40 text-xs text-destructive hover:bg-destructive/10"
+        className="min-h-[44px] w-full border-destructive/40 text-xs text-destructive hover:bg-destructive/10"
       >
         <LogOut className="h-3.5 w-3.5 mr-1.5" /> Sign Out from CoreCade
       </Button>
@@ -1604,11 +1639,11 @@ function ProfileTab() {
             You will need to sign in again to view your bookings and access your cyber wallet.
           </p>
           <div className="mt-4 flex gap-2">
-            <Button variant="outline" className="flex-1 text-xs" onClick={() => setConfirmSignout(false)}>
+            <Button variant="outline" className="min-h-[44px] flex-1 text-xs" onClick={() => setConfirmSignout(false)}>
               Stay Signed In
             </Button>
             <Button
-              className="flex-1 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="min-h-[44px] flex-1 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleSignOut}
             >
               Sign Out

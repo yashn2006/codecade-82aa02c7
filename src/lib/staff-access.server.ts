@@ -16,7 +16,11 @@ export type CafeAccessResult = {
 const VALID_PERMS = new Set<string>(STAFF_PERMS);
 
 export async function resolveCafeAccess(userId: string, cafeId: string): Promise<CafeAccessResult | null> {
-  const [{ data: adminRole }, { data: cafe }, { data: staffRow }] = await Promise.all([
+  const [
+    { data: adminRole, error: adminErr },
+    { data: cafe, error: cafeErr },
+    { data: staffRow, error: staffErr },
+  ] = await Promise.all([
     supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -36,6 +40,9 @@ export async function resolveCafeAccess(userId: string, cafeId: string): Promise
       .eq("staff_user_id", userId)
       .maybeSingle(),
   ]);
+  if (adminErr) throw new Error(adminErr.message);
+  if (cafeErr) throw new Error(cafeErr.message);
+  if (staffErr) throw new Error(staffErr.message);
 
   if (adminRole) {
     return {

@@ -1,5 +1,5 @@
 import { DemoFloor } from "@/components/DemoFloor";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -12,7 +12,14 @@ import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { ConsoleMockup } from "@/components/ConsoleMockup";
 import { TerminalContact } from "@/components/TerminalContact";
 import { supabase } from "@/lib/supabase/client";
-import { getDashboardPathForUser } from "@/lib/auth-routing";
+import {
+  clearOAuthPending,
+  getDashboardPathForUser,
+  getOAuthErrorFromUrl,
+  getSupabaseUserReady,
+  isOAuthReturn,
+} from "@/lib/auth-routing";
+import { toast } from "sonner";
 
 
 
@@ -38,12 +45,62 @@ const fadeUp = {
 };
 
 function Landing() {
+  const navigate = useNavigate();
+  const [completingOAuth, setCompletingOAuth] = useState(() => isOAuthReturn());
+
   useEffect(() => {
+    const oauthErr = getOAuthErrorFromUrl();
+    if (oauthErr) {
+      clearOAuthPending();
+      setCompletingOAuth(false);
+      toast.error(oauthErr);
+      return;
+    }
+
+    if (completingOAuth) {
+      let cancelled = false;
+      (async () => {
+        const user = await getSupabaseUserReady(6000);
+        if (cancelled) return;
+        if (user) {
+          clearOAuthPending();
+          try {
+            const dest = await getDashboardPathForUser(user);
+            if (!cancelled) navigate({ to: dest as never, replace: true });
+          } catch {
+            if (!cancelled) navigate({ to: "/portal" as never, replace: true });
+          }
+          return;
+        }
+        clearOAuthPending();
+        setCompletingOAuth(false);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+
     // Ensure landing always opens at the top (override any scroll restoration)
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     }
-  }, []);
+  }, [completingOAuth, navigate]);
+
+  if (completingOAuth) {
+    return (
+      <div className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
+        <AuroraBackground intensity="immersive" />
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <div className="font-display text-lg font-bold text-white">Entering CoreCade…</div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+            Completing Google sign-in
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-dvh overflow-x-clip">
       <Header />
@@ -229,16 +286,29 @@ function MagneticSignIn() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session?.user) {
-        try {
-          const path = await getDashboardPathForUser(data.session.user);
-          setDashboardPath(path);
-        } catch {
-          setDashboardPath("/portal");
-        }
+    let active = true;
+    const sync = async (user: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"] extends infer S ? S extends { user: infer U } ? U | null : null : null) => {
+      if (!active) return;
+      if (!user) {
+        setDashboardPath(null);
+        return;
       }
+      try {
+        const path = await getDashboardPathForUser(user);
+        if (active) setDashboardPath(path);
+      } catch {
+        if (active) setDashboardPath("/portal");
+      }
+    };
+
+    supabase.auth.getSession().then(({ data }) => sync(data.session?.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_ev, session) => {
+      void sync(session?.user ?? null);
     });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const target = dashboardPath ?? "/auth";
@@ -294,16 +364,29 @@ function Hero() {
   const [dashboardPath, setDashboardPath] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session?.user) {
-        try {
-          const path = await getDashboardPathForUser(data.session.user);
-          setDashboardPath(path);
-        } catch {
-          setDashboardPath("/portal");
-        }
+    let active = true;
+    const sync = async (user: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"] extends infer S ? S extends { user: infer U } ? U | null : null : null) => {
+      if (!active) return;
+      if (!user) {
+        setDashboardPath(null);
+        return;
       }
+      try {
+        const path = await getDashboardPathForUser(user);
+        if (active) setDashboardPath(path);
+      } catch {
+        if (active) setDashboardPath("/portal");
+      }
+    };
+
+    supabase.auth.getSession().then(({ data }) => sync(data.session?.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_ev, session) => {
+      void sync(session?.user ?? null);
     });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   return (

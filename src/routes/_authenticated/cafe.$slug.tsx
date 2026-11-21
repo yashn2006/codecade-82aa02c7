@@ -90,7 +90,7 @@ function CafeLayout() {
   const supportFn = useServerFn(listCafeCustomerTickets);
   const heartbeatFn = useServerFn(staffHeartbeat);
 
-  const { data: cafe, isError: cafeError, refetch: refetchCafe } = useQuery({
+  const { data: cafe, isError: cafeError, error: cafeErrorObj, refetch: refetchCafe } = useQuery({
     queryKey: ["cafe", slug],
     queryFn: () => fn({ data: { slug } }),
   });
@@ -101,7 +101,11 @@ function CafeLayout() {
   const cafeId = (cafe as { id?: string } | undefined)?.id;
   const access = useCafeAccess(cafeId);
   const {
+    access: accessData,
     isLoading: accessLoading,
+    isError: accessError,
+    error: accessErrorObj,
+    refetch: refetchAccess,
     isMember,
     isActive,
     isOwnerOrAdmin,
@@ -111,7 +115,6 @@ function CafeLayout() {
     username,
     isPinStaff,
     can,
-    canAny,
   } = access;
 
   // Periodic staff online heartbeat (every 2 minutes)
@@ -260,8 +263,14 @@ function CafeLayout() {
     ? ((cafe as { restricted_message?: string }).restricted_message ?? "")
     : "Your free trial has ended. Renew your subscription to continue managing this café.";
 
-  const blockedStaff = Boolean(cafe && !accessLoading && (!isMember || (isStaff && !isActive)));
-  const forcePinGate = Boolean(cafe && !accessLoading && isStaff && isActive && mustChangePin);
+  const blockedStaff = Boolean(
+    cafe &&
+      !accessLoading &&
+      !accessError &&
+      accessData &&
+      (!isMember || (isStaff && !isActive)),
+  );
+  const forcePinGate = Boolean(cafe && !accessLoading && !accessError && isStaff && isActive && mustChangePin);
 
   const staffAccountLabel = isStaff
     ? displayName
@@ -298,8 +307,24 @@ function CafeLayout() {
       {cafeError && !cafe ? (
         <ErrorState
           title="Couldn't load café"
-          description={import.meta.env.DEV ? "Failed to fetch café workspace." : "We couldn't reach your café details right now."}
+          description={
+            cafeErrorObj instanceof Error && cafeErrorObj.message
+              ? import.meta.env.DEV || /permission|deactivated|not found/i.test(cafeErrorObj.message)
+                ? cafeErrorObj.message
+                : "We couldn't reach your café details right now."
+              : "We couldn't reach your café details right now."
+          }
           onRetry={() => void refetchCafe()}
+        />
+      ) : cafe && accessError && !accessData ? (
+        <ErrorState
+          title="Couldn't verify access"
+          description={
+            accessErrorObj instanceof Error && accessErrorObj.message
+              ? accessErrorObj.message
+              : "Please retry to verify your workspace access."
+          }
+          onRetry={() => void refetchAccess()}
         />
       ) : blockedStaff ? (
         <DeactivatedOverlay
@@ -376,7 +401,17 @@ function ForcePinChangeGate({
   const [err, setErr] = useState<string | null>(null);
 
   const mut = useMutation({
-    mutationFn: () => changePinFn({ data: { new_pin: pin } }),
+    mutationFn: async () => {
+      const res = await changePinFn({ data: { new_pin: pin } });
+      if (res?.access_token && res?.refresh_token) {
+        const { error: sessErr } = await supabase.auth.setSession({
+          access_token: res.access_token,
+          refresh_token: res.refresh_token,
+        });
+        if (sessErr) throw sessErr;
+      }
+      return res;
+    },
     onSuccess: () => {
       toast.success("PIN updated! Welcome to the console.");
       setPin("");

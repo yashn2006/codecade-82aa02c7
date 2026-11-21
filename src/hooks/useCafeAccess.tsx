@@ -33,8 +33,9 @@ export function useCafeAccess(cafeId?: string) {
 
   return {
     access: data,
-    isLoading: Boolean(cafeId) && query.isLoading,
+    isLoading: Boolean(cafeId) && (query.isPending || query.isLoading),
     isError: query.isError,
+    error: query.error,
     refetch: query.refetch,
     role: data?.role ?? null,
     isOwnerOrAdmin,

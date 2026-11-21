@@ -15,7 +15,12 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/lib/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProgress } from "@/components/RouteProgress";
-import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
+import {
+  clearOAuthPending,
+  getDashboardPathForUser,
+  getSupabaseUserReady,
+  isOAuthReturn,
+} from "@/lib/auth-routing";
 
 function NotFoundComponent() {
   const router = useRouter();
@@ -294,32 +299,42 @@ function RootComponent() {
     // cancels in-flight loaders → empty dashboards on first paint AND a
     // visible "auto-refresh" a couple seconds after every section click.
     let lastUserId: string | null | undefined = undefined;
+    let routingNow = false;
 
     const routeByRoleIfNeeded = async () => {
+      if (routingNow) return;
       const path = window.location.pathname;
-      // /auth owns its own post-login routing — never double-navigate from here
-      // (that was the "glitchy Google login bounces through /redirecting" bug).
-      const shouldRoute = path === "/login" || path === "/signup";
+      const oauthReturn = isOAuthReturn();
+      // /auth and / index handle their own OAuth overlay transitions, while
+      // /login, /signup, or a fallback Site-URL OAuth landing on / should route cleanly.
+      const shouldRoute =
+        path === "/login" ||
+        path === "/signup" ||
+        (path === "/" && oauthReturn);
       if (!shouldRoute) return;
-      const user = await getSupabaseUserReady(1200);
-      if (!user) return;
-      const dest = await getDashboardPathForUser(user);
-      router.navigate({ to: dest as never, replace: true });
+      routingNow = true;
+      try {
+        const user = await getSupabaseUserReady(3000);
+        if (!user) return;
+        clearOAuthPending();
+        const dest = await getDashboardPathForUser(user);
+        router.navigate({ to: dest as never, replace: true });
+      } finally {
+        routingNow = false;
+      }
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const currentId = session?.user?.id ?? null;
-      // First event after mount: just record state, don't invalidate.
+      // First event after mount: record state and route if OAuth callback landed on /.
       if (lastUserId === undefined) {
         lastUserId = currentId;
-        if (event === "SIGNED_IN" && currentId) routeByRoleIfNeeded();
+        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && currentId) {
+          void routeByRoleIfNeeded();
+        }
         return;
       }
       // Same identity (token refresh, tab focus, USER_UPDATED) → no-op.
-      // USER_UPDATED fires on profile/metadata sync and was causing
-      // router.invalidate() + queryClient.invalidateQueries() while the user
-      // was actively using the app — visible as a "glitchy auto-reload"
-      // a couple seconds after opening any portal.
       if (currentId === lastUserId) return;
       lastUserId = currentId;
 
@@ -331,7 +346,7 @@ function RootComponent() {
       } else {
         queryClient.invalidateQueries();
       }
-      if (event === "SIGNED_IN" && currentId) routeByRoleIfNeeded();
+      if (event === "SIGNED_IN" && currentId) void routeByRoleIfNeeded();
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);

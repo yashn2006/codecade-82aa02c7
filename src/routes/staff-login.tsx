@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -129,6 +130,7 @@ function PinPad({
 
 function StaffLoginPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const loginFn = useServerFn(staffLogin);
   const changePinFn = useServerFn(staffChangePin);
 
@@ -174,6 +176,9 @@ function StaffLoginPage() {
       });
       if (sessErr) throw sessErr;
 
+      await qc.cancelQueries();
+      qc.clear();
+
       if (res.must_change_pin) {
         setTargetCafe({ slug: res.slug, name: res.cafe_name });
         setStep("change_pin");
@@ -206,7 +211,16 @@ function StaffLoginPage() {
 
     setLoading(true);
     try {
-      await changePinFn({ data: { new_pin: newPin } });
+      const res = await changePinFn({ data: { new_pin: newPin } });
+      if (res?.access_token && res?.refresh_token) {
+        const { error: sessErr } = await supabase.auth.setSession({
+          access_token: res.access_token,
+          refresh_token: res.refresh_token,
+        });
+        if (sessErr) throw sessErr;
+      }
+      await qc.cancelQueries();
+      qc.clear();
       toast.success("PIN updated! Entering console…");
       const slug = targetCafe?.slug;
       if (slug) {

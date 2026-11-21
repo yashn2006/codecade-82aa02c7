@@ -6,6 +6,76 @@ export type DashboardPath = "/admin" | "/owner" | "/portal" | `/cafe/${string}`;
 
 const SUPER_ADMIN_EMAILS = ["giganexa2026@gmail.com", "yashnandi77@gmail.com"];
 const ROLE_TTL_MS = 5 * 60_000;
+const OAUTH_PENDING_KEY = "cc_oauth_pending";
+const OAUTH_PENDING_TTL_MS = 10 * 60_000;
+
+function readOAuthParams(searchStr: string, hashStr: string) {
+  const sp = new URLSearchParams(searchStr.startsWith("?") ? searchStr.slice(1) : searchStr);
+  const hp = new URLSearchParams(hashStr.startsWith("#") ? hashStr.slice(1) : hashStr);
+  const hasToken =
+    sp.has("code") ||
+    hp.has("access_token") ||
+    hp.has("refresh_token");
+  const errorMessage =
+    sp.get("error_description") ||
+    hp.get("error_description") ||
+    sp.get("error") ||
+    hp.get("error") ||
+    null;
+  return { hasToken, errorMessage };
+}
+
+// Capture at module load BEFORE Supabase detectSessionInUrl strips query/hash.
+const INITIAL_OAUTH =
+  typeof window !== "undefined"
+    ? readOAuthParams(window.location.search, window.location.hash)
+    : { hasToken: false, errorMessage: null };
+
+export function markOAuthPending(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(OAUTH_PENDING_KEY, String(Date.now()));
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+export function clearOAuthPending(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(OAUTH_PENDING_KEY);
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+export function hasPendingOAuth(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.sessionStorage.getItem(OAUTH_PENDING_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!Number.isFinite(ts) || Date.now() - ts > OAUTH_PENDING_TTL_MS) {
+      window.sessionStorage.removeItem(OAUTH_PENDING_KEY);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function getOAuthErrorFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  const live = readOAuthParams(window.location.search, window.location.hash);
+  return live.errorMessage || INITIAL_OAUTH.errorMessage;
+}
+
+export function isOAuthReturn(): boolean {
+  if (typeof window === "undefined") return false;
+  const live = readOAuthParams(window.location.search, window.location.hash);
+  return live.hasToken || INITIAL_OAUTH.hasToken || hasPendingOAuth();
+}
 
 /* ------------------------------------------------------------------ */
 /* In-tab caches. Route guards run on EVERY navigation; without these */

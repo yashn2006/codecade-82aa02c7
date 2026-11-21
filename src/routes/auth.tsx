@@ -10,7 +10,14 @@ import { Label } from "@/components/ui/label";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { BrandLockup, BrandShowcase } from "@/components/Brand";
 import { toast } from "sonner";
-import { getDashboardPathForUser, getSupabaseUserReady } from "@/lib/auth-routing";
+import {
+  clearOAuthPending,
+  getDashboardPathForUser,
+  getOAuthErrorFromUrl,
+  getSupabaseUserReady,
+  isOAuthReturn,
+  markOAuthPending,
+} from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -50,40 +57,62 @@ function AuthPage() {
   const routeOnce = async () => {
     if (redirectingRef.current) return;
     redirectingRef.current = true;
+    clearOAuthPending();
     await routeByRole(navigate);
   };
 
-  // Check for active session. If session exists and user is not logging in via OAuth redirect,
-  // show the "Go to Dashboard" button instead of abruptly auto-redirecting.
+  // Check for active session. If returning from OAuth (even if Supabase already
+  // stripped ?code= / #access_token= from the URL), automatically complete login
+  // into the user's dashboard instead of stopping on the "Already signed in" card.
   useEffect(() => {
     let cancelled = false;
-    const isOAuthCallback =
-      typeof window !== "undefined" &&
-      (window.location.hash.includes("access_token") || window.location.search.includes("code="));
+    const oauthErr = getOAuthErrorFromUrl();
+    if (oauthErr) {
+      clearOAuthPending();
+      toast.error(oauthErr);
+    }
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (cancelled) return;
-      if (data.session?.user) {
-        if (isOAuthCallback) {
+    const oauthCallback = isOAuthReturn();
+
+    (async () => {
+      if (oauthCallback) {
+        const user = await getSupabaseUserReady(6000);
+        if (cancelled) return;
+        if (user) {
           await routeOnce();
           return;
         }
+        clearOAuthPending();
+        setCheckingSession(false);
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (data.session?.user) {
         try {
           const dest = await getDashboardPathForUser(data.session.user);
-          setActiveSession({ email: data.session.user.email ?? "your account", dest });
+          if (!cancelled) setActiveSession({ email: data.session.user.email ?? "your account", dest });
         } catch {
-          setActiveSession({ email: data.session.user.email ?? "your account", dest: "/portal" });
+          if (!cancelled) setActiveSession({ email: data.session.user.email ?? "your account", dest: "/portal" });
         }
       }
-      setCheckingSession(false);
-    });
+      if (!cancelled) setCheckingSession(false);
+    })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user && isOAuthCallback) {
-        routeOnce();
+      if (
+        (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
+        session?.user &&
+        oauthCallback
+      ) {
+        void routeOnce();
       }
     });
-    return () => { cancelled = true; sub.subscription.unsubscribe(); };
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, [navigate]);
 
   // Validation state (drives magnetic-evading button)
@@ -358,13 +387,14 @@ function AuthPage() {
                   onClick={async () => {
                     if (googleLoading) return;
                     setGoogleLoading(true);
+                    markOAuthPending();
                     try {
                       const { error } = await supabase.auth.signInWithOAuth({
                         provider: "google",
                         options: {
                           // Return to /auth: this page resolves the real
-                          // dashboard in one hop (no /redirecting bounce, which
-                          // raced with the root listener and double-navigated).
+                          // dashboard in one hop (and /, __root also handle
+                          // fallback if Supabase redirects to Site URL).
                           redirectTo: `${window.location.origin}/auth`,
                           // Force the Google account chooser every time so
                           // users aren't silently logged in with whatever
@@ -374,6 +404,7 @@ function AuthPage() {
                       });
                       if (error) throw error;
                     } catch (err) {
+                      clearOAuthPending();
                       setGoogleLoading(false);
                       toast.error(err instanceof Error ? err.message : "Google sign-in failed");
                     }

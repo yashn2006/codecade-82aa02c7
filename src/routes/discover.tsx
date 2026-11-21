@@ -23,8 +23,10 @@ import {
   ChevronRight,
   Sparkles,
   Menu,
+  LogOut,
 } from "lucide-react";
 import { listPublicCafes } from "@/lib/discover.functions";
+import { getDashboardPathForUser, type DashboardPath } from "@/lib/auth-routing";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,14 +103,34 @@ function DiscoverPage() {
 
   const [signedIn, setSignedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [dashboardPath, setDashboardPath] = useState<DashboardPath>("/portal");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setSignedIn(!!data.user);
-      setUserEmail(data.user?.email ?? null);
+    let alive = true;
+    const syncUser = async (user: { id: string; email?: string | null } | null) => {
+      if (!alive) return;
+      setSignedIn(!!user);
+      setUserEmail(user?.email ?? null);
+      if (user) {
+        try {
+          const dest = await getDashboardPathForUser(user as Parameters<typeof getDashboardPathForUser>[0]);
+          if (alive) setDashboardPath(dest);
+        } catch {
+          if (alive) setDashboardPath("/portal");
+        }
+      } else {
+        setDashboardPath("/portal");
+      }
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      void syncUser(data.session?.user ?? null);
+    });
+    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+      void syncUser(session?.user ?? null);
     });
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -122,8 +144,20 @@ function DiscoverPage() {
       }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      alive = false;
+      authSub.subscription.unsubscribe();
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, []);
+
+  async function handleSignOut() {
+    setMobileMenuOpen(false);
+    await supabase.auth.signOut();
+    setSignedIn(false);
+    setUserEmail(null);
+    setDashboardPath("/portal");
+  }
 
   const cities = useMemo(() => {
     const list = new Set<string>();
@@ -132,6 +166,18 @@ function DiscoverPage() {
     });
     return Array.from(list).sort();
   }, [cafes]);
+
+  const cityPills = useMemo(() => {
+    const seen = new Set<string>(POPULAR_CITIES.map((c) => c.toLowerCase()));
+    const merged = [...POPULAR_CITIES];
+    for (const city of cities) {
+      if (city && !seen.has(city.toLowerCase())) {
+        seen.add(city.toLowerCase());
+        merged.push(city);
+      }
+    }
+    return merged;
+  }, [cities]);
 
   const filteredCafes = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -183,7 +229,7 @@ function DiscoverPage() {
         >
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3.5 py-2.5 sm:px-6 sm:py-3.5 lg:px-8">
             <div className="flex min-w-0 items-center gap-6">
-              <BrandLockup size={28} badge="Arenas" to="/" />
+              <BrandLockup size={28} badge={isMobile ? undefined : "Arenas"} to="/" />
               <div className="hidden items-center gap-2 border-l border-white/10 pl-6 text-xs text-muted-foreground md:flex">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -203,28 +249,32 @@ function DiscoverPage() {
                 Features
               </Link>
               {signedIn ? (
-                <Link to="/portal">
+                <Link to={dashboardPath as never}>
                   <Button
                     size="sm"
-                    className="min-h-[42px] gap-1.5 px-3 text-xs font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5 sm:px-3.5"
+                    className="min-h-[44px] gap-1.5 px-3 text-xs font-semibold text-white shadow-lg transition-transform sm:hover:-translate-y-0.5 active:scale-[0.98] sm:px-3.5"
                     style={{ background: "var(--gradient-brand-hot)" }}
                   >
                     <Compass className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">Gamer Portal</span>
-                    <span className="sm:hidden">Portal</span>
+                    <span className="hidden sm:inline">
+                      {dashboardPath === "/owner" ? "Owner Hub" : dashboardPath === "/admin" ? "Admin Console" : "Gamer Portal"}
+                    </span>
+                    <span className="sm:hidden">
+                      {dashboardPath === "/owner" ? "Owner Hub" : dashboardPath === "/admin" ? "Admin" : "Portal"}
+                    </span>
                   </Button>
                 </Link>
               ) : (
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <Link to="/auth" className="hidden sm:inline-flex">
-                    <Button variant="ghost" size="sm" className="min-h-[42px] text-xs text-white/80 hover:bg-white/10 hover:text-white">
+                    <Button variant="ghost" size="sm" className="min-h-[44px] text-xs text-white/80 hover:bg-white/10 hover:text-white">
                       Sign in
                     </Button>
                   </Link>
                   <Link to="/auth">
                     <Button
                       size="sm"
-                      className="min-h-[42px] px-3 text-xs font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5"
+                      className="min-h-[44px] px-3 text-xs font-semibold text-white shadow-md transition-transform sm:hover:-translate-y-0.5 active:scale-[0.98]"
                       style={{ background: "var(--gradient-brand-hot)" }}
                     >
                       Join Free
@@ -246,66 +296,100 @@ function DiscoverPage() {
 
           <AnimatePresence>
             {mobileMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-30 bg-black/45 md:hidden"
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-hidden
-                />
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.14 }}
-                  className="mobile-keep-blur relative z-40 border-t border-white/10 bg-[#0d091d]/95 px-4 py-3 backdrop-blur-2xl md:hidden"
-                >
-                  <div className="grid grid-cols-2 gap-2">
+              <motion.div
+                key="discover-menu-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.16 }}
+                className="fixed inset-0 top-0 z-30 bg-black/55 backdrop-blur-sm md:hidden"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-hidden
+              />
+            )}
+            {mobileMenuOpen && (
+              <motion.div
+                key="discover-menu-drawer"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.16 }}
+                className="mobile-keep-blur relative z-40 border-t border-white/10 bg-[#0d091d]/95 px-4 py-3.5 backdrop-blur-2xl md:hidden"
+              >
+                {signedIn && userEmail && (
+                  <div className="mb-2.5 flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
+                    <span className="truncate font-mono text-muted-foreground">{userEmail}</span>
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-emerald-400">Signed in</span>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  {signedIn && (
                     <Link
-                      to="/"
+                      to={dashboardPath as never}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                      className="col-span-2 flex min-h-[44px] items-center justify-between rounded-xl border border-primary/40 bg-primary/15 px-3.5 text-sm font-semibold text-white active:scale-[0.98]"
                     >
-                      <span>Home</span>
+                      <span>Open Dashboard</span>
                       <ArrowRight className="h-3.5 w-3.5 text-primary" />
                     </Link>
-                    <Link
-                      to="/features"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
-                    >
-                      <span>Features</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-primary" />
-                    </Link>
+                  )}
+                  <Link
+                    to="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white active:scale-[0.98]"
+                  >
+                    <span>Home</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                  </Link>
+                  <Link
+                    to="/features"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white active:scale-[0.98]"
+                  >
+                    <span>Features</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                  </Link>
+                  {!signedIn && (
                     <Link
                       to="/auth"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white active:scale-[0.98]"
                     >
-                      <span>{signedIn ? "Account" : "Sign in"}</span>
+                      <span>Sign in</span>
                       <ArrowRight className="h-3.5 w-3.5 text-primary" />
                     </Link>
-                    <Link
-                      to="/staff-login"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white"
+                  )}
+                  <Link
+                    to="/staff-login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex min-h-[44px] items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-white active:scale-[0.98]"
+                  >
+                    <span>Staff PIN</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                  </Link>
+                  {signedIn && (
+                    <button
+                      type="button"
+                      onClick={() => void handleSignOut()}
+                      className="flex min-h-[44px] items-center justify-between rounded-xl border border-destructive/40 bg-destructive/10 px-3.5 text-sm font-medium text-rose-300 active:scale-[0.98]"
                     >
-                      <span>Staff PIN</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-primary" />
-                    </Link>
-                  </div>
-                </motion.div>
-              </>
+                      <span>Sign out</span>
+                      <LogOut className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </motion.div>
             )}
           </AnimatePresence>
         </header>
 
         {/* HERO SECTION */}
-        <section className="relative overflow-hidden px-4 pt-10 pb-10 sm:px-6 sm:pt-16 lg:px-8">
+        <section className="relative overflow-hidden px-4 pt-6 pb-8 sm:px-6 sm:pt-14 sm:pb-10 lg:px-8">
           <div className="mx-auto max-w-5xl text-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mx-auto mb-5 max-w-[210px] sm:max-w-[260px]"
+              className="mx-auto mb-4 max-w-[160px] sm:mb-5 sm:max-w-[240px]"
             >
               <BrandShowcase compact className="aspect-[16/9]" />
             </motion.div>
@@ -401,15 +485,15 @@ function DiscoverPage() {
               </div>
 
               {/* City quick filter pills — swipeable rail on mobile */}
-              <div className="-mx-4 mt-4 flex flex-nowrap items-center justify-start gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:px-0">
-                {POPULAR_CITIES.map((c) => {
+              <div className="-mx-4 mt-4 flex snap-x flex-nowrap items-center justify-start gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:px-0">
+                {cityPills.map((c) => {
                   const isSelected = selectedCity === c;
                   return (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setSelectedCity(c)}
-                      className={`min-h-[40px] shrink-0 snap-start rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                      className={`min-h-[40px] shrink-0 snap-start rounded-full border px-4 py-1.5 text-xs font-semibold transition active:scale-[0.97] ${
                         isSelected
                           ? "border-primary bg-primary/20 text-white shadow-[0_0_15px_-3px_oklch(0.7_0.26_335/0.7)]"
                           : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-white/20 hover:text-white"
@@ -477,7 +561,7 @@ function DiscoverPage() {
                 <button
                   type="button"
                   onClick={() => setView("grid")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  className={`flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition active:scale-[0.97] ${
                     view === "grid" ? "bg-white/15 text-white shadow" : "text-muted-foreground hover:text-white"
                   }`}
                 >
@@ -487,7 +571,7 @@ function DiscoverPage() {
                 <button
                   type="button"
                   onClick={() => setView("map")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  className={`flex min-h-[40px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition active:scale-[0.97] ${
                     view === "map" ? "bg-white/15 text-white shadow" : "text-muted-foreground hover:text-white"
                   }`}
                 >
@@ -545,7 +629,7 @@ function DiscoverPage() {
         {/* Quick Peek Drawer / Modal */}
         {quickPeekCafe && (
           <Dialog open={!!quickPeekCafe} onOpenChange={(open) => !open && setQuickPeekCafe(null)}>
-            <DialogContent className="max-w-xl border-white/15 bg-[#0e0c1a] p-0 max-sm:p-0 [&>span]:hidden text-foreground overflow-hidden">
+            <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-xl border-white/15 bg-[#0e0c1a] p-0 max-sm:p-0 [&>span]:hidden [&>button]:z-20 [&>button]:h-9 [&>button]:w-9 [&>button]:rounded-full [&>button]:bg-black/65 [&>button]:text-white [&>button]:backdrop-blur-md text-foreground">
               <div className="relative h-48 w-full overflow-hidden bg-black/60">
                 <img
                   src={quickPeekCafe.cover_url || stationHeroImg}
@@ -638,7 +722,9 @@ function DiscoverPage() {
               <span>Discover · Book · Play</span>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/portal" className="hover:text-white transition">Gamer Portal</Link>
+              <Link to={dashboardPath as never} className="hover:text-white transition">
+                {dashboardPath === "/owner" ? "Owner Hub" : dashboardPath === "/admin" ? "Admin Console" : "Gamer Portal"}
+              </Link>
               <Link to="/owner" className="hover:text-white transition">Café Owners</Link>
               <Link to="/terms" className="hover:text-white transition">Terms</Link>
             </div>
@@ -678,7 +764,7 @@ function ArenaCard({
       transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.3) }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0d0b17] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_0_35px_-8px_oklch(0.7_0.26_335/0.5)]"
+      className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0d0b17] shadow-lg transition-all duration-300 sm:hover:-translate-y-1 active:scale-[0.99] hover:border-primary/50 hover:shadow-[0_0_35px_-8px_oklch(0.7_0.26_335/0.5)]"
     >
       <div>
         {/* Cover Media Header */}
@@ -760,14 +846,14 @@ function ArenaCard({
             <button
               type="button"
               onClick={onQuickPeek}
-              className="min-h-[40px] rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition"
+              className="min-h-[44px] rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition active:scale-[0.97]"
             >
               Details
             </button>
             <Button
               size="sm"
               onClick={onBookDirect}
-              className="min-h-[40px] gap-1.5 px-3.5 text-xs font-bold text-white shadow-md transition-transform hover:-translate-y-0.5"
+              className="min-h-[44px] gap-1.5 px-3.5 text-xs font-bold text-white shadow-md transition-transform sm:hover:-translate-y-0.5 active:scale-[0.97]"
               style={{ background: "var(--gradient-brand-hot)" }}
             >
               <span>Book</span>

@@ -33,13 +33,15 @@ function checkAndRecordIpAttempt(ip: string): boolean {
 const GENERIC_ERR = "Invalid café code, username or PIN";
 
 export const staffLogin = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({
+  .inputValidator((d: unknown) => {
+    const parsed = z.object({
       cafe_code: z.string().trim().min(1).max(16),
       username: z.string().trim().min(1).max(40),
       pin: z.string().regex(/^\d{6}$/, GENERIC_ERR),
-    }).parse(d),
-  )
+    }).safeParse(d);
+    if (!parsed.success) throw new Error(GENERIC_ERR);
+    return parsed.data;
+  })
   .handler(async ({ data }) => {
     const { getRequestHeader } = await import("@tanstack/react-start/server");
     const { createClient } = await import("@supabase/supabase-js");
@@ -101,7 +103,9 @@ export const staffLogin = createServerFn({ method: "POST" })
     });
 
     if (authErr || !authData.session) {
-      const nextAttempts = (staff.failed_attempts ?? 0) + 1;
+      const lockExpired = Boolean(staff.locked_until && new Date(staff.locked_until).getTime() <= Date.now());
+      const baseAttempts = lockExpired ? 0 : (staff.failed_attempts ?? 0);
+      const nextAttempts = baseAttempts + 1;
       const shouldLock = nextAttempts >= MAX_FAILED_ATTEMPTS;
       const lockedUntil = shouldLock ? new Date(Date.now() + LOCKOUT_MS).toISOString() : null;
 

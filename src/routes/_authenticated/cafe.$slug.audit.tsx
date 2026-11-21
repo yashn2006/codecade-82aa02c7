@@ -36,6 +36,13 @@ const ACTION_VERBS: Record<string, string> = {
   "revenue.manual_logged": "logged manual income entry",
   "staff.added": "added staff member",
   "staff.removed": "removed staff member",
+  "staff.permissions_updated": "updated staff permissions",
+  "staff.pin_reset": "reset staff PIN",
+  "staff.pin_changed": "changed personal PIN",
+  "staff.activated": "activated staff account",
+  "staff.deactivated": "deactivated staff account",
+  "staff.login": "signed in via PIN",
+  "staff.login_failed_locked": "locked staff login after failed PINs",
   "device.price_changed": "changed device price",
   "cafe.settings_updated": "updated café settings",
   "cafe.maintenance_updated": "updated maintenance schedule",
@@ -64,6 +71,8 @@ function formatAction(action: string): string {
 function formatTarget(e: AuditRow): string {
   const m = (e.meta ?? {}) as Record<string, unknown>;
   const nameHint =
+    (typeof m.display_name === "string" && m.display_name) ||
+    (typeof m.username === "string" && `@${m.username}`) ||
     (typeof m.customer === "string" && m.customer) ||
     (typeof m.email === "string" && m.email) ||
     (typeof m.name === "string" && m.name) ||

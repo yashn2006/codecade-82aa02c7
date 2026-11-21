@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -13,31 +12,29 @@ import {
   Activity,
   Building2,
   Users,
-  Receipt,
   ScrollText,
   Settings,
   TrendingUp,
-  Cpu,
-  CalendarRange,
-  UtensilsCrossed,
-  Crown,
-  Trophy,
-  LayoutGrid,
   Shield,
-  Wallet,
-  LineChart,
   BarChart3,
   Megaphone,
   FileText,
   Home,
+  Compass,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { getCachedRoles, getCachedUser, getSupabaseUserReady, getUserRoles } from "@/lib/auth-routing";
 
 type Cafe = { id: string; name: string; slug: string };
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [cafes, setCafes] = useState<Cafe[]>([]);
+  const [roles, setRoles] = useState<Set<string>>(() => {
+    const u = getCachedUser();
+    return (u ? getCachedRoles(u.id) : null) ?? new Set<string>();
+  });
+  const [loaded, setLoaded] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,15 +49,52 @@ export function CommandPalette() {
   }, []);
 
   useEffect(() => {
-    if (!open || cafes.length) return;
-    supabase
-      .from("cafes")
-      .select("id, name, slug")
-      .limit(50)
-      .then(({ data }) => {
-        if (data) setCafes(data as Cafe[]);
-      });
-  }, [open, cafes.length]);
+    if (!open || loaded) return;
+    let active = true;
+    void (async () => {
+      const user = await getSupabaseUserReady(1200);
+      if (!user || !active) return;
+      const r = await getUserRoles(user.id);
+      if (!active) return;
+      setRoles(r);
+
+      if (r.has("super_admin")) {
+        const { data } = await supabase.from("cafes").select("id, name, slug").limit(50);
+        if (active && data) setCafes(data as Cafe[]);
+      } else if (r.has("cafe_owner")) {
+        const { data } = await supabase
+          .from("cafes")
+          .select("id, name, slug")
+          .eq("owner_id", user.id)
+          .limit(50);
+        if (active && data) setCafes(data as Cafe[]);
+      } else if (r.has("cafe_staff")) {
+        const { data } = await supabase
+          .from("staff_permissions")
+          .select("cafes!inner(id, name, slug)")
+          .eq("staff_user_id", user.id)
+          .eq("is_active", true)
+          .limit(20);
+        if (active && data) {
+          const list = data
+            .flatMap((row) => {
+              const joined = (row as unknown as { cafes?: Cafe | Cafe[] | null }).cafes;
+              return Array.isArray(joined) ? joined : joined ? [joined] : [];
+            })
+            .filter((c): c is Cafe => Boolean(c?.id && c?.slug));
+          setCafes(list);
+        }
+      }
+      if (active) setLoaded(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [open, loaded]);
+
+  const isSuperAdmin = roles.has("super_admin");
+  const isOwner = roles.has("cafe_owner");
+  const isStaffOnly = roles.has("cafe_staff") && !isOwner && !isSuperAdmin;
 
   const go = (to: string, params?: Record<string, string>) => {
     setOpen(false);
@@ -92,33 +126,40 @@ export function CommandPalette() {
           </CommandGroup>
         )}
 
-        <CommandGroup heading="Admin">
-          <Item icon={Shield} label="Admin overview" onSelect={() => go("/admin")} />
-          <Item icon={BarChart3} label="Network reports" onSelect={() => go("/admin/reports")} />
-          <Item icon={TrendingUp} label="Revenue" onSelect={() => go("/admin/revenue")} />
-          <Item icon={Activity} label="Health" onSelect={() => go("/admin/health")} />
-          <Item icon={Building2} label="Cafés" onSelect={() => go("/admin/cafes")} />
-          <Item icon={Users} label="Users & roles" onSelect={() => go("/admin/users")} />
-          <Item icon={ScrollText} label="Audit log" onSelect={() => go("/admin/audit")} />
-          <Item
-            icon={Megaphone}
-            label="Announcements"
-            onSelect={() => go("/admin/announcements")}
-          />
-          <Item icon={FileText} label="Leads" onSelect={() => go("/admin/leads")} />
-        </CommandGroup>
+        {isSuperAdmin && (
+          <CommandGroup heading="Admin">
+            <Item icon={Shield} label="Admin overview" onSelect={() => go("/admin")} />
+            <Item icon={BarChart3} label="Network reports" onSelect={() => go("/admin/reports")} />
+            <Item icon={TrendingUp} label="Revenue" onSelect={() => go("/admin/revenue")} />
+            <Item icon={Activity} label="Health" onSelect={() => go("/admin/health")} />
+            <Item icon={Building2} label="Cafés" onSelect={() => go("/admin/cafes")} />
+            <Item icon={Users} label="Users & roles" onSelect={() => go("/admin/users")} />
+            <Item icon={ScrollText} label="Audit log" onSelect={() => go("/admin/audit")} />
+            <Item
+              icon={Megaphone}
+              label="Announcements"
+              onSelect={() => go("/admin/announcements")}
+            />
+            <Item icon={FileText} label="Leads" onSelect={() => go("/admin/leads")} />
+            <Item icon={Settings} label="Settings" onSelect={() => go("/admin/settings")} />
+          </CommandGroup>
+        )}
 
         <CommandGroup heading="Quick">
-          <Item icon={Home} label="Owner hub" onSelect={() => go("/owner")} />
-          <Item icon={Home} label="Customer portal" onSelect={() => go("/portal")} />
-          <Item icon={Settings} label="Settings" onSelect={() => go("/admin/settings")} />
+          {(isOwner || isSuperAdmin) && (
+            <Item icon={Home} label="Owner hub" onSelect={() => go("/owner")} />
+          )}
+          {!isStaffOnly && (
+            <Item icon={Home} label="Customer portal" onSelect={() => go("/portal")} />
+          )}
+          <Item icon={Compass} label="Discover arenas" onSelect={() => go("/discover")} />
         </CommandGroup>
       </CommandList>
     </CommandDialog>
   );
 }
 
-function Item({ icon: Icon, label, onSelect }: { icon: any; label: string; onSelect: () => void }) {
+function Item({ icon: Icon, label, onSelect }: { icon: typeof Home; label: string; onSelect: () => void }) {
   return (
     <CommandItem onSelect={onSelect} value={label}>
       <Icon className="mr-2 h-4 w-4" />

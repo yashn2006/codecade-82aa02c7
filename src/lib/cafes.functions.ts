@@ -125,7 +125,8 @@ export const getCafeBySlug = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ slug: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: cafe, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: cafe, error } = await supabaseAdmin
       .from("cafes")
       .select("*")
       .eq("slug", data.slug)

@@ -115,6 +115,39 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_staff_permissions_cafe_username_ci
   ON public.staff_permissions (cafe_id, lower(username))
   WHERE username IS NOT NULL;
 
+-- Helpers to avoid RLS recursion between public.cafes and public.staff_permissions
+CREATE OR REPLACE FUNCTION public._is_cafe_owner(_cafe_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.cafes c
+    WHERE c.id = _cafe_id AND c.owner_id = auth.uid()
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public._is_cafe_owner(uuid) TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public._is_active_staff_user(_cafe_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.staff_permissions sp
+    WHERE sp.cafe_id = _cafe_id
+      AND sp.staff_user_id = auth.uid()
+      AND sp.is_active = true
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public._is_active_staff_user(uuid) TO authenticated, service_role;
+
 -- Harden staff_permissions RLS: staff can read own row; only owner/super_admin can write
 DROP POLICY IF EXISTS "owner manages staff perms" ON public.staff_permissions;
 DROP POLICY IF EXISTS "staff reads own perm" ON public.staff_permissions;
@@ -124,7 +157,7 @@ CREATE POLICY "staff reads own perm"
   ON public.staff_permissions FOR SELECT TO authenticated
   USING (
     public.has_role(auth.uid(), 'super_admin')
-    OR EXISTS (SELECT 1 FROM public.cafes c WHERE c.id = staff_permissions.cafe_id AND c.owner_id = auth.uid())
+    OR public._is_cafe_owner(staff_permissions.cafe_id)
     OR staff_user_id = auth.uid()
   );
 
@@ -132,25 +165,18 @@ CREATE POLICY "owner writes staff perms"
   ON public.staff_permissions FOR ALL TO authenticated
   USING (
     public.has_role(auth.uid(), 'super_admin')
-    OR EXISTS (SELECT 1 FROM public.cafes c WHERE c.id = staff_permissions.cafe_id AND c.owner_id = auth.uid())
+    OR public._is_cafe_owner(staff_permissions.cafe_id)
   )
   WITH CHECK (
     public.has_role(auth.uid(), 'super_admin')
-    OR EXISTS (SELECT 1 FROM public.cafes c WHERE c.id = staff_permissions.cafe_id AND c.owner_id = auth.uid())
+    OR public._is_cafe_owner(staff_permissions.cafe_id)
   );
 
 -- Allow active staff to read their assigned cafe even if inactive/trial-locked
 DROP POLICY IF EXISTS "staff reads assigned cafe" ON public.cafes;
 CREATE POLICY "staff reads assigned cafe"
   ON public.cafes FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.staff_permissions sp
-      WHERE sp.cafe_id = cafes.id
-        AND sp.staff_user_id = auth.uid()
-        AND sp.is_active = true
-    )
-  );
+  USING (public._is_active_staff_user(cafes.id));
 
 -- 3. Permission helper function ----------------------------------------------
 CREATE OR REPLACE FUNCTION public.staff_has_perm(_cafe_id uuid, _perm text)
@@ -202,6 +228,88 @@ $$;
 GRANT EXECUTE ON FUNCTION public._is_active_cafe_member(uuid) TO authenticated, service_role;
 
 -- 4. Wallet RPC & policies (require manage_wallet for staff) -----------------
+-- Ensure wallet tables & required columns exist even on pre-v2/partial DBs
+ALTER TABLE public.customers
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS wallet_balance integer NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS public.wallet_transactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id uuid REFERENCES public.customers(id) ON DELETE CASCADE,
+  cafe_id uuid REFERENCES public.cafes(id) ON DELETE CASCADE,
+  amount integer NOT NULL DEFAULT 0,
+  kind text NOT NULL DEFAULT 'topup',
+  note text,
+  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.wallet_transactions
+  ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES public.customers(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS cafe_id uuid REFERENCES public.cafes(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS amount integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'topup',
+  ADD COLUMN IF NOT EXISTS note text,
+  ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'wallet_transactions'
+      AND column_name = 'user_id'
+  ) THEN
+    UPDATE public.wallet_transactions wt
+       SET customer_id = cu.id
+      FROM public.customers cu
+     WHERE wt.customer_id IS NULL
+       AND wt.user_id IS NOT NULL
+       AND cu.user_id = wt.user_id
+       AND (wt.cafe_id IS NULL OR cu.cafe_id = wt.cafe_id);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_wallet_tx_customer ON public.wallet_transactions(customer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wallet_tx_cafe_created ON public.wallet_transactions(cafe_id, created_at DESC);
+
+GRANT SELECT, INSERT ON public.wallet_transactions TO authenticated;
+GRANT ALL ON public.wallet_transactions TO service_role;
+ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.wallet_topups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cafe_id uuid NOT NULL REFERENCES public.cafes(id) ON DELETE CASCADE,
+  customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
+  amount integer NOT NULL CHECK (amount > 0),
+  currency text NOT NULL DEFAULT 'INR',
+  razorpay_order_id text UNIQUE,
+  razorpay_payment_id text,
+  razorpay_signature text,
+  status text NOT NULL DEFAULT 'created' CHECK (status IN ('created','paid','failed','refunded')),
+  notes jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  paid_at timestamptz
+);
+
+ALTER TABLE public.wallet_topups
+  ADD COLUMN IF NOT EXISTS cafe_id uuid REFERENCES public.cafes(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES public.customers(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS amount integer,
+  ADD COLUMN IF NOT EXISTS currency text NOT NULL DEFAULT 'INR',
+  ADD COLUMN IF NOT EXISTS razorpay_order_id text,
+  ADD COLUMN IF NOT EXISTS razorpay_payment_id text,
+  ADD COLUMN IF NOT EXISTS razorpay_signature text,
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'created',
+  ADD COLUMN IF NOT EXISTS notes jsonb,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS paid_at timestamptz;
+
+GRANT SELECT, INSERT, UPDATE ON public.wallet_topups TO authenticated;
+GRANT ALL ON public.wallet_topups TO service_role;
+ALTER TABLE public.wallet_topups ENABLE ROW LEVEL SECURITY;
+
 CREATE OR REPLACE FUNCTION public.apply_wallet_tx(
   _customer_id uuid,
   _cafe_id uuid,
@@ -218,7 +326,8 @@ DECLARE
   v_user uuid := auth.uid();
   v_allowed boolean;
 BEGIN
-  IF coalesce(auth.role(), '') = 'service_role' THEN
+  IF coalesce(auth.role(), '') = 'service_role'
+     OR coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' THEN
     v_allowed := true;
   ELSE
     SELECT public.staff_has_perm(_cafe_id, 'manage_wallet') INTO v_allowed;
@@ -296,6 +405,23 @@ CREATE POLICY "bookings owner update"
   ON public.bookings FOR UPDATE TO authenticated
   USING (public.staff_has_perm(bookings.cafe_id, 'create_bookings'))
   WITH CHECK (public.staff_has_perm(bookings.cafe_id, 'create_bookings'));
+
+DROP POLICY IF EXISTS "bookings customer cancel" ON public.bookings;
+CREATE POLICY "bookings customer cancel"
+  ON public.bookings FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.customers cu
+      WHERE cu.id = bookings.customer_id AND cu.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    status = 'cancelled'
+    AND EXISTS (
+      SELECT 1 FROM public.customers cu
+      WHERE cu.id = bookings.customer_id AND cu.user_id = auth.uid()
+    )
+  );
 
 DROP POLICY IF EXISTS "bookings owner delete" ON public.bookings;
 CREATE POLICY "bookings owner delete"
@@ -404,6 +530,82 @@ CREATE POLICY "customers owner delete"
   );
 
 -- 8. POS & Menu RLS + RPCs (generate_bills / manage_menu) --------------------
+CREATE TABLE IF NOT EXISTS public.menu_categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cafe_id uuid NOT NULL REFERENCES public.cafes(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  sort_order int NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.menu_categories
+  ADD COLUMN IF NOT EXISTS cafe_id uuid REFERENCES public.cafes(id) ON DELETE CASCADE;
+ALTER TABLE public.menu_categories ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.menu_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cafe_id uuid NOT NULL REFERENCES public.cafes(id) ON DELETE CASCADE,
+  category_id uuid REFERENCES public.menu_categories(id) ON DELETE SET NULL,
+  name text NOT NULL,
+  description text,
+  price integer NOT NULL DEFAULT 0,
+  stock integer,
+  is_veg boolean NOT NULL DEFAULT true,
+  is_active boolean NOT NULL DEFAULT true,
+  image_url text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.menu_items
+  ADD COLUMN IF NOT EXISTS cafe_id uuid REFERENCES public.cafes(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS stock integer;
+ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cafe_id uuid NOT NULL REFERENCES public.cafes(id) ON DELETE CASCADE,
+  customer_id uuid REFERENCES public.customers(id) ON DELETE SET NULL,
+  session_id uuid REFERENCES public.sessions(id) ON DELETE SET NULL,
+  status text NOT NULL DEFAULT 'open',
+  payment_method text,
+  subtotal integer NOT NULL DEFAULT 0,
+  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  paid_at timestamptz
+);
+ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS cafe_id uuid REFERENCES public.cafes(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES public.customers(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'open',
+  ADD COLUMN IF NOT EXISTS payment_method text,
+  ADD COLUMN IF NOT EXISTS subtotal integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS paid_at timestamptz,
+  ADD COLUMN IF NOT EXISTS tax_amount integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS discount_amount integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS total_amount integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS refund_amount integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS refund_reason text,
+  ADD COLUMN IF NOT EXISTS refunded_at timestamptz,
+  ADD COLUMN IF NOT EXISTS gst_rate numeric(5,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS receipt_no text;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.order_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id uuid NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  item_id uuid NOT NULL REFERENCES public.menu_items(id),
+  name text NOT NULL,
+  unit_price integer NOT NULL,
+  qty integer NOT NULL DEFAULT 1
+);
+ALTER TABLE public.order_items
+  ADD COLUMN IF NOT EXISTS order_id uuid REFERENCES public.orders(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS item_id uuid REFERENCES public.menu_items(id),
+  ADD COLUMN IF NOT EXISTS qty integer NOT NULL DEFAULT 1;
+ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.menu_categories, public.menu_items, public.orders, public.order_items TO authenticated;
+GRANT SELECT ON public.menu_categories, public.menu_items TO anon;
+GRANT ALL ON public.menu_categories, public.menu_items, public.orders, public.order_items TO service_role;
+
 DROP POLICY IF EXISTS "menu manage" ON public.menu_items;
 DROP POLICY IF EXISTS "menu owner/staff select" ON public.menu_items;
 DROP POLICY IF EXISTS "menu staff insert" ON public.menu_items;
@@ -545,7 +747,8 @@ BEGIN
     RAISE EXCEPTION 'order not found or already settled';
   END IF;
 
-  IF coalesce(auth.role(), '') = 'service_role' THEN
+  IF coalesce(auth.role(), '') = 'service_role'
+     OR coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' THEN
     v_allowed := true;
   ELSE
     SELECT public.staff_has_perm(v_cafe, 'generate_bills') INTO v_allowed;
@@ -591,7 +794,8 @@ BEGIN
   SELECT * INTO o FROM public.orders WHERE id = _order_id;
   IF o IS NULL THEN RAISE EXCEPTION 'Order not found'; END IF;
 
-  IF coalesce(auth.role(), '') = 'service_role' THEN
+  IF coalesce(auth.role(), '') = 'service_role'
+     OR coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' THEN
     v_allowed := true;
   ELSE
     SELECT public.staff_has_perm(o.cafe_id, 'generate_bills') INTO v_allowed;
@@ -629,6 +833,29 @@ $$;
 GRANT EXECUTE ON FUNCTION public.refund_order(uuid, integer, text) TO authenticated, service_role;
 
 -- 9. Revenue entries & RPC (require view_revenue / owner) -------------------
+CREATE TABLE IF NOT EXISTS public.revenue_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cafe_id uuid NOT NULL REFERENCES public.cafes(id) ON DELETE CASCADE,
+  amount integer NOT NULL,
+  kind text NOT NULL DEFAULT 'cash',
+  source text NOT NULL DEFAULT 'session',
+  note text,
+  recorded_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.revenue_entries
+  ADD COLUMN IF NOT EXISTS cafe_id uuid REFERENCES public.cafes(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS amount integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'cash',
+  ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'session',
+  ADD COLUMN IF NOT EXISTS note text,
+  ADD COLUMN IF NOT EXISTS recorded_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.revenue_entries TO authenticated;
+GRANT ALL ON public.revenue_entries TO service_role;
+ALTER TABLE public.revenue_entries ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS "revenue owner manage" ON public.revenue_entries;
 DROP POLICY IF EXISTS "revenue view" ON public.revenue_entries;
 DROP POLICY IF EXISTS "revenue write" ON public.revenue_entries;
@@ -665,11 +892,16 @@ DECLARE
   v_allowed boolean;
   v_id uuid;
 BEGIN
-  SELECT
-    public.has_role(v_user, 'super_admin')
-    OR EXISTS (SELECT 1 FROM public.cafes c WHERE c.id = _cafe_id AND c.owner_id = v_user)
-    OR public.staff_has_perm(_cafe_id, 'view_revenue')
-  INTO v_allowed;
+  IF coalesce(auth.role(), '') = 'service_role'
+     OR coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' THEN
+    v_allowed := true;
+  ELSE
+    SELECT
+      public.has_role(v_user, 'super_admin')
+      OR EXISTS (SELECT 1 FROM public.cafes c WHERE c.id = _cafe_id AND c.owner_id = v_user)
+      OR public.staff_has_perm(_cafe_id, 'view_revenue')
+    INTO v_allowed;
+  END IF;
   IF NOT coalesce(v_allowed, false) THEN RAISE EXCEPTION 'forbidden'; END IF;
 
   INSERT INTO public.revenue_entries (cafe_id, amount, kind, source, note, recorded_by)

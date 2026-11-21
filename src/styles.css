@@ -164,8 +164,6 @@
     width: 100%;
     max-width: 100%;
     overflow-x: clip;
-    overflow-y: auto;
-    overscroll-behavior-y: auto;
     scroll-behavior: smooth;
   }
 
@@ -179,8 +177,6 @@
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: clip;
-    overflow-y: visible;
-    overscroll-behavior-y: auto;
     position: relative;
   }
 
@@ -1235,6 +1231,7 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
 
 /* ===== Mobile app chrome: header, floating dock, "More" sheet ===== */
 .mobile-header {
+  transform: translateZ(0);
   background:
     radial-gradient(120% 120% at 50% 0%, rgba(255, 255, 255, 0.06) 0%, transparent 65%),
     color-mix(in oklab, var(--background) 74%, transparent);
@@ -1258,6 +1255,7 @@ select.lf-input option { background: var(--lf-panel); color: var(--lf-text); }
   opacity: 0.65; pointer-events: none;
 }
 .mobile-dock {
+  transform: translateZ(0);
   background:
     radial-gradient(120% 140% at 50% 0%, rgba(255, 255, 255, 0.11) 0%, color-mix(in oklab, var(--primary) 10%, transparent) 38%, transparent 72%),
     linear-gradient(180deg, rgba(22, 16, 42, 0.84), rgba(11, 8, 22, 0.92));

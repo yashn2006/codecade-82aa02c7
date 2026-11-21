@@ -122,12 +122,33 @@ export const updateStaffPermissions = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCafeOwner(context, data.cafe_id);
     const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("staff_permissions")
+      .select("username, display_name")
+      .eq("cafe_id", data.cafe_id)
+      .eq("staff_user_id", data.staff_user_id)
+      .maybeSingle();
+
     const { error } = await supabaseAdmin
       .from("staff_permissions")
       .update({ permissions: data.permissions })
       .eq("cafe_id", data.cafe_id)
       .eq("staff_user_id", data.staff_user_id);
     if (error) throw new Error(error.message);
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.cafe_id,
+      actorId: context.userId,
+      action: "staff.permissions_updated",
+      resourceType: "staff",
+      resourceId: data.staff_user_id,
+      meta: {
+        username: (row as { username?: string | null } | null)?.username ?? null,
+        display_name: (row as { display_name?: string | null } | null)?.display_name ?? null,
+        permissions: data.permissions,
+      },
+    });
     return { ok: true };
   });
 
@@ -178,14 +199,18 @@ export const getMyCafeAccess = createServerFn({ method: "GET" })
 
 export const createStaffWithPin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({
+  .inputValidator((d: unknown) => {
+    const parsed = z.object({
       cafe_id: z.string().uuid(),
       display_name: z.string().trim().min(1, "Display name is required").max(80),
       username: z.string().trim().min(2, "Username must be at least 2 characters").max(32),
       permissions: z.array(z.enum(STAFF_PERMS)).default([]),
-    }).parse(d),
-  )
+    }).safeParse(d);
+    if (!parsed.success) {
+      throw new Error(parsed.error.issues[0]?.message || "Invalid staff details");
+    }
+    return parsed.data;
+  })
   .handler(async ({ data, context }) => {
     await assertCafeOwner(context, data.cafe_id);
     const username = normalizeUsername(data.username);
@@ -288,6 +313,21 @@ export const createStaffWithPin = createServerFn({ method: "POST" })
       throw err instanceof Error ? err : new Error("Failed to save staff permissions");
     }
 
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.cafe_id,
+      actorId: context.userId,
+      action: "staff.added",
+      resourceType: "staff",
+      resourceId: createdUserId,
+      meta: {
+        method: "pin",
+        username,
+        display_name: data.display_name,
+        permissions: data.permissions,
+      },
+    });
+
     return {
       staff_user_id: createdUserId,
       username,
@@ -332,6 +372,19 @@ export const resetStaffPin = createServerFn({ method: "POST" })
       .eq("staff_user_id", data.staff_user_id);
     if (updErr) throw new Error(updErr.message);
 
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.cafe_id,
+      actorId: context.userId,
+      action: "staff.pin_reset",
+      resourceType: "staff",
+      resourceId: data.staff_user_id,
+      meta: {
+        username: (row as { username?: string | null }).username ?? null,
+        display_name: (row as { display_name?: string | null }).display_name ?? null,
+      },
+    });
+
     return { ok: true, pin };
   });
 
@@ -350,7 +403,7 @@ export const setStaffActive = createServerFn({ method: "POST" })
 
     const { data: row, error: fetchErr } = await supabaseAdmin
       .from("staff_permissions")
-      .select("id, login_email")
+      .select("id, login_email, username, display_name")
       .eq("cafe_id", data.cafe_id)
       .eq("staff_user_id", data.staff_user_id)
       .maybeSingle();
@@ -394,16 +447,33 @@ export const setStaffActive = createServerFn({ method: "POST" })
       if (banErr) throw new Error(banErr.message);
     }
 
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: data.cafe_id,
+      actorId: context.userId,
+      action: data.active ? "staff.activated" : "staff.deactivated",
+      resourceType: "staff",
+      resourceId: data.staff_user_id,
+      meta: {
+        username: (row as { username?: string | null }).username ?? null,
+        display_name: (row as { display_name?: string | null }).display_name ?? null,
+      },
+    });
+
     return { ok: true, is_active: data.active };
   });
 
 export const staffChangePin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({
+  .inputValidator((d: unknown) => {
+    const parsed = z.object({
       new_pin: z.string().regex(/^\d{6}$/, "PIN must be exactly 6 digits."),
-    }).parse(d),
-  )
+    }).safeParse(d);
+    if (!parsed.success) {
+      throw new Error(parsed.error.issues[0]?.message || "PIN must be exactly 6 digits.");
+    }
+    return parsed.data;
+  })
   .handler(async ({ data, context }) => {
     if (isTrivialPin(data.new_pin)) {
       throw new Error("Please choose a stronger PIN (avoid 000000, 123456, 654321, or repeating patterns).");
@@ -412,9 +482,10 @@ export const staffChangePin = createServerFn({ method: "POST" })
 
     const { data: staffRow, error: fetchErr } = await supabaseAdmin
       .from("staff_permissions")
-      .select("id, cafe_id, is_active")
+      .select("id, cafe_id, is_active, username, display_name, login_email")
       .eq("staff_user_id", context.userId)
       .eq("is_active", true)
+      .limit(1)
       .maybeSingle();
     if (fetchErr) throw new Error(fetchErr.message);
     if (!staffRow) throw new Error("No active staff account found.");
@@ -434,7 +505,43 @@ export const staffChangePin = createServerFn({ method: "POST" })
       .eq("staff_user_id", context.userId);
     if (updErr) throw new Error(updErr.message);
 
-    return { ok: true };
+    // Re-authenticate with the new PIN because admin password updates invalidate prior sessions
+    let loginEmail = (staffRow as { login_email?: string | null }).login_email ?? null;
+    if (!loginEmail) {
+      const { data: authUserRes } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+      loginEmail = authUserRes?.user?.email ?? null;
+    }
+
+    let access_token: string | null = null;
+    let refresh_token: string | null = null;
+    if (loginEmail) {
+      const { createClient } = await import("@supabase/supabase-js");
+      const { SUPABASE_URL, SUPABASE_ANON_KEY } = await import("@/lib/supabase-config");
+      const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: freshAuth } = await anon.auth.signInWithPassword({
+        email: loginEmail,
+        password: data.new_pin,
+      });
+      access_token = freshAuth.session?.access_token ?? null;
+      refresh_token = freshAuth.session?.refresh_token ?? null;
+    }
+
+    const { writeAudit } = await import("@/lib/audit.server");
+    await writeAudit({
+      cafeId: (staffRow as { cafe_id?: string | null }).cafe_id ?? undefined,
+      actorId: context.userId,
+      action: "staff.pin_changed",
+      resourceType: "staff",
+      resourceId: context.userId,
+      meta: {
+        username: (staffRow as { username?: string | null }).username ?? null,
+        display_name: (staffRow as { display_name?: string | null }).display_name ?? null,
+      },
+    });
+
+    return { ok: true, access_token, refresh_token };
   });
 
 export const inviteStaff = createServerFn({ method: "POST" })

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence, useDragControls } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   Compass,
@@ -89,23 +89,51 @@ export function ConsoleShell({
   const [effectsPref, setEffectsPref] = useState<"liquid" | "crisp">("liquid");
   const [motionPref, setMotionPref] = useState<"smooth" | "reduced">("smooth");
   const mainRef = useRef<HTMLElement>(null);
+  const sheetSwipeY = useRef<number | null>(null);
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const hash = useRouterState({ select: (s) => s.location.hash });
+  const routerHash = useRouterState({ select: (s) => s.location.hash });
+  const [winHash, setWinHash] = useState<string>(() =>
+    typeof window !== "undefined" ? window.location.hash : "",
+  );
+  const hash = routerHash || winHash;
   const safeNav = useMemo(() => (Array.isArray(nav) ? nav : []), [nav]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => setWinHash(window.location.hash);
+    sync();
+    window.addEventListener("hashchange", sync);
+    window.addEventListener("popstate", sync);
+    return () => {
+      window.removeEventListener("hashchange", sync);
+      window.removeEventListener("popstate", sync);
+    };
+  }, [path, routerHash]);
+
   const normalizeHash = (h?: string) => {
-    const clean = (h ?? "").replace(/^#/, "");
+    const clean = (h ?? "").replace(/^#/, "").trim();
     return clean || undefined;
+  };
+
+  const splitTarget = (to: string, params?: Record<string, string>, explicitHash?: string) => {
+    const [rawPath, inlineHash] = to.split("#");
+    const pathname = params
+      ? rawPath.replace(/\$(\w+)/g, (_, k) => params[k] ?? "")
+      : rawPath;
+    const resolvedHash = normalizeHash(explicitHash ?? inlineHash);
+    return { rawPath, pathname, hash: resolvedHash };
   };
 
   const preloadRouteTarget = useCallback(
     (to?: string, params?: Record<string, string>, targetHash?: string) => {
       if (!to) return;
+      const [rawPath, inlineHash] = to.split("#");
+      const h = normalizeHash(targetHash ?? inlineHash);
       void router
         .preloadRoute({
-          to: to as never,
+          to: rawPath as never,
           params: params as never,
-          hash: normalizeHash(targetHash),
+          hash: h,
         })
         .catch(() => {});
     },
@@ -142,9 +170,9 @@ export function ConsoleShell({
 
   useEffect(() => {
     setOpen(false);
-    mainRef.current?.scrollTo({ top: 0 });
+    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
     if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0, behavior: "auto" });
     }
   }, [path, hash]);
 
@@ -231,20 +259,25 @@ export function ConsoleShell({
   };
 
   const resolveTo = (to: string, params?: Record<string, string>) =>
-    params ? to.replace(/\$(\w+)/g, (_, k) => params[k] ?? "") : to;
+    splitTarget(to, params).pathname;
+
+  const isHashScopedRoute = (pathname: string) =>
+    safeNav.some((n) => splitTarget(n.to, n.params, n.hash).pathname === pathname && (n.hash !== undefined || n.to.includes("#")));
+
+  const linkHashProp = (pathname: string, targetHash?: string) =>
+    isHashScopedRoute(pathname) ? (targetHash ?? "") : targetHash;
 
   const isActive = (item: NavItem) => {
-    const target = resolveTo(item.to, item.params);
+    const { pathname: target, hash: itemHash } = splitTarget(item.to, item.params, item.hash);
     const pathMatches = item.exact
       ? path === target
       : path === target || path.startsWith(target + "/");
     if (!pathMatches) return false;
-    const hashScoped = safeNav.some(
-      (n) => resolveTo(n.to, n.params) === target && n.hash !== undefined,
-    );
+    const hashScoped =
+      item.hash !== undefined || item.to.includes("#") || isHashScopedRoute(target);
     if (!hashScoped) return true;
-    const current = (hash ?? "").replace(/^#/, "");
-    const wanted = (item.hash ?? "").replace(/^#/, "");
+    const current = normalizeHash(hash) ?? "";
+    const wanted = itemHash ?? "";
     return current === wanted;
   };
 
@@ -263,29 +296,32 @@ export function ConsoleShell({
   // ---- mobile tabs ------------------------------------------------------
   const mobileTabs: MobileTab[] = useMemo(() => {
     if (tabs?.length) return tabs;
-    const primary = safeNav.slice(0, 4).map((n) => ({
-      label: n.label.split(" ")[0],
-      icon: n.icon,
-      to: n.to,
-      params: n.params,
-      hash: normalizeHash(n.hash),
-      exact: n.exact,
-    }));
+    const primary = safeNav.slice(0, 4).map((n) => {
+      const parsed = splitTarget(n.to, n.params, n.hash);
+      return {
+        label: n.label.split(" ")[0],
+        icon: n.icon,
+        to: parsed.rawPath,
+        params: n.params,
+        hash: parsed.hash,
+        exact: n.exact,
+      };
+    });
     return [...primary, { label: "Menu", icon: Menu, more: true }];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs, safeNav]);
 
   const tabActive = (t: MobileTab) => {
     if (t.more) return false;
     if (!t.to) return false;
-    const target = resolveTo(t.to, t.params);
+    const { pathname: target, hash: tabHash } = splitTarget(t.to, t.params, t.hash);
     const hit = t.exact ? path === target : path === target || path.startsWith(target + "/");
     if (hit) {
       const hashScoped =
-        t.hash !== undefined ||
-        safeNav.some((n) => resolveTo(n.to, n.params) === target && n.hash !== undefined);
+        t.hash !== undefined || t.to.includes("#") || isHashScopedRoute(target);
       if (!hashScoped) return true;
-      const current = (hash ?? "").replace(/^#/, "");
-      const wanted = (t.hash ?? "").replace(/^#/, "");
+      const current = normalizeHash(hash) ?? "";
+      const wanted = tabHash ?? "";
       return current === wanted;
     }
     return (t.match ?? []).some((m) => {
@@ -294,7 +330,6 @@ export function ConsoleShell({
     });
   };
   const anyTabActive = mobileTabs.some(tabActive);
-  const sheetDrag = useDragControls();
 
   // Mobile header shows the section you're on (most specific match wins).
   const currentLabel = useMemo(() => {
@@ -361,12 +396,13 @@ export function ConsoleShell({
               <div className="space-y-0.5">
                 {g.items.map((item) => {
                   const active = isActive(item);
+                  const target = splitTarget(item.to, item.params, item.hash);
                   return (
                     <Link
                       key={item.label}
-                      to={item.to}
-                      params={item.params}
-                      hash={normalizeHash(item.hash)}
+                      to={target.rawPath as never}
+                      params={item.params as never}
+                      hash={linkHashProp(target.pathname, target.hash)}
                       onMouseEnter={() => preloadRouteTarget(item.to, item.params, item.hash)}
                       onFocus={() => preloadRouteTarget(item.to, item.params, item.hash)}
                       className={cn(
@@ -577,7 +613,7 @@ export function ConsoleShell({
           {/* Main content — native document flow on mobile, independent viewport on desktop */}
           <main
             ref={mainRef}
-            className="dashboard-content flex-1 min-w-0 w-full max-w-full overflow-x-clip px-3.5 pb-[calc(max(env(safe-area-inset-bottom),8px)+5.25rem)] pt-3.5 sm:px-6 lg:overflow-y-auto lg:overscroll-y-contain lg:px-8 lg:pb-12"
+            className="dashboard-content flex-1 min-w-0 w-full max-w-full overflow-x-clip px-3.5 pb-[calc(max(env(safe-area-inset-bottom),10px)+6rem)] pt-3.5 sm:px-6 lg:overflow-y-auto lg:overscroll-y-contain lg:px-8 lg:pb-12"
           >
             <PageTransition routeKey={normalizeHash(hash) ? `${path}#${normalizeHash(hash)}` : path}>{children}</PageTransition>
           </main>
@@ -637,12 +673,13 @@ export function ConsoleShell({
                 </button>
               );
             }
+            const parsed = splitTarget(t.to, t.params, t.hash);
             return (
               <Link
                 key={t.label}
-                to={t.to}
-                params={t.params}
-                hash={normalizeHash(t.hash)}
+                to={parsed.rawPath as never}
+                params={t.params as never}
+                hash={linkHashProp(parsed.pathname, parsed.hash)}
                 onMouseEnter={() => preloadRouteTarget(t.to, t.params, t.hash)}
                 onFocus={() => preloadRouteTarget(t.to, t.params, t.hash)}
                 onClick={() => setOpen(false)}
@@ -660,122 +697,130 @@ export function ConsoleShell({
       {/* ============ "More" sheet ============ */}
       <AnimatePresence>
         {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-              onClick={() => setOpen(false)}
-              className="mobile-keep-blur fixed inset-0 z-[60] bg-background/70 backdrop-blur-sm lg:hidden"
-            />
-            <motion.aside
-              role="dialog"
-              aria-modal="true"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 620, damping: 44, mass: 0.42 }}
-              drag="y"
-              dragControls={sheetDrag}
-              dragListener={false}
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0, bottom: 0.7 }}
-              onDragEnd={(_, info) => {
-                if (info.offset.y > 85 || info.velocity.y > 480) setOpen(false);
+          <motion.div
+            key="mobile-sheet-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.14 }}
+            onClick={() => setOpen(false)}
+            className="mobile-keep-blur fixed inset-0 z-[60] bg-background/75 backdrop-blur-sm lg:hidden"
+          />
+        )}
+        {open && (
+          <motion.aside
+            key="mobile-sheet-drawer"
+            role="dialog"
+            aria-modal="true"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 520, damping: 42, mass: 0.55 }}
+            className="mobile-sheet mobile-keep-blur fixed inset-x-0 bottom-0 z-[70] w-full max-w-full flex max-h-[88dvh] flex-col overflow-hidden rounded-t-[30px] lg:hidden"
+            style={{
+              paddingBottom: "max(env(safe-area-inset-bottom), 1rem)",
+              willChange: "transform",
+            }}
+            aria-label="More navigation"
+          >
+            {/* drag handle + header — swipe down or tap close */}
+            <div
+              className="touch-none select-none"
+              onTouchStart={(e) => {
+                sheetSwipeY.current = e.touches[0]?.clientY ?? null;
               }}
-              className="mobile-sheet mobile-keep-blur fixed inset-x-0 bottom-0 z-[70] w-full max-w-full flex max-h-[88dvh] flex-col overflow-hidden rounded-t-[30px] lg:hidden"
-              style={{
-                paddingBottom: "max(env(safe-area-inset-bottom), 1rem)",
-                willChange: "transform",
+              onTouchEnd={(e) => {
+                const startY = sheetSwipeY.current;
+                sheetSwipeY.current = null;
+                const endY = e.changedTouches[0]?.clientY;
+                if (startY != null && endY != null && endY - startY > 56) {
+                  setOpen(false);
+                }
               }}
-              aria-label="More navigation"
             >
-              {/* drag handle + header — swipe down to close */}
-              <div className="touch-none select-none" onPointerDown={(e) => sheetDrag.start(e)}>
-                <div className="flex justify-center pt-3">
-                  <span className="h-1.5 w-11 rounded-full bg-white/30" />
-                </div>
-                <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <BrandMark size={38} />
-                    <div className="min-w-0">
-                      <div className="truncate font-display text-lg font-extrabold leading-tight">
-                        {title}
-                      </div>
-                      <div className="truncate font-mono text-[10px] uppercase tracking-[0.22em] text-primary/85">
-                        {badge}
-                      </div>
+              <div className="flex justify-center pt-3">
+                <span className="h-1.5 w-11 rounded-full bg-white/30" />
+              </div>
+              <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <BrandMark size={38} />
+                  <div className="min-w-0">
+                    <div className="truncate font-display text-lg font-extrabold leading-tight">
+                      {title}
+                    </div>
+                    <div className="truncate font-mono text-[10px] uppercase tracking-[0.22em] text-primary/85">
+                      {badge}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-white/80 transition active:scale-90"
-                    aria-label="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-white/80 transition active:scale-90"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 space-y-5">
+              {/* Account & Quick Utility Strip */}
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground">
+                    {avatar}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-semibold text-white">{displayAccount || "Signed in"}</div>
+                    <div className="font-mono text-[9px] uppercase tracking-wider text-emerald-300">Session active</div>
+                  </div>
+                </div>
+                <Link
+                  to="/discover"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl border border-primary/35 bg-primary/15 px-3 text-[11px] font-semibold text-primary active:scale-95"
+                >
+                  <Compass className="h-3.5 w-3.5" /> Arenas
+                </Link>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 space-y-5">
-                {/* Account & Quick Utility Strip */}
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground">
-                      {avatar}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate text-xs font-semibold text-white">{displayAccount || "Signed in"}</div>
-                      <div className="font-mono text-[9px] uppercase tracking-wider text-emerald-300">Session active</div>
+              {/* Navigation Sections */}
+              {groups.map((g) => (
+                <div key={g.label ?? "root"}>
+                  {g.label && (
+                    <div className="flex items-center gap-2 px-1 pb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                      <span className="h-px w-3 bg-primary/60" />
+                      {g.label}
                     </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {g.items.map((item) => {
+                      const active = isActive(item);
+                      const parsed = splitTarget(item.to, item.params, item.hash);
+                      return (
+                        <Link
+                          key={item.label}
+                          to={parsed.rawPath as never}
+                          params={item.params as never}
+                          hash={linkHashProp(parsed.pathname, parsed.hash)}
+                          onMouseEnter={() => preloadRouteTarget(item.to, item.params, item.hash)}
+                          onClick={() => setOpen(false)}
+                          data-active={active || undefined}
+                          className="sheet-tile flex min-h-[84px] min-w-0 flex-col items-center justify-center gap-2 rounded-[20px] p-2.5 text-center transition active:scale-95"
+                        >
+                          <span className="sheet-tile-icon grid h-10 w-10 place-items-center rounded-2xl">
+                            <item.icon className="h-[19px] w-[19px]" />
+                          </span>
+                          <span className="line-clamp-2 text-[11px] font-semibold leading-tight">
+                            {item.label}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
-                  <Link
-                    to="/discover"
-                    onClick={() => setOpen(false)}
-                    className="inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-xl border border-primary/35 bg-primary/15 px-3 text-[11px] font-semibold text-primary active:scale-95"
-                  >
-                    <Compass className="h-3.5 w-3.5" /> Arenas
-                  </Link>
                 </div>
-
-                {/* Navigation Sections */}
-                {groups.map((g) => (
-                  <div key={g.label ?? "root"}>
-                    {g.label && (
-                      <div className="flex items-center gap-2 px-1 pb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                        <span className="h-px w-3 bg-primary/60" />
-                        {g.label}
-                      </div>
-                    )}
-                    <div className="grid grid-cols-3 gap-2.5">
-                      {g.items.map((item) => {
-                        const active = isActive(item);
-                        return (
-                          <Link
-                            key={item.label}
-                            to={item.to}
-                            params={item.params}
-                            hash={normalizeHash(item.hash)}
-                            onMouseEnter={() => preloadRouteTarget(item.to, item.params, item.hash)}
-                            onClick={() => setOpen(false)}
-                            data-active={active || undefined}
-                            className="sheet-tile flex min-h-[84px] min-w-0 flex-col items-center justify-center gap-2 rounded-[20px] p-2.5 text-center transition active:scale-95"
-                          >
-                            <span className="sheet-tile-icon grid h-10 w-10 place-items-center rounded-2xl">
-                              <item.icon className="h-[19px] w-[19px]" />
-                            </span>
-                            <span className="line-clamp-2 text-[11px] font-semibold leading-tight">
-                              {item.label}
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+              ))}
 
                 {/* Mobile Display & Motion Preferences */}
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-3">
@@ -848,7 +893,6 @@ export function ConsoleShell({
                 </div>
               </div>
             </motion.aside>
-          </>
         )}
       </AnimatePresence>
     </>

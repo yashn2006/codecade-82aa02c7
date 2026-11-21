@@ -406,10 +406,12 @@ function StaffPageContent() {
                 >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="pin" className="gap-1.5 text-xs sm:text-sm">
-                      <KeyRound className="h-3.5 w-3.5" /> PIN login (recommended)
+                      <KeyRound className="h-3.5 w-3.5 shrink-0" />
+                      <span className="sm:hidden">PIN login</span>
+                      <span className="hidden sm:inline">PIN login (recommended)</span>
                     </TabsTrigger>
                     <TabsTrigger value="email" className="gap-1.5 text-xs sm:text-sm">
-                      <Mail className="h-3.5 w-3.5" /> Email invite
+                      <Mail className="h-3.5 w-3.5 shrink-0" /> Email invite
                     </TabsTrigger>
                   </TabsList>
 
@@ -862,7 +864,7 @@ function StaffPageContent() {
                 <tr>
                   <th className="sticky left-0 z-10 bg-card/85 p-3 backdrop-blur">Staff</th>
                   {STAFF_PERMS.map((p) => (
-                    <th key={p} className="p-3 text-center font-mono" title={STAFF_PERM_META[p].description}>
+                    <th key={p} className="min-w-[88px] whitespace-nowrap p-3 text-center font-mono" title={STAFF_PERM_META[p].description}>
                       {STAFF_PERM_META[p].label}
                     </th>
                   ))}
