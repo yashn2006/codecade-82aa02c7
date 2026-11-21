@@ -4,8 +4,9 @@ import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 
 // PUBLIC — anyone can read the platform maintenance banner.
 export const getPlatformMaintenance = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-  const { data } = await supabaseAdmin
+  const { getSupabaseAdminOrPublic } = await import("@/lib/supabase/client.server");
+  const db = getSupabaseAdminOrPublic();
+  const { data } = await db
     .from("platform_settings")
     .select("maintenance_starts_at, maintenance_ends_at, maintenance_message, maintenance_title")
     .eq("id", true)

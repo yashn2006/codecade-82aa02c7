@@ -708,7 +708,7 @@ function BookingsTab({ onMessageCafe }: { onMessageCafe: (booking: any) => void 
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [cancelTarget, setCancelTarget] = useState<any | null>(null);
-  const { data } = useQuery({ queryKey: ["my-bookings"], queryFn: () => fetchBookings() });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["my-bookings"], queryFn: () => fetchBookings() });
 
   const cancelMutation = useMutation({
     mutationFn: cancelFn,
@@ -760,7 +760,24 @@ function BookingsTab({ onMessageCafe }: { onMessageCafe: (booking: any) => void 
         </Link>
       </div>
 
-      {list.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-44 animate-pulse rounded-3xl border border-white/10 bg-white/[0.03]" />
+          ))}
+        </div>
+      ) : isError ? (
+        <EmptyState
+          icon={CalendarRange}
+          title="Couldn't Load Your Bookings"
+          description="We couldn't fetch your reservations right now. Please try again."
+          action={
+            <Button variant="outline" onClick={() => void refetch()} className="min-h-[44px] border-white/20 text-xs">
+              Try Again
+            </Button>
+          }
+        />
+      ) : list.length === 0 ? (
         <EmptyState
           icon={CalendarRange}
           title={tab === "upcoming" ? "No Active Rig Bookings" : "No Past Booking History"}

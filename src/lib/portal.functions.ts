@@ -6,8 +6,9 @@ import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 export const getCafeDevicesPublic = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin
+    const { getSupabaseAdminOrPublic } = await import("@/lib/supabase/client.server");
+    const db = getSupabaseAdminOrPublic();
+    const { data: rows, error } = await db
       .from("devices")
       .select("id, name, type, hourly_rate, status, specs")
       .eq("cafe_id", data.cafe_id)
@@ -26,7 +27,8 @@ export const getDeviceSchedule = createServerFn({ method: "GET" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) return [];
     const dayStart = new Date(`${data.date}T00:00:00`);
     const dayEnd = new Date(`${data.date}T23:59:59`);
     const { data: rows, error } = await supabaseAdmin
@@ -52,8 +54,9 @@ export const customerBookDevice = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: device, error: de } = await supabaseAdmin
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: device, error: de } = await db
       .from("devices").select("id, cafe_id, hourly_rate, name").eq("id", data.device_id).maybeSingle();
     if (de) throw new Error(de.message);
     if (!device) throw new Error("Device not found");
@@ -61,7 +64,7 @@ export const customerBookDevice = createServerFn({ method: "POST" })
     // conflict window check
     const start = new Date(data.scheduled_at);
     const end = new Date(start.getTime() + data.duration_minutes * 60_000);
-    const { data: conflicts } = await supabaseAdmin
+    const { data: conflicts } = await db
       .from("bookings")
       .select("scheduled_at, duration_minutes")
       .eq("device_id", data.device_id)
@@ -80,11 +83,11 @@ export const customerBookDevice = createServerFn({ method: "POST" })
     const { data: profile } = await context.supabase
       .from("profiles").select("full_name, phone, email").eq("id", context.userId).single();
     let customerId: string;
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
       .from("customers").select("id").eq("cafe_id", device.cafe_id).eq("user_id", context.userId).maybeSingle();
     if (existing) customerId = existing.id;
     else {
-      const { data: nc, error: ce } = await supabaseAdmin
+      const { data: nc, error: ce } = await db
         .from("customers")
         .insert({
           cafe_id: device.cafe_id,
@@ -99,7 +102,7 @@ export const customerBookDevice = createServerFn({ method: "POST" })
     }
 
     const amount = Math.ceil((device.hourly_rate * data.duration_minutes) / 60);
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await db
       .from("bookings")
       .insert({
         cafe_id: device.cafe_id,
@@ -219,24 +222,25 @@ async function myCustomerIds(supa: { from: (t: string) => any }, userId: string)
 export const getMyPortalHome = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const customers = await myCustomerIds(context.supabase, context.userId);
     const ids = customers.map((c) => c.id);
     const empty = { customers, activeSession: null, nextBooking: null, memberships: [], activity: [] as any[] };
     if (!ids.length) return empty;
 
     const [{ data: sessions }, { data: bookings }, { data: memberships }, { data: txs }] = await Promise.all([
-      supabaseAdmin.from("sessions")
+      db.from("sessions")
         .select("id, cafe_id, started_at, amount, status, devices(name, type, hourly_rate), cafes(name, slug)")
         .in("customer_id", ids).eq("status", "active").order("started_at", { ascending: false }).limit(1),
-      supabaseAdmin.from("bookings")
+      db.from("bookings")
         .select("id, cafe_id, scheduled_at, duration_minutes, status, deposit_amount, devices(name, type), cafes(name, slug, address)")
         .in("customer_id", ids).in("status", ["pending", "confirmed"])
         .gte("scheduled_at", new Date().toISOString()).order("scheduled_at", { ascending: true }).limit(1),
-      supabaseAdmin.from("customer_memberships")
+      db.from("customer_memberships")
         .select("id, customer_id, starts_at, ends_at, hours_remaining, memberships(name, hours_included, price)")
         .in("customer_id", ids).gt("ends_at", new Date().toISOString()).order("ends_at", { ascending: true }),
-      supabaseAdmin.from("wallet_transactions")
+      db.from("wallet_transactions")
         .select("id, amount, kind, note, created_at, cafe_id")
         .in("customer_id", ids).order("created_at", { ascending: false }).limit(5),
     ]);
@@ -253,7 +257,8 @@ export const getMyPortalHome = createServerFn({ method: "GET" })
 export const getMyWalletLedger = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const customers = await myCustomerIds(context.supabase, context.userId);
     const ids = customers.map((c) => c.id);
     const cafeIds = Array.from(new Set(customers.map((c) => c.cafe_id).filter(Boolean)));
@@ -269,19 +274,19 @@ export const getMyWalletLedger = createServerFn({ method: "GET" })
     }
 
     const [{ data: transactions }, { data: pages }, { data: topups }] = await Promise.all([
-      supabaseAdmin
+      db
         .from("wallet_transactions")
         .select("id, amount, kind, note, created_at, cafe_id, customer_id")
         .in("customer_id", ids)
         .order("created_at", { ascending: false })
         .limit(100),
       cafeIds.length
-        ? supabaseAdmin
+        ? db
             .from("cafe_pages")
             .select("cafe_id, upi_id, upi_qr_url")
             .in("cafe_id", cafeIds)
         : Promise.resolve({ data: [] as { cafe_id: string; upi_id: string | null; upi_qr_url: string | null }[] }),
-      supabaseAdmin
+      db
         .from("wallet_topups")
         .select("id, cafe_id, customer_id, amount, status, razorpay_payment_id, notes, created_at, paid_at, cafes(name, slug)")
         .in("customer_id", ids)
@@ -311,21 +316,22 @@ export const getMyWalletLedger = createServerFn({ method: "GET" })
 export const getMyTournaments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const { data: profile } = await context.supabase
       .from("profiles").select("email, phone").eq("id", context.userId).maybeSingle();
     const contacts = [profile?.email, profile?.phone].filter(Boolean) as string[];
 
     let mine: any[] = [];
     if (contacts.length) {
-      const { data } = await supabaseAdmin
+      const { data } = await db
         .from("tournament_registrations")
         .select("id, team_name, contact, paid, tournaments(id, title, game, format, prize_pool, entry_fee, starts_at, status, cafe_id, cafes(name, slug))")
         .in("contact", contacts).order("created_at", { ascending: false }).limit(30);
       mine = data ?? [];
     }
 
-    const { data: upcoming } = await supabaseAdmin
+    const { data: upcoming } = await db
       .from("tournaments")
       .select("id, title, game, format, prize_pool, entry_fee, starts_at, status, cafes(name, slug, city)")
       .eq("status", "upcoming").gte("starts_at", new Date().toISOString())

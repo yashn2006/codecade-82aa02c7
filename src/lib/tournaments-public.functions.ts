@@ -7,22 +7,23 @@ export const getPublicTournament = createServerFn({ method: "GET" })
     z.object({ slug: z.string().min(1), id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafe, error: ce } = await supabaseAdmin
+    const { getSupabaseAdminOrPublic } = await import("@/lib/supabase/client.server");
+    const db = getSupabaseAdminOrPublic();
+    const { data: cafe, error: ce } = await db
       .from("cafes")
       .select("id, slug, name, city, address, phone, logo_url, cover_url")
       .eq("slug", data.slug).eq("is_active", true).maybeSingle();
     if (ce) throw new Error(ce.message);
     if (!cafe) throw new Error("Café not found");
 
-    const { data: tournament, error: te } = await supabaseAdmin
+    const { data: tournament, error: te } = await db
       .from("tournaments")
       .select("id, title, game, format, entry_fee, prize_pool, capacity, starts_at, status, banner_url, rules, winner_team, paid_out_at")
       .eq("id", data.id).eq("cafe_id", cafe.id).maybeSingle();
     if (te) throw new Error(te.message);
     if (!tournament) throw new Error("Tournament not found");
 
-    const { count } = await supabaseAdmin
+    const { count } = await db
       .from("tournament_registrations")
       .select("id", { count: "exact", head: true })
       .eq("tournament_id", tournament.id);

@@ -87,7 +87,7 @@ const HARDWARE_FILTERS = [
 
 function DiscoverPage() {
   const fetchCafes = useServerFn(listPublicCafes);
-  const { data: cafes = [], isLoading } = useQuery<Cafe[]>({
+  const { data: cafes = [], isLoading, isError, refetch } = useQuery<Cafe[]>({
     queryKey: ["public-cafes"],
     queryFn: () => fetchCafes(),
     refetchInterval: 30_000,
@@ -588,6 +588,21 @@ function DiscoverPage() {
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="h-96 animate-pulse rounded-3xl border border-white/5 bg-white/[0.02]" />
               ))}
+            </div>
+          ) : isError ? (
+            <div className="my-16 flex flex-col items-center justify-center rounded-3xl border border-rose-500/30 bg-rose-500/5 p-10 text-center">
+              <Gamepad2 className="h-12 w-12 text-rose-400/80" />
+              <h3 className="mt-4 font-display text-xl font-bold text-white">Couldn&apos;t Load Live Arenas</h3>
+              <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                The server couldn&apos;t reach the arena directory right now. Please try again.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => void refetch()}
+                className="mt-5 min-h-[44px] border-white/20 text-xs"
+              >
+                Try Again
+              </Button>
             </div>
           ) : filteredCafes.length === 0 ? (
             <div className="my-16 flex flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.02] p-12 text-center">

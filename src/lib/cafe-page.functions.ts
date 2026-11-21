@@ -7,8 +7,9 @@ import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 export const getPublicCafe = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string() }).parse(d))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafe, error } = await supabaseAdmin
+    const { getSupabaseAdminOrPublic, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = getSupabaseAdminOrPublic();
+    const { data: cafe, error } = await db
       .from("cafes")
       .select("id, slug, name, city, state, address, phone, email, description, logo_url, cover_url, latitude, longitude, gst_no, maintenance_starts_at, maintenance_ends_at, maintenance_message")
       .eq("slug", data.slug)
@@ -18,20 +19,22 @@ export const getPublicCafe = createServerFn({ method: "GET" })
     if (!cafe) throw new Error("Café not found");
 
     const [page, devices, menuItems, menuCats, tournaments, platform] = await Promise.all([
-      supabaseAdmin.from("cafe_pages").select("*").eq("cafe_id", cafe.id).maybeSingle(),
-      supabaseAdmin.from("devices").select("id,name,type,hourly_rate,status,specs").eq("cafe_id", cafe.id),
-      supabaseAdmin.from("menu_items").select("*").eq("cafe_id", cafe.id).eq("is_active", true),
-      supabaseAdmin.from("menu_categories").select("*").eq("cafe_id", cafe.id).order("sort_order"),
-      supabaseAdmin.from("tournaments").select("*").eq("cafe_id", cafe.id)
+      db.from("cafe_pages").select("*").eq("cafe_id", cafe.id).maybeSingle(),
+      db.from("devices").select("id,name,type,hourly_rate,status,specs").eq("cafe_id", cafe.id),
+      db.from("menu_items").select("*").eq("cafe_id", cafe.id).eq("is_active", true),
+      db.from("menu_categories").select("*").eq("cafe_id", cafe.id).order("sort_order"),
+      db.from("tournaments").select("*").eq("cafe_id", cafe.id)
         .in("status", ["upcoming", "live"]).order("starts_at").limit(10),
-      supabaseAdmin.from("platform_settings")
+      db.from("platform_settings")
         .select("maintenance_starts_at, maintenance_ends_at, maintenance_message, maintenance_title")
         .eq("id", true).maybeSingle(),
     ]);
 
-    const liveSessions = await supabaseAdmin
-      .from("sessions").select("device_id", { count: "exact", head: false })
-      .eq("cafe_id", cafe.id).eq("status", "active");
+    const liveSessions = hasSupabaseAdminKey()
+      ? await db
+          .from("sessions").select("device_id", { count: "exact", head: false })
+          .eq("cafe_id", cafe.id).eq("status", "active")
+      : { data: [] as { device_id: string }[] };
 
     return {
       cafe,

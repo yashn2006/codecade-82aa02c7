@@ -53,12 +53,14 @@ export const createTicket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => TicketInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
 
     const [{ data: profile }, cafeRes] = await Promise.all([
-      supabaseAdmin.from("profiles").select("full_name, email").eq("id", context.userId).maybeSingle(),
+      db.from("profiles").select("full_name, email").eq("id", context.userId).maybeSingle(),
       data.cafe_id
-        ? supabaseAdmin.from("cafes").select("id, name, slug, owner_id").eq("id", data.cafe_id).maybeSingle()
+        ? db.from("cafes").select("id, name, slug, owner_id").eq("id", data.cafe_id).maybeSingle()
         : Promise.resolve({ data: null as { id: string; name: string; slug: string; owner_id: string } | null }),
     ]);
 
@@ -105,7 +107,9 @@ export const createTicket = createServerFn({ method: "POST" })
 
     // Push live notifications to recipient(s)
     try {
-      if (data.role === "customer" && cafe?.owner_id && cafe.owner_id !== context.userId) {
+      if (!hasAdmin) {
+        // Service role required to notify other users cross-tenant
+      } else if (data.role === "customer" && cafe?.owner_id && cafe.owner_id !== context.userId) {
         await supabaseAdmin.from("notifications").insert({
           user_id: cafe.owner_id,
           cafe_id: cafe.id,
@@ -143,7 +147,8 @@ export const createTicket = createServerFn({ method: "POST" })
 export const listMyTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const { data, error } = await context.supabase
       .from("support_tickets")
       .select("id, user_id, role, subject, description, category, priority, status, admin_reply, replied_at, created_at, cafe_id")
@@ -155,7 +160,7 @@ export const listMyTickets = createServerFn({ method: "GET" })
     const rows = data ?? [];
     const cafeIds = Array.from(new Set(rows.map((t) => t.cafe_id).filter(Boolean) as string[]));
     const { data: cafes } = cafeIds.length
-      ? await supabaseAdmin.from("cafes").select("id, name, slug").in("id", cafeIds)
+      ? await db.from("cafes").select("id, name, slug").in("id", cafeIds)
       : { data: [] as { id: string; name: string; slug: string }[] };
     const cafeMap = new Map((cafes ?? []).map((c) => [c.id, c]));
 
@@ -168,13 +173,14 @@ export const listMyTickets = createServerFn({ method: "GET" })
 export const listCustomerBookingCafes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const [{ data: myCustomers }, { data: activeCafes }] = await Promise.all([
-      supabaseAdmin
+      db
         .from("customers")
         .select("cafe_id, cafes(id, name, slug, city)")
         .eq("user_id", context.userId),
-      supabaseAdmin
+      db
         .from("cafes")
         .select("id, name, slug, city")
         .eq("is_active", true)

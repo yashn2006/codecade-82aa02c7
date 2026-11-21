@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import process from "node:process";
-import { SUPABASE_URL } from "../supabase-config";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../supabase-config";
 
 // Server-only admin client. NEVER import from client-reachable modules at
 // module scope. Load inside server function handlers via:
@@ -9,6 +9,14 @@ import { SUPABASE_URL } from "../supabase-config";
 // Lazy init so a missing secret only fails the specific handler that needs
 // it (instead of crashing the whole Worker at boot).
 let cached: SupabaseClient | null = null;
+let cachedPublic: SupabaseClient | null = null;
+
+export function hasSupabaseAdminKey(): boolean {
+  return Boolean(
+    process.env.EXTERNAL_SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
+}
 
 function build(): SupabaseClient {
   const serviceKey =
@@ -24,6 +32,12 @@ function build(): SupabaseClient {
   });
 }
 
+function buildPublic(): SupabaseClient {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
 export const supabaseAdmin: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_t, prop) {
     if (!cached) cached = build();
@@ -32,3 +46,16 @@ export const supabaseAdmin: SupabaseClient = new Proxy({} as SupabaseClient, {
     return typeof v === "function" ? v.bind(cached) : v;
   },
 });
+
+export const supabasePublic: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_t, prop) {
+    if (!cachedPublic) cachedPublic = buildPublic();
+    // @ts-expect-error dynamic proxy
+    const v = cachedPublic[prop];
+    return typeof v === "function" ? v.bind(cachedPublic) : v;
+  },
+});
+
+export function getSupabaseAdminOrPublic(): SupabaseClient {
+  return hasSupabaseAdminKey() ? supabaseAdmin : supabasePublic;
+}

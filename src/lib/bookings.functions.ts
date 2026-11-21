@@ -148,15 +148,17 @@ export const createBookingForCustomer = createServerFn({ method: "POST" })
 export const listMyBookings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: customers } = await supabaseAdmin
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: customers, error: custErr } = await db
       .from("customers")
       .select("id")
       .eq("user_id", context.userId);
+    if (custErr) throw new Error(custErr.message);
     const ids = (customers ?? []).map((c) => c.id);
     if (!ids.length) return [];
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await db
       .from("bookings")
       .select("id, cafe_id, scheduled_at, duration_minutes, status, deposit_amount, payment_method, cafes(id, name, slug, city, address), devices(name, type, specs, hourly_rate)")
       .in("customer_id", ids)
@@ -176,14 +178,15 @@ export const customerCreateBooking = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
 
     const start = new Date(data.scheduled_at);
     const end = new Date(start.getTime() + data.duration_minutes * 60_000);
 
     // Find candidate devices of the requested type; then pick the first one
     // whose schedule doesn't collide with the requested window.
-    const { data: candidates, error: de } = await supabaseAdmin
+    const { data: candidates, error: de } = await db
       .from("devices")
       .select("id, hourly_rate, status")
       .eq("cafe_id", data.cafe_id)
@@ -193,14 +196,13 @@ export const customerCreateBooking = createServerFn({ method: "POST" })
     if (usable.length === 0) throw new Error("No device of this type available at this café");
 
     const deviceIds = usable.map((d) => d.id);
-    const { data: overlapping, error: oe } = await supabaseAdmin
+    const { data: overlapping } = await db
       .from("bookings")
       .select("device_id, scheduled_at, duration_minutes")
       .in("device_id", deviceIds)
       .in("status", ["pending", "confirmed"])
       .gte("scheduled_at", new Date(start.getTime() - 8 * 3600_000).toISOString())
       .lte("scheduled_at", new Date(end.getTime() + 8 * 3600_000).toISOString());
-    if (oe) throw new Error(oe.message);
 
     const busy = new Set<string>();
     for (const b of overlapping ?? []) {
@@ -216,7 +218,7 @@ export const customerCreateBooking = createServerFn({ method: "POST" })
       .from("profiles").select("full_name, phone, email").eq("id", context.userId).single();
 
     let customerId: string;
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
       .from("customers")
       .select("id")
       .eq("cafe_id", data.cafe_id)
@@ -225,7 +227,7 @@ export const customerCreateBooking = createServerFn({ method: "POST" })
     if (existing) {
       customerId = existing.id;
     } else {
-      const { data: newCust, error: ce } = await supabaseAdmin
+      const { data: newCust, error: ce } = await db
         .from("customers")
         .insert({
           cafe_id: data.cafe_id,
@@ -241,7 +243,7 @@ export const customerCreateBooking = createServerFn({ method: "POST" })
     }
 
     const amount = Math.ceil((device.hourly_rate * data.duration_minutes) / 60);
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await db
       .from("bookings")
       .insert({
         cafe_id: data.cafe_id,

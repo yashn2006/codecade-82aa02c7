@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 
 export const listPublicCafes = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-  const { data: cafes, error } = await supabaseAdmin
+  const { getSupabaseAdminOrPublic, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+  const db = getSupabaseAdminOrPublic();
+  const { data: cafes, error } = await db
     .from("cafes")
     .select("id, slug, name, city, state, address, description, cover_url, open_time, close_time")
     .eq("is_active", true)
@@ -14,8 +15,10 @@ export const listPublicCafes = createServerFn({ method: "GET" }).handler(async (
   const cafeIds = cafes.map((c) => c.id);
 
   const [devicesRes, sessionsRes] = await Promise.all([
-    supabaseAdmin.from("devices").select("cafe_id, type, hourly_rate, status").in("cafe_id", cafeIds),
-    supabaseAdmin.from("sessions").select("cafe_id, device_id, status").in("cafe_id", cafeIds).eq("status", "active"),
+    db.from("devices").select("cafe_id, type, hourly_rate, status").in("cafe_id", cafeIds),
+    hasSupabaseAdminKey()
+      ? db.from("sessions").select("cafe_id, device_id, status").in("cafe_id", cafeIds).eq("status", "active")
+      : Promise.resolve({ data: [] as { cafe_id: string; device_id: string; status: string }[] }),
   ]);
 
   const devicesByCafe = new Map<string, { total: number; min_rate: number; types: Set<string> }>();
@@ -55,8 +58,9 @@ export const cafeDeviceTypes = createServerFn({ method: "GET" })
     return { cafe_id: String((d as { cafe_id: unknown }).cafe_id) };
   })
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin
+    const { getSupabaseAdminOrPublic } = await import("@/lib/supabase/client.server");
+    const db = getSupabaseAdminOrPublic();
+    const { data: rows, error } = await db
       .from("devices")
       .select("type, hourly_rate")
       .eq("cafe_id", data.cafe_id);
