@@ -41,11 +41,15 @@ const THEME_PRESETS = [
 ] as const;
 
 const FONT_PRESETS = [
-  { id: "display", label: "Display (default)" },
-  { id: "mono",    label: "Mono / Tech" },
-  { id: "serif",   label: "Editorial serif" },
-  { id: "grotesk", label: "Modern grotesk" },
+  { id: "display", label: "Display (default)", css: 'var(--font-display, "Sora", system-ui, sans-serif)' },
+  { id: "mono",    label: "Mono / Tech",       css: 'var(--font-mono, "JetBrains Mono", ui-monospace, monospace)' },
+  { id: "serif",   label: "Editorial serif",   css: 'Georgia, Cambria, "Times New Roman", Times, serif' },
+  { id: "grotesk", label: "Modern grotesk",    css: 'var(--font-sans, "Inter Tight", system-ui, sans-serif)' },
 ] as const;
+
+const FONT_FAMILY_MAP: Record<string, string> = Object.fromEntries(
+  FONT_PRESETS.map((f) => [f.id, f.css]),
+);
 
 type Theme = { mode?: string; accent?: string; bg?: string; font?: string; logo?: string };
 
@@ -129,16 +133,24 @@ function PageEditorContent() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    const trimmedLogo = form.theme.logo?.trim();
     mut.mutate({ data: {
       cafe_id: cafeId!,
-      tagline: form.tagline || null,
-      hero_url: form.hero_url || null,
-      about: form.about || null,
+      tagline: form.tagline.trim() || null,
+      hero_url: form.hero_url.trim() || null,
+      about: form.about.trim() || null,
       hours: form.hours,
-      socials: Object.fromEntries(Object.entries(form.socials).filter(([, v]) => v)),
+      socials: Object.fromEntries(
+        Object.entries(form.socials)
+          .map(([k, v]) => [k, v.trim()])
+          .filter(([, v]) => v),
+      ),
       gallery: form.gallery,
-      theme: form.theme,
-      map_url: form.map_url || null,
+      theme: {
+        ...form.theme,
+        logo: trimmedLogo || undefined,
+      },
+      map_url: form.map_url.trim() || null,
       upi_id: form.upi_id.trim() || null,
       upi_qr_url: form.upi_qr_url.trim() || null,
     } });
@@ -161,15 +173,15 @@ function PageEditorContent() {
         <div className="space-y-1"><Label>Tagline</Label><Input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="The fastest rigs in town" /></div>
         <div className="space-y-1">
           <Label>Hero image</Label>
-          <div className="flex gap-2">
-            <Input value={form.hero_url} onChange={(e) => setForm({ ...form, hero_url: e.target.value })} placeholder="Paste URL or upload…" />
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+            <Input value={form.hero_url} onChange={(e) => setForm({ ...form, hero_url: e.target.value })} placeholder="Paste URL or upload…" className="min-w-0 flex-1" />
             <ImageUploader cafeId={cafeId} folder="hero" label="Upload" onUploaded={(url) => setForm((c) => ({ ...c, hero_url: url }))} />
           </div>
         </div>
         <div className="space-y-1">
           <Label>Logo (white-label)</Label>
-          <div className="flex gap-2">
-            <Input value={form.theme.logo ?? ""} onChange={(e) => setForm((c) => ({ ...c, theme: { ...c.theme, logo: e.target.value } }))} placeholder="Paste URL or upload — shown on your public page" />
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+            <Input value={form.theme.logo ?? ""} onChange={(e) => setForm((c) => ({ ...c, theme: { ...c.theme, logo: e.target.value } }))} placeholder="Paste URL or upload — shown on your public page" className="min-w-0 flex-1" />
             <ImageUploader cafeId={cafeId} folder="logo" label="Upload" onUploaded={(url) => setForm((c) => ({ ...c, theme: { ...c.theme, logo: url } }))} />
           </div>
         </div>
@@ -228,6 +240,7 @@ function PageEditorContent() {
               background: `linear-gradient(140deg, ${form.theme.bg}, ${form.theme.bg}dd)`,
               borderColor: `${form.theme.accent}55`,
               boxShadow: `0 0 60px -20px ${form.theme.accent}88 inset`,
+              fontFamily: FONT_FAMILY_MAP[form.theme.font ?? "display"] ?? FONT_FAMILY_MAP.display,
             }}
           >
             <div className="flex items-center gap-3">
@@ -243,13 +256,17 @@ function PageEditorContent() {
                 </div>
               </div>
             </div>
-            <div className="mt-3 text-sm" style={{ color: form.theme.mode === "minimal" ? "#33333399" : "#ffffffb0" }}>
+            <div className="mt-3 text-sm" style={{ color: form.theme.mode === "minimal" ? "#333333b3" : "#ffffffb0" }}>
               {form.tagline || "Your tagline previews right here as you type."}
             </div>
             <button
               type="button"
-              className="mt-4 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest text-black transition hover:brightness-110"
-              style={{ background: form.theme.accent, boxShadow: `0 8px 30px -8px ${form.theme.accent}` }}
+              className="mt-4 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest transition hover:brightness-110"
+              style={{
+                background: form.theme.accent,
+                color: form.theme.mode === "minimal" ? "#fff" : "#000",
+                boxShadow: `0 8px 30px -8px ${form.theme.accent}`,
+              }}
             >
               Book a rig
             </button>
@@ -319,11 +336,12 @@ function PageEditorContent() {
               placeholder="yourcafe@upi"
             />
           </div>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-wrap gap-2 sm:flex-nowrap">
             <Input
               value={form.upi_qr_url}
               onChange={(e) => setForm({ ...form, upi_qr_url: e.target.value })}
               placeholder="QR image URL (or upload)"
+              className="min-w-0 flex-1"
             />
             <ImageUploader cafeId={cafeId} folder="upi" label="Upload QR" onUploaded={(url) => setForm((c) => ({ ...c, upi_qr_url: url }))} />
           </div>
@@ -334,8 +352,8 @@ function PageEditorContent() {
           )}
         </div>
 
-        <Button type="submit" className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
-          <Save className="h-4 w-4" /> Save page
+        <Button type="submit" disabled={mut.isPending} className="gap-2" style={{ background: "var(--gradient-brand-hot)" }}>
+          <Save className="h-4 w-4" /> {mut.isPending ? "Saving…" : "Save page"}
         </Button>
       </form>
 

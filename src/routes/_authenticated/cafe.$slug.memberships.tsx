@@ -67,7 +67,11 @@ function MembershipsPageContent() {
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: ["memberships", cafeId] });
   const createM = useMutation({ mutationFn: create, onSuccess: () => { toast.success("Created"); refresh(); setOpen(false); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
-  const delM = useMutation({ mutationFn: del, onSuccess: () => { toast.success("Deleted"); refresh(); } });
+  const delM = useMutation({
+    mutationFn: del,
+    onSuccess: () => { toast.success("Deleted"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to delete plan"),
+  });
   const grantM = useMutation({
     mutationFn: grant,
     onSuccess: () => { toast.success("Granted"); setGrantTo(null); },
@@ -116,11 +120,15 @@ function MembershipsPageContent() {
             >
               <div className="space-y-1"><Label>Plan name</Label><Input name="name" required placeholder="Weekend Pro" /></div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1"><Label>Hours</Label><Input name="hours_included" type="number" defaultValue={10} required /></div>
-                <div className="space-y-1"><Label>Price (₹)</Label><Input name="price" type="number" defaultValue={500} required /></div>
-                <div className="space-y-1"><Label>Validity (days)</Label><Input name="validity_days" type="number" defaultValue={30} required /></div>
+                <div className="space-y-1"><Label>Hours</Label><Input name="hours_included" type="number" min={1} defaultValue={10} required /></div>
+                <div className="space-y-1"><Label>Price (₹)</Label><Input name="price" type="number" min={0} defaultValue={500} required /></div>
+                <div className="space-y-1"><Label>Validity (days)</Label><Input name="validity_days" type="number" min={1} defaultValue={30} required /></div>
               </div>
-              <DialogFooter><Button type="submit" style={{ background: "var(--gradient-brand-hot)" }}>Create</Button></DialogFooter>
+              <DialogFooter>
+                <Button type="submit" disabled={createM.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
+                  {createM.isPending ? "Creating…" : "Create"}
+                </Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>

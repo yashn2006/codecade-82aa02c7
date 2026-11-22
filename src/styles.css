@@ -205,6 +205,11 @@
     color: var(--color-ink);
   }
 
+  select option {
+    background-color: #120d22;
+    color: #f8f6ff;
+  }
+
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: oklch(0.20 0.025 295); }
   ::-webkit-scrollbar-thumb {

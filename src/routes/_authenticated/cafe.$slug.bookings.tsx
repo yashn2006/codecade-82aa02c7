@@ -86,8 +86,16 @@ function BookingsPage() {
 
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: ["bookings", cafeId] });
-  const setM = useMutation({ mutationFn: setStatus, onSuccess: () => { refresh(); toast.success("Updated"); } });
-  const depositM = useMutation({ mutationFn: deposit, onSuccess: () => { refresh(); toast.success("Deposit updated"); } });
+  const setM = useMutation({
+    mutationFn: setStatus,
+    onSuccess: () => { refresh(); toast.success("Updated"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update booking"),
+  });
+  const depositM = useMutation({
+    mutationFn: deposit,
+    onSuccess: () => { refresh(); toast.success("Deposit updated"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update deposit"),
+  });
   const payDep = useServerFn(payBookingDeposit);
   const refDep = useServerFn(refundBookingDeposit);
   const cxlRef = useServerFn(cancelBookingWithRefund);
@@ -418,6 +426,15 @@ function BookingsPage() {
             }}
             className="space-y-4"
           >
+            {((customersQ.data ?? []).length === 0 || (devicesQ.data ?? []).length === 0) && (
+              <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-200">
+                {(customersQ.data ?? []).length === 0 && (devicesQ.data ?? []).length === 0
+                  ? "Add at least one customer and one station before creating a booking."
+                  : (customersQ.data ?? []).length === 0
+                  ? "No customers yet — register a customer first."
+                  : "No stations yet — add a device first."}
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Customer</Label>
               <select name="customer_id" required className="field-select">

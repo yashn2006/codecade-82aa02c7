@@ -132,17 +132,17 @@ function OwnerHelp() {
           <div className="font-display text-lg font-bold">Still stuck?</div>
           <div className="text-sm text-muted-foreground">Drop us a line — we typically reply in under 4 hours.</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <a
             href="mailto:support@corecade.app"
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground"
             style={{ background: "var(--gradient-brand-hot)" }}
           >
             <Mail className="h-4 w-4" /> Email support
           </a>
           <Link
             to="/owner"
-            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/50 px-4 py-2 text-sm font-semibold hover:bg-background"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-border/60 bg-background/50 px-4 py-2 text-sm font-semibold hover:bg-background"
           >
             <Bell className="h-4 w-4" /> Back to dashboard
           </Link>

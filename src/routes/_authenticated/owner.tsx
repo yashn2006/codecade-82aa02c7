@@ -169,12 +169,12 @@ function OwnerHub() {
                     )}
                     {!cafe.is_active && <Badge variant="destructive" className="h-4">paused</Badge>}
                   </div>
-                  <h2 className="mt-1 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">{cafe.name}</h2>
+                  <h2 className="mt-1 break-words font-display text-2xl font-extrabold tracking-tight sm:text-3xl">{cafe.name}</h2>
                 </div>
                 <Link
                   to="/cafe/$slug"
                   params={{ slug: cafe.slug }}
-                  className="group inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground"
+                  className="group inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground"
                   style={{ background: "var(--gradient-brand-hot)" }}
                 >
                   Open console <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
@@ -388,7 +388,14 @@ function CreateCafeButton() {
                     name="slug" required pattern="[a-z0-9-]+"
                     placeholder="pixel-arcade"
                     value={slug}
-                    onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                    onChange={(e) =>
+                      setSlug(
+                        e.target.value
+                          .toLowerCase()
+                          .replace(/[^a-z0-9-]+/g, "-")
+                          .replace(/-{2,}/g, "-"),
+                      )
+                    }
                     className="h-12 border-0 font-mono text-base focus-visible:ring-0"
                   />
                 </div>

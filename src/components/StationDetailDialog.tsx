@@ -111,6 +111,7 @@ export function StationDetailDialog({
       refresh();
       toast.success("Updated");
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update"),
   });
   const cxlM = useMutation({
     mutationFn: cxlRef,
@@ -313,6 +314,7 @@ export function StationDetailDialog({
                   size="sm"
                   variant="outline"
                   className="h-8 gap-1 text-xs"
+                  disabled={extM.isPending || endM.isPending || setM.isPending}
                   onClick={() => extM.mutate({ data: { id: activeBooking!.id, add_minutes: 15 } })}
                 >
                   <Plus className="h-3.5 w-3.5" /> +15 min
@@ -321,6 +323,7 @@ export function StationDetailDialog({
                   size="sm"
                   variant="outline"
                   className="h-8 gap-1 text-xs"
+                  disabled={extM.isPending || endM.isPending || setM.isPending}
                   onClick={() => extM.mutate({ data: { id: activeBooking!.id, add_minutes: 30 } })}
                 >
                   <Plus className="h-3.5 w-3.5" /> +30 min

@@ -139,11 +139,18 @@ function PublicCafePage() {
   const minRate = devices.length ? Math.min(...devices.map((d) => d.hourly_rate ?? 0).filter((r) => r > 0)) : 0;
   const freeCount = devices.filter((d) => !activeDeviceIds.includes(d.id) && d.status !== "maintenance").length;
   const heroUrl = page?.hero_url ?? cafe.cover_url;
-  const theme = (page?.theme ?? {}) as { accent?: string; bg?: string; mode?: string; logo?: string };
+  const theme = (page?.theme ?? {}) as { accent?: string; bg?: string; mode?: string; font?: string; logo?: string };
   const accent = theme.accent ?? "#ff52e0";
   const bg = theme.bg ?? "#04030c";
   const isLight = theme.mode === "minimal";
   const logoUrl = theme.logo ?? null;
+  const FONT_MAP: Record<string, string> = {
+    display: 'var(--font-display, "Sora", system-ui, sans-serif)',
+    mono: 'var(--font-mono, "JetBrains Mono", ui-monospace, monospace)',
+    serif: 'Georgia, Cambria, "Times New Roman", Times, serif',
+    grotesk: 'var(--font-sans, "Inter Tight", system-ui, sans-serif)',
+  };
+  const selectedFont = FONT_MAP[theme.font ?? "display"] ?? FONT_MAP.display;
   const social = (page?.socials ?? {}) as Record<string, string>;
   const gallery = (page?.gallery ?? []) as string[];
   const mapUrl = (page?.map_url ?? null) as string | null;
@@ -159,7 +166,13 @@ function PublicCafePage() {
   return (
     <div
       className={`relative min-h-dvh overflow-x-clip antialiased ${isLight ? "text-neutral-900" : "text-white"}`}
-      style={{ background: bg }}
+      style={{
+        background: bg,
+        fontFamily: selectedFont,
+        ...(theme.font && theme.font !== "display"
+          ? { "--font-display": selectedFont, "--font-sans": selectedFont }
+          : {}),
+      } as React.CSSProperties}
     >
       {/* Ambient backdrop — driven by theme accent */}
       <div className="pointer-events-none fixed inset-0 -z-10">

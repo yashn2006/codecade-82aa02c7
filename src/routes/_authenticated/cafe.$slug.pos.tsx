@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ShoppingCart, Trash2, Receipt, Plus, Minus, Leaf, Beef, Printer, RotateCcw, FileBarChart, Split } from "lucide-react";
@@ -18,6 +18,7 @@ import { QueryBoundary, QueryErrorBanner } from "@/components/QueryBoundary";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { ConfirmModal } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { PrintableReceipt, type ReceiptOrder } from "@/components/PrintableReceipt";
 import { CafeAccessGuard, useCafeAccess } from "@/hooks/useCafeAccess";
@@ -93,12 +94,20 @@ function POSPageContent() {
   const [customerId, setCustomerId] = useState<string>("");
   const [discount, setDiscount] = useState(0);
   const [gstRate, setGstRate] = useState<number>(Number(defaultGst));
+  const [gstTouched, setGstTouched] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<{ id: string; total: number } | null>(null);
   const [receiptOrder, setReceiptOrder] = useState<ReceiptOrder | null>(null);
   const [refundFor, setRefundFor] = useState<{ id: string; max: number } | null>(null);
+  const [voidTarget, setVoidTarget] = useState<null | { id: string; receipt: string }>(null);
   const [zOpen, setZOpen] = useState(false);
   const [splitFor, setSplitFor] = useState<null | { id: string; total: number }>(null);
+
+  useEffect(() => {
+    if (!gstTouched) {
+      setGstRate(Number(defaultGst));
+    }
+  }, [defaultGst, gstTouched]);
 
   const cats = menuQ.data?.categories ?? [];
   const items: Item[] = useMemo(() => {
@@ -152,7 +161,11 @@ function POSPageContent() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
-  const voidIt = useMutation({ mutationFn: cancel, onSuccess: () => { toast.success("Voided"); refresh(); } });
+  const voidIt = useMutation({
+    mutationFn: cancel,
+    onSuccess: () => { toast.success("Voided"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to void order"),
+  });
   const refundM = useMutation({
     mutationFn: refund,
     onSuccess: () => { toast.success("Refunded"); setRefundFor(null); refresh(); qc.invalidateQueries({ queryKey: ["customers", cafeId] }); },
@@ -264,7 +277,12 @@ function POSPageContent() {
                         <Button size="icon" variant="ghost" title="Split bill" onClick={() => setSplitFor({ id: o.id, total: tot })}>
                           <Split className="h-3.5 w-3.5 text-azure" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => voidIt.mutate({ data: { id: o.id } })}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="Void order"
+                          onClick={() => setVoidTarget({ id: o.id, receipt: o.receipt_no ?? o.id.slice(0, 6) })}
+                        >
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </>
@@ -323,7 +341,18 @@ function POSPageContent() {
             </div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">GST %</label>
-              <Input type="number" min={0} max={50} step={0.5} value={gstRate} onChange={(e) => setGstRate(Math.max(0, Number(e.target.value) || 0))} className="h-9" />
+              <Input
+                type="number"
+                min={0}
+                max={50}
+                step={0.5}
+                value={gstRate}
+                onChange={(e) => {
+                  setGstTouched(true);
+                  setGstRate(Math.max(0, Number(e.target.value) || 0));
+                }}
+                className="h-9"
+              />
             </div>
           </div>
         </div>
@@ -343,7 +372,7 @@ function POSPageContent() {
             items: cart, discount_amount: discountClamped, gst_rate: gstRate,
           } })}
         >
-          Place order
+          {placeOrder.isPending ? "Placing order…" : "Place order"}
         </Button>
       </aside>
 
@@ -392,6 +421,17 @@ function POSPageContent() {
       />
 
       {receiptOrder && <PrintableReceipt order={receiptOrder} onClose={() => setReceiptOrder(null)} />}
+
+      <ConfirmModal
+        open={!!voidTarget}
+        onOpenChange={(o) => !o && setVoidTarget(null)}
+        title={`Void order ${voidTarget?.receipt ?? ""}?`}
+        description="This marks the open order as voided so it cannot be settled."
+        confirmLabel="Void Order"
+        onConfirm={() =>
+          voidTarget ? voidIt.mutateAsync({ data: { id: voidTarget.id } }) : Promise.resolve()
+        }
+      />
     </div>
     </div>
   );
@@ -406,7 +446,6 @@ function SplitDialog({ order, onClose, onSubmit, pending }: {
   const [count, setCount] = useState(2);
   const [splits, setSplits] = useState<{ label: string; amount: number }[]>([]);
 
-  // Re-init splits when order or count changes
   const init = (n: number, total: number) => {
     const base = Math.floor(total / n);
     const remainder = total - base * n;
@@ -416,17 +455,22 @@ function SplitDialog({ order, onClose, onSubmit, pending }: {
     }));
   };
 
-  // Use derived state when order/count changes
+  useEffect(() => {
+    if (order) {
+      setCount(2);
+      setSplits(init(2, order.total));
+    } else {
+      setSplits([]);
+    }
+  }, [order]);
+
   const expectedTotal = order?.total ?? 0;
   const currentTotal = splits.reduce((s, x) => s + x.amount, 0);
   const balanced = currentTotal === expectedTotal;
 
   return (
     <Dialog open={!!order} onOpenChange={(v) => { if (!v) { onClose(); setSplits([]); } }}>
-      <DialogContent
-        className="sm:max-w-md"
-        onOpenAutoFocus={() => order && setSplits(init(count, order.total))}
-      >
+      <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>Split ₹{order?.total}</DialogTitle></DialogHeader>
         <div className="flex items-center gap-2">
           <Label className="text-xs">Number of people</Label>

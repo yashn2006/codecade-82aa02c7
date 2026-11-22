@@ -167,7 +167,21 @@ function BracketPageContent() {
                   {round === rounds[rounds.length - 1][0] ? "Final" : `Round ${round}`}
                 </div>
                 {ms.sort((a, b) => a.match_index - b.match_index).map((m) => (
-                  <MatchCard key={m.id} m={m} onPick={(winner) => resM.mutate({ data: { match_id: m.id, winner } })} />
+                  <MatchCard
+                    key={m.id}
+                    m={m}
+                    pending={resM.isPending}
+                    onPick={(winner, scoreA, scoreB) =>
+                      resM.mutate({
+                        data: {
+                          match_id: m.id,
+                          winner,
+                          ...(scoreA !== undefined ? { score_a: scoreA } : {}),
+                          ...(scoreB !== undefined ? { score_b: scoreB } : {}),
+                        },
+                      })
+                    }
+                  />
                 ))}
               </div>
             ))}
@@ -244,15 +258,21 @@ function BracketPageContent() {
 }
 
 type Match = { id: string; round: number; match_index: number; team_a: string; team_b: string; score_a: number | null; score_b: number | null; winner: string | null };
-function MatchCard({ m, onPick }: { m: Match; onPick: (w: "a" | "b") => void }) {
+function MatchCard({ m, pending, onPick }: { m: Match; pending: boolean; onPick: (w: "a" | "b", scoreA?: number, scoreB?: number) => void }) {
   const [scoreA, setScoreA] = useState<string>(m.score_a?.toString() ?? "");
   const [scoreB, setScoreB] = useState<string>(m.score_b?.toString() ?? "");
   const ready = m.team_a && m.team_b && m.team_a !== "BYE" && m.team_b !== "BYE";
+  const parseScore = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed) return undefined;
+    const n = Math.floor(Number(trimmed));
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+  };
   return (
     <div className="w-56 rounded-xl border border-border/60 bg-card/60 p-2 backdrop-blur">
-      <Row team={m.team_a} score={scoreA} setScore={setScoreA} winner={m.winner === m.team_a} canPick={!!ready && !m.winner} onPick={() => onPick("a")} />
+      <Row team={m.team_a} score={scoreA} setScore={setScoreA} winner={m.winner === m.team_a} canPick={!!ready && !m.winner && !pending} onPick={() => onPick("a", parseScore(scoreA), parseScore(scoreB))} />
       <div className="my-1 text-center text-[9px] font-mono uppercase tracking-wider text-muted-foreground">vs</div>
-      <Row team={m.team_b} score={scoreB} setScore={setScoreB} winner={m.winner === m.team_b} canPick={!!ready && !m.winner} onPick={() => onPick("b")} />
+      <Row team={m.team_b} score={scoreB} setScore={setScoreB} winner={m.winner === m.team_b} canPick={!!ready && !m.winner && !pending} onPick={() => onPick("b", parseScore(scoreA), parseScore(scoreB))} />
       {m.winner && (
         <Badge className="mt-2 w-full justify-center gap-1 bg-primary/20 text-primary"><Crown className="h-3 w-3" />{m.winner}</Badge>
       )}

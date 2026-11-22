@@ -86,10 +86,12 @@ function DevicesPageContent() {
   const updateM = useMutation({
     mutationFn: update,
     onSuccess: () => { toast.success("Updated"); refresh(); setEditing(null); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update device"),
   });
   const delM = useMutation({
     mutationFn: del,
     onSuccess: () => { toast.success("Deleted"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to delete device"),
   });
 
   if (cafeQ.isError || !cafeId) {
@@ -138,7 +140,9 @@ function DevicesPageContent() {
                 <div className="space-y-1"><Label>Hourly rate (₹)</Label><Input name="hourly_rate" type="number" defaultValue={100} required /></div>
               </div>
               <DialogFooter>
-                <Button type="submit" style={{ background: "var(--gradient-brand-hot)" }}>Add</Button>
+                <Button type="submit" disabled={createM.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
+                  {createM.isPending ? "Adding…" : "Add"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -221,7 +225,11 @@ function DevicesPageContent() {
                   </select>
                 </div>
               </div>
-              <DialogFooter><Button type="submit" style={{ background: "var(--gradient-brand-hot)" }}>Save</Button></DialogFooter>
+              <DialogFooter>
+                <Button type="submit" disabled={updateM.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
+                  {updateM.isPending ? "Saving…" : "Save"}
+                </Button>
+              </DialogFooter>
             </form>
           )}
         </DialogContent>
@@ -267,6 +275,7 @@ function DeviceControlDialog({ cafeId, device, onClose }: { cafeId: string; devi
   const cancelM = useMutation({
     mutationFn: cx,
     onSuccess: () => { toast.success("Cancelled"); qc.invalidateQueries({ queryKey: ["devcmds", device?.id] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to cancel command"),
   });
 
   function send(command: DeviceCommand, payload?: Record<string, unknown>) {
@@ -318,7 +327,11 @@ function DeviceControlDialog({ cafeId, device, onClose }: { cafeId: string; devi
             <Label className="text-xs">Send message to screen</Label>
             <Input value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Time's almost up!" />
           </div>
-          <Button onClick={() => message.trim() && send("message", { text: message.trim() })} className="gap-2">
+          <Button
+            onClick={() => message.trim() && send("message", { text: message.trim() })}
+            disabled={createM.isPending || !message.trim()}
+            className="gap-2"
+          >
             <MessageSquare className="h-4 w-4" /> Send
           </Button>
         </div>

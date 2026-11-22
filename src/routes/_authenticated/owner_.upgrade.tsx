@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
+import { ErrorState } from "@/components/ErrorState";
 import { myBilling, ownerCreateUpgradePayment } from "@/lib/billing.functions";
 import { getDashboardPathForUser, guardRoute } from "@/lib/auth-routing";
 
@@ -117,7 +118,7 @@ function OwnerUpgradePage() {
   const loadBilling = useServerFn(myBilling);
   const submitUpgrade = useServerFn(ownerCreateUpgradePayment);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-billing"],
     queryFn: () => loadBilling(),
   });
@@ -221,6 +222,20 @@ function OwnerUpgradePage() {
             </p>
           </div>
         </motion.section>
+
+        {isError ? (
+          <ErrorState
+            title="Couldn't load billing details"
+            description={error instanceof Error && error.message ? error.message : "Failed to load your subscription details."}
+            onRetry={() => void refetch()}
+          />
+        ) : isLoading ? (
+          <div className="space-y-4">
+            <div className="h-24 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
+            <div className="h-64 animate-pulse rounded-3xl border border-border/40 bg-card/30" />
+          </div>
+        ) : (
+          <>
 
         {/* STEP 1: SELECT CAFÉ */}
         {cafes.length > 0 && (
@@ -550,6 +565,8 @@ function OwnerUpgradePage() {
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </ConsoleShell>

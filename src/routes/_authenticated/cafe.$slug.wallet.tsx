@@ -17,6 +17,7 @@ import {
   Users,
   Copy,
   IndianRupee,
+  Loader2,
 } from "lucide-react";
 import { getCafeBySlug } from "@/lib/cafes.functions";
 import { listCustomers } from "@/lib/customers.functions";
@@ -256,6 +257,13 @@ function WalletPageContent() {
     enabled: !!statementFor,
   });
 
+  useEffect(() => {
+    if (statementFor && stmtTxQ.isError) {
+      toast.error("Couldn't load wallet statement");
+      setStatementFor(null);
+    }
+  }, [statementFor, stmtTxQ.isError]);
+
   if (cafeQ.isError || customersQ.isError || !cafeId) {
     return (
       <QueryBoundary
@@ -474,11 +482,16 @@ function WalletPageContent() {
                       size="icon"
                       variant="outline"
                       className="h-11 w-11 rounded-xl"
+                      disabled={statementFor?.id === c.id && stmtTxQ.isFetching}
                       onClick={() => setStatementFor({ id: c.id, name: c.full_name, phone: c.phone, balance: c.wallet_balance })}
                       title="Print statement"
                       aria-label={`Print statement for ${c.full_name}`}
                     >
-                      <FileText className="h-4 w-4" />
+                      {statementFor?.id === c.id && stmtTxQ.isFetching ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileText className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>

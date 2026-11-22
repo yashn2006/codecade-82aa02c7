@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -37,6 +37,14 @@ type T = {
   status: "upcoming" | "live" | "completed" | "cancelled"; banner_url: string | null; rules: string | null;
   tournament_registrations?: { count: number }[];
 };
+
+function toLocalDatetimeInput(value?: string | null): string {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value.slice(0, 16);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 function TournamentsPage() {
   const { slug } = Route.useParams();
@@ -79,7 +87,11 @@ function TournamentsPageContent() {
     onSuccess: () => { toast.success("Saved"); refresh(); setEdit(null); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
-  const rm = useMutation({ mutationFn: del, onSuccess: () => { toast.success("Deleted"); refresh(); } });
+  const rm = useMutation({
+    mutationFn: del,
+    onSuccess: () => { toast.success("Deleted"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to delete tournament"),
+  });
   const addReg = useMutation({
     mutationFn: reg,
     onSuccess: () => { toast.success("Registered"); qc.invalidateQueries({ queryKey: ["regs"] }); },
@@ -108,7 +120,7 @@ function TournamentsPageContent() {
     <div>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <div className="text-sm text-muted-foreground">{rows.length} tournaments</div>
-        <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }} onClick={() => setEdit({ cafe_id: cafeId, format: "solo", status: "upcoming", capacity: 16, starts_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16) })}>
+        <Button className="gap-2" style={{ background: "var(--gradient-brand-hot)" }} onClick={() => setEdit({ cafe_id: cafeId, format: "solo", status: "upcoming", capacity: 16, starts_at: new Date(Date.now() + 86400000).toISOString() })}>
           <Plus className="h-4 w-4" /> New tournament
         </Button>
       </div>
@@ -142,9 +154,13 @@ function TournamentsPageContent() {
                   </div>
                   <div className="relative mt-3 flex flex-wrap items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => setView(t)}>Roster</Button>
-                    <a href={`/cafe/${slug}/tournaments/${t.id}`} className="inline-flex h-9 items-center justify-center rounded-md bg-primary/10 px-3 text-xs font-semibold text-primary hover:bg-primary/20">
+                    <Link
+                      to="/cafe/$slug/tournaments/$id"
+                      params={{ slug, id: t.id }}
+                      className="inline-flex h-9 items-center justify-center rounded-md bg-primary/10 px-3 text-xs font-semibold text-primary hover:bg-primary/20"
+                    >
                       <Trophy className="mr-1 h-3 w-3" /> Bracket
-                    </a>
+                    </Link>
                     <Button size="sm" variant="ghost" onClick={() => setEdit(t)}>Edit</Button>
                     <Button size="icon" variant="ghost" className="ml-auto" onClick={() => setDeleteTarget({ id: t.id, title: t.title })}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -165,19 +181,25 @@ function TournamentsPageContent() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
+                const parsedStart = new Date(String(fd.get("starts_at") ?? ""));
+                if (isNaN(parsedStart.getTime())) {
+                  toast.error("Please select a valid start date and time");
+                  return;
+                }
+                const bannerRaw = String(fd.get("banner_url") ?? "").trim();
                 save.mutate({ data: {
                   id: edit.id,
                   cafe_id: cafeId,
-                  title: String(fd.get("title")),
-                  game: String(fd.get("game")),
+                  title: String(fd.get("title")).trim(),
+                  game: String(fd.get("game")).trim(),
                   format: fd.get("format") as "solo" | "duo" | "squad",
                   entry_fee: Number(fd.get("entry_fee")),
                   prize_pool: Number(fd.get("prize_pool")),
                   capacity: Number(fd.get("capacity")),
-                  starts_at: new Date(String(fd.get("starts_at"))).toISOString(),
+                  starts_at: parsedStart.toISOString(),
                   status: fd.get("status") as T["status"],
-                  banner_url: (fd.get("banner_url") as string) || null,
-                  rules: (fd.get("rules") as string) || null,
+                  banner_url: bannerRaw || null,
+                  rules: String(fd.get("rules") ?? "").trim() || null,
                 } });
               }}
               className="space-y-3"
@@ -200,11 +222,15 @@ function TournamentsPageContent() {
                     <option value="upcoming">Upcoming</option><option value="live">Live</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option>
                   </select>
                 </div>
-                <div className="space-y-1 sm:col-span-2"><Label>Starts at</Label><Input name="starts_at" type="datetime-local" defaultValue={typeof edit.starts_at === "string" ? edit.starts_at.slice(0, 16) : ""} required /></div>
+                <div className="space-y-1 sm:col-span-2"><Label>Starts at</Label><Input name="starts_at" type="datetime-local" defaultValue={toLocalDatetimeInput(edit.starts_at)} required /></div>
                 <div className="space-y-1 sm:col-span-2"><Label>Banner URL</Label><Input name="banner_url" defaultValue={edit.banner_url ?? ""} placeholder="https://…" /></div>
                 <div className="space-y-1 sm:col-span-2"><Label>Rules</Label><Textarea name="rules" defaultValue={edit.rules ?? ""} rows={3} /></div>
               </div>
-              <DialogFooter><Button type="submit" style={{ background: "var(--gradient-brand-hot)" }}>{edit.id ? "Save" : "Create"}</Button></DialogFooter>
+              <DialogFooter>
+                <Button type="submit" disabled={save.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
+                  {save.isPending ? "Saving…" : edit.id ? "Save" : "Create"}
+                </Button>
+              </DialogFooter>
             </form>
           )}
         </DialogContent>
@@ -231,7 +257,7 @@ function TournamentsPageContent() {
             <div className="flex-1 space-y-1"><Label>Team / player</Label><Input name="team_name" required /></div>
             <div className="space-y-1"><Label>Contact</Label><Input name="contact" placeholder="phone" /></div>
             <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="paid" /> Paid</label>
-            <Button type="submit" size="sm">Add</Button>
+            <Button type="submit" size="sm" disabled={addReg.isPending}>{addReg.isPending ? "Adding…" : "Add"}</Button>
           </form>
           <QueryErrorBanner queries={[regsQ]} title="Couldn't load registrations" />
           <div className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-border/40">

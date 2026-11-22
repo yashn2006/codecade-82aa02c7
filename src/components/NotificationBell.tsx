@@ -42,11 +42,13 @@ export function NotificationBell() {
   const markM = useMutation({
     mutationFn: () => mark(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to mark notifications read"),
   });
 
   const markSingleM = useMutation({
     mutationFn: markSingle,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to mark notification read"),
   });
 
   const deleteSingleM = useMutation({
@@ -110,18 +112,19 @@ export function NotificationBell() {
   const unread = items.filter((n) => !n.read_at).length;
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center">
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
-        className="mobile-keep-blur relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-muted-foreground shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-xl transition hover:border-white/25 hover:bg-white/10 hover:text-foreground active:scale-95"
+        className="mobile-keep-blur relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] text-muted-foreground shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-xl transition hover:border-white/25 hover:bg-white/10 hover:text-foreground active:scale-95"
         aria-label={`Notifications${unread ? ` — ${unread} unread` : ""}`}
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="h-4 w-4 shrink-0" />
         {unread > 0 && (
           <motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-gradient-to-r from-primary to-accent px-1 text-[9px] font-bold text-white shadow-[0_0_10px_oklch(0.7_0.26_335/0.8)]"
+            className="pointer-events-none absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-gradient-to-r from-primary to-accent px-1 text-[9px] font-bold leading-none text-white ring-2 ring-[#0c0818] shadow-[0_0_10px_oklch(0.7_0.26_335/0.8)]"
           >
             {unread > 9 ? "9+" : unread}
           </motion.span>

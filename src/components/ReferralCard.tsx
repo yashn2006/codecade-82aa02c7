@@ -27,10 +27,14 @@ export function ReferralCard() {
       : `/auth?ref=${code}`;
 
   const copy = async (text: string, key: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(key);
-    toast.success("Copied to clipboard");
-    setTimeout(() => setCopied(null), 1500);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(key);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      toast.error("Could not copy to clipboard");
+    }
   };
 
   return (

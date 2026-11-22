@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/ImageUploader";
+import { ErrorState } from "@/components/ErrorState";
 import { myBilling, submitInvoiceProof } from "@/lib/billing.functions";
 
 const money = (paise: number) => `₹${Math.round(paise / 100).toLocaleString("en-IN")}`;
@@ -23,7 +24,7 @@ export function OwnerBilling() {
   const qc = useQueryClient();
   const load = useServerFn(myBilling);
   const submit = useServerFn(submitInvoiceProof);
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-billing"],
     queryFn: () => load(),
     refetchInterval: 60000,
@@ -40,6 +41,16 @@ export function OwnerBilling() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not submit"),
   });
+
+  if (isError) {
+    return (
+      <ErrorState
+        title="Couldn't load subscription details"
+        description={error instanceof Error && error.message ? error.message : "Failed to fetch billing status."}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   if (isLoading || !data) {
     return <div className="h-40 animate-pulse rounded-3xl border border-border/40 bg-card/30" />;
@@ -67,7 +78,7 @@ export function OwnerBilling() {
       </div>
 
       {/* Days left per café */}
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      <div className={`mt-4 grid gap-2 ${data.cafes.length > 1 ? "sm:grid-cols-2" : ""}`}>
         {data.cafes.map((c) => {
           const col = tone(c.days_left, c.subscription_status);
           return (

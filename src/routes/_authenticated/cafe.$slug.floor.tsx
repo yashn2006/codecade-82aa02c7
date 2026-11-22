@@ -127,14 +127,17 @@ function FloorBuilderContent() {
   const updateM = useMutation({
     mutationFn: update,
     onSuccess: () => { toast.success("Saved"); refresh(); setEditing(null); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to save station"),
   });
   const delM = useMutation({
     mutationFn: del,
     onSuccess: () => { toast.success("Removed"); refresh(); setEditing(null); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to remove station"),
   });
   const sizeM = useMutation({
     mutationFn: upCafe,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["cafe", slug] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to resize floor grid"),
   });
 
   const [adding, setAdding] = useState<null | { x: number; y: number }>(null);

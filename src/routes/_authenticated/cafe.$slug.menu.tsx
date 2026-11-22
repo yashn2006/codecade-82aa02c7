@@ -139,7 +139,11 @@ function MenuPageContent() {
               >
                 <div className="space-y-1"><Label>Name</Label><Input name="name" required placeholder="Snacks" /></div>
                 <div className="space-y-1"><Label>Sort order</Label><Input name="sort" type="number" defaultValue={0} /></div>
-                <DialogFooter><Button type="submit">Save</Button></DialogFooter>
+                <DialogFooter>
+                  <Button type="submit" disabled={saveCat.isPending}>
+                    {saveCat.isPending ? "Saving…" : "Save"}
+                  </Button>
+                </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -276,7 +280,11 @@ function MenuPageContent() {
                 <label className="flex items-center gap-2 text-sm"><Switch name="is_veg" defaultChecked={edit.is_veg ?? true} /> Veg</label>
                 <label className="flex items-center gap-2 text-sm"><Switch name="is_active" defaultChecked={edit.is_active ?? true} /> Active</label>
               </div>
-              <DialogFooter><Button type="submit" style={{ background: "var(--gradient-brand-hot)" }}>{edit.id ? "Save" : "Create"}</Button></DialogFooter>
+              <DialogFooter>
+                <Button type="submit" disabled={saveItem.isPending} style={{ background: "var(--gradient-brand-hot)" }}>
+                  {saveItem.isPending ? "Saving…" : edit.id ? "Save" : "Create"}
+                </Button>
+              </DialogFooter>
             </form>
           )}
         </DialogContent>

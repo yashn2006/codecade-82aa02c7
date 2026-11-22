@@ -86,6 +86,7 @@ export function BookingDetailDialog({
       refresh();
       toast.success("Updated");
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update"),
   });
   const cxlM = useMutation({
     mutationFn: cxlRef,
@@ -290,6 +291,7 @@ export function BookingDetailDialog({
                 <Button
                   size="sm"
                   className="gap-1"
+                  disabled={setM.isPending}
                   onClick={() => setM.mutate({ data: { id: b.id, status: "confirmed" } })}
                 >
                   <Check className="h-4 w-4" /> Confirm
@@ -298,6 +300,7 @@ export function BookingDetailDialog({
                   size="sm"
                   variant="destructive"
                   className="gap-1"
+                  disabled={setM.isPending}
                   onClick={() => setM.mutate({ data: { id: b.id, status: "cancelled" } })}
                 >
                   <X className="h-4 w-4" /> Reject
@@ -310,6 +313,7 @@ export function BookingDetailDialog({
                   size="sm"
                   variant="outline"
                   className="gap-1"
+                  disabled={extM.isPending || endM.isPending}
                   onClick={() => extM.mutate({ data: { id: b.id, add_minutes: 15 } })}
                 >
                   <Plus className="h-4 w-4" /> +15 min
@@ -318,6 +322,7 @@ export function BookingDetailDialog({
                   size="sm"
                   variant="outline"
                   className="gap-1"
+                  disabled={extM.isPending || endM.isPending}
                   onClick={() => extM.mutate({ data: { id: b.id, add_minutes: 30 } })}
                 >
                   <Plus className="h-4 w-4" /> +30 min

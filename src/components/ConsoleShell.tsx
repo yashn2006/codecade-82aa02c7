@@ -537,8 +537,8 @@ export function ConsoleShell({
             </div>
           </div>
 
-            <div className="flex shrink-0 items-center gap-1 lg:justify-self-end">
-              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald-300 sm:flex">
+            <div className="flex shrink-0 items-center justify-end gap-2 lg:justify-self-end">
+              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald-300 sm:inline-flex">
                 <span className="h-1.5 w-1.5 animate-dot-pulse rounded-full bg-emerald-300 shadow-[0_0_10px_currentColor]" />
                 Console online
               </span>
@@ -546,13 +546,12 @@ export function ConsoleShell({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
+                    type="button"
                     title={displayAccount || "Account"}
                     aria-label="Account menu"
-                    className="grid h-10 w-10 place-items-center rounded-full p-1 transition hover:opacity-90 active:scale-95"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground ring-1 ring-white/20 shadow-[0_0_14px_-2px_oklch(0.7_0.26_335/0.6)] transition hover:brightness-110 active:scale-95"
                   >
-                    <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-[11px] font-bold text-primary-foreground shadow-[0_0_14px_-2px_oklch(0.7_0.26_335/0.6)]">
-                      {avatar}
-                    </span>
+                    {avatar}
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-60">
