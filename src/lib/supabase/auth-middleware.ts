@@ -1,5 +1,5 @@
 import { createMiddleware } from "@tanstack/react-start";
-import { getRequestHeader } from "@tanstack/react-start/server";
+import { getRequestHeader, setResponseStatus } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../supabase-config";
 
@@ -7,7 +7,8 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
   async ({ next }) => {
     const authHeader = getRequestHeader("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      throw new Response("Unauthorized: No authorization header provided", { status: 401 });
+      setResponseStatus(401);
+      throw new Error("Unauthorized: No authorization header provided");
     }
     const token = authHeader.slice(7);
 
@@ -18,7 +19,8 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
 
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data.user) {
-      throw new Response("Unauthorized", { status: 401 });
+      setResponseStatus(401);
+      throw new Error("Unauthorized");
     }
 
     return next({

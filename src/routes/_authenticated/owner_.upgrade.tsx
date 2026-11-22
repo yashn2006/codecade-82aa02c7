@@ -120,10 +120,16 @@ function OwnerUpgradePage() {
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-billing"],
-    queryFn: () => loadBilling(),
+    queryFn: async () => {
+      const res = await loadBilling();
+      if (!res || typeof res !== "object" || !("payTo" in res) || !res.payTo || !Array.isArray(res.cafes)) {
+        throw new Error("Could not load billing details right now. Please try again.");
+      }
+      return res;
+    },
   });
 
-  const cafes = data?.cafes ?? [];
+  const cafes = Array.isArray(data?.cafes) ? data.cafes : [];
   const [selectedCafeId, setSelectedCafeId] = useState<string>("");
   const activeCafe = cafes.find((c) => c.id === (selectedCafeId || cafes[0]?.id)) ?? cafes[0];
 
@@ -147,11 +153,11 @@ function OwnerUpgradePage() {
     },
   });
 
-  const upiId = data?.payTo.upi_id?.trim() || "";
+  const upiId = data?.payTo?.upi_id?.trim() || "";
   const upiQrString = upiId
     ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("CoreCade Pro")}&am=${selectedPlan.price}&cu=INR&tn=${encodeURIComponent(`Upgrade ${selectedPlan.name}`)}`
     : "";
-  const qrUrl = data?.payTo.qr_url?.trim() || (upiQrString ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiQrString)}` : "");
+  const qrUrl = data?.payTo?.qr_url?.trim() || (upiQrString ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiQrString)}` : "");
   const hasPayTarget = Boolean(upiId || qrUrl);
 
   const handleSubmit = (e: React.FormEvent) => {

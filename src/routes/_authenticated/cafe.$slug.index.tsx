@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Gamepad2, MousePointerClick, SearchX } from "lucide-react";
 import { toast } from "sonner";
 import { getCafeBySlug } from "@/lib/cafes.functions";
-import { listDevices, setDeviceStatus } from "@/lib/devices.functions";
+import { listDevices, setDeviceStatus, updateDevice } from "@/lib/devices.functions";
 import {
   listSessions, startSession, endSession, extendSession, suspendSession, resumeSession, assignSessionCustomer,
 } from "@/lib/sessions.functions";
@@ -20,7 +20,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { FloorStats, StationToolbar, type FloorView } from "@/components/livefloor/FloorHeader";
 import { FloorScene } from "@/components/livefloor/FloorScene";
 import { FloorFooter } from "@/components/livefloor/FloorFooter";
-import { StationPanel } from "@/components/livefloor/StationPanel";
+import { StationPanel, type StationSettingsPatch } from "@/components/livefloor/StationPanel";
 import { StationCard, StationRow, type StationAction } from "@/components/livefloor/StationCard";
 import { BookingDialog, type BookingSubmit } from "@/components/livefloor/BookingDialog";
 import { MaintenanceDialog } from "@/components/livefloor/MaintenanceDialog";
@@ -127,6 +127,7 @@ function LiveFloor() {
   const resume = useServerFn(resumeSession);
   const assign = useServerFn(assignSessionCustomer);
   const setStatus = useServerFn(setDeviceStatus);
+  const patchDevice = useServerFn(updateDevice);
   const book = useServerFn(createBookingForCustomer);
   const setBooking = useServerFn(updateBookingStatus);
 
@@ -300,7 +301,19 @@ function LiveFloor() {
       await setStatus({ data: { id: deviceId, status: "available" } });
       return b ? "Booking cancelled" : `${codeOf(deviceId)} released`;
     }),
-  }), [run, start, assign, extend, suspend, resume, end, setStatus, setBooking,
+    saveSettings: (deviceId: string, patch: StationSettingsPatch) => run(async () => {
+      await patchDevice({
+        data: {
+          id: deviceId,
+          patch: {
+            cafe_id: cafeId!,
+            ...patch,
+          },
+        },
+      });
+      return `${codeOf(deviceId)} settings saved`;
+    }),
+  }), [run, start, assign, extend, suspend, resume, end, setStatus, patchDevice, setBooking,
     cafeId, codeOf, sessionsByDevice, bookingsByDevice, devices]);
 
   const opsRef = useRef(ops);
@@ -419,6 +432,7 @@ function LiveFloor() {
         onAvailable: () => ops.available(selected.id),
         onCheckIn: () => ops.checkIn(selected.id),
         onCancelBooking: () => ops.cancelBooking(selected.id),
+        onSaveSettings: canDevices ? (patch) => ops.saveSettings(selected.id, patch) : undefined,
       }}
     />
   ) : null;
@@ -485,6 +499,8 @@ function LiveFloor() {
               sessionsByDevice={sessionsByDevice}
               bookingsByDevice={bookingsByDevice}
               selectedId={effectiveId}
+              floorCols={(cafe as { floor_cols?: number | null })?.floor_cols}
+              floorRows={(cafe as { floor_rows?: number | null })?.floor_rows}
               onSelect={onSelect}
             />
           ) : view === "grid" ? (

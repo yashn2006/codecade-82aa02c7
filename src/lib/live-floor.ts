@@ -10,10 +10,13 @@ export type FloorDevice = {
   type: string;
   hourly_rate: number;
   status: string;
+  pos_x?: number | null;
+  pos_y?: number | null;
   zone?: string | null;
   zone_color?: string | null;
   suspend_until?: string | null;
   notes?: string | null;
+  specs?: Record<string, unknown> | null;
 };
 
 export type FloorSession = {

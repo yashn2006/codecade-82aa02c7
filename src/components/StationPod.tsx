@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { memo, useEffect, useState } from "react";
 import {
   Cpu,
   Gamepad2,
@@ -29,36 +28,36 @@ const STATUS_THEME: Record<
 > = {
   available: {
     ring: "#22d3a8",
-    glow: "rgba(34,211,168,0.55)",
-    chip: "EMPTY · READY",
+    glow: "rgba(34,211,168,0.45)",
+    chip: "READY",
     label: "available",
     pulse: false,
   },
   in_use: {
     ring: "#ef4fb6",
-    glow: "rgba(239,79,182,0.7)",
-    chip: "● LIVE SESSION",
+    glow: "rgba(239,79,182,0.65)",
+    chip: "LIVE",
     label: "in use",
     pulse: true,
   },
   reserved: {
     ring: "#f5b042",
-    glow: "rgba(245,176,66,0.6)",
-    chip: "✦ RESERVED",
+    glow: "rgba(245,176,66,0.55)",
+    chip: "BOOKED",
     label: "reserved",
     pulse: false,
   },
   suspended: {
     ring: "#94a3b8",
-    glow: "rgba(148,163,184,0.45)",
-    chip: "⏸ SUSPENDED",
+    glow: "rgba(148,163,184,0.38)",
+    chip: "PAUSED",
     label: "suspended",
     pulse: false,
   },
   maintenance: {
     ring: "#f87171",
-    glow: "rgba(248,113,113,0.55)",
-    chip: "✖ MAINTENANCE",
+    glow: "rgba(248,113,113,0.48)",
+    chip: "REPAIR",
     label: "maintenance",
     pulse: false,
   },
@@ -72,19 +71,20 @@ const STATUS_GLYPH: Record<DeviceStatus, typeof Cpu> = {
   maintenance: Wrench,
 };
 
-/** Convert #rrggbb or shorthand to rgba string. Returns passed value if not a hex. */
 function hexToRgba(hex: string, alpha = 1): string {
   if (!hex.startsWith("#")) return hex;
   let h = hex.slice(1);
-  if (h.length === 3)
+  if (h.length === 3) {
     h = h
       .split("")
       .map((c) => c + c)
       .join("");
+  }
   const num = parseInt(h, 16);
-  const r = (num >> 16) & 255,
-    g = (num >> 8) & 255,
-    b = num & 255;
+  if (!Number.isFinite(num)) return hex;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
@@ -93,242 +93,301 @@ export type StationPodProps = {
   type: DeviceType;
   status: DeviceStatus;
   hourlyRate: number;
-  overlay?: React.ReactNode; // e.g. timer, customer name
-  caption?: React.ReactNode; // small line under chip
+  overlay?: React.ReactNode;
+  caption?: React.ReactNode;
+  zone?: string | null;
+  selected?: boolean;
   index?: number;
   onClick?: () => void;
-  onContextMenu?: React.MouseEventHandler<HTMLButtonElement>;
+  onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
   title?: string;
   className?: string;
-  /** Optional zone color — re-tints decorative chrome (halo, grid floor, icon tile, base shadow). */
+  /** Optional zone color — tints the desk pad and subtle zone indicator; screen reflects live status. */
   accent?: string | null;
+  /** Optional compact top-right quick controls (e.g., move / edit in Floor Builder). */
+  controls?: React.ReactNode;
 };
 
 /**
- * A 3D-styled gaming station tile: tilted monitor + base, screen mock with
- * scanlines, animated status ring, pointer-tilt parallax, ambient glow.
+ * High-contrast, GPU-composited hardware station pod with a sculpted OLED
+ * monitor bezel, CNC stand, status underglow, and live screen telemetry.
  */
-export function StationPod({
+export const StationPod = memo(function StationPod({
   name,
   type,
   status,
   hourlyRate,
   overlay,
   caption,
-  index = 0,
+  zone,
+  selected = false,
   onClick,
   onContextMenu,
   title,
   className,
   accent,
+  controls,
 }: StationPodProps) {
   const Icon = TYPE_ICON[type] ?? Cpu;
   const Glyph = STATUS_GLYPH[status];
   const statusTheme = STATUS_THEME[status];
-
-  // Zone color overrides the decorative chrome; the screen still reflects status.
-  const chromeRing = accent || statusTheme.ring;
-  const chromeGlow = accent ? hexToRgba(accent, 0.55) : statusTheme.glow;
-  const theme = { ...statusTheme, ring: chromeRing, glow: chromeGlow };
-
-  const rotateX = useMotionValue(0);
-  const rotateY = useMotionValue(0);
-  const rx = useSpring(rotateX, { stiffness: 200, damping: 18 });
-  const ry = useSpring(rotateY, { stiffness: 200, damping: 18 });
-  const liftZ = useTransform(
-    [rx, ry],
-    ([x, y]) => 1 - (Math.abs(x as number) + Math.abs(y as number)) / 60,
-  );
-
-  const ref = useRef<HTMLButtonElement>(null);
-  const [hover, setHover] = useState(false);
-
-  const onMove = (e: React.PointerEvent) => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    rotateY.set(px * 14);
-    rotateX.set(-py * 12);
-  };
-  const reset = () => {
-    rotateX.set(0);
-    rotateY.set(0);
-    setHover(false);
-  };
+  const screenRing = statusTheme.ring;
+  const screenGlow = statusTheme.glow;
+  const padAccent = accent || statusTheme.ring;
 
   return (
-    <motion.button
-      ref={ref}
-      type="button"
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       onContextMenu={onContextMenu}
       title={title}
-      onPointerMove={onMove}
-      onPointerEnter={() => setHover(true)}
-      onPointerLeave={reset}
-      initial={{ opacity: 0, y: 18, rotateX: -20 }}
-      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-      transition={{ delay: index * 0.04, type: "spring", stiffness: 160, damping: 18 }}
-      style={{ perspective: 900 }}
-      className={`group relative block text-left focus:outline-none ${className ?? ""}`}
-      aria-label={`${name} — ${theme.label}`}
+      aria-label={`${name} — ${statusTheme.label}`}
+      className={`group relative block w-full select-none text-left outline-none transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-primary/70 rounded-[20px] ${
+        onClick ? "cursor-pointer" : ""
+      } ${className ?? ""}`}
     >
-      <motion.div
-        style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
-        className="relative rounded-[22px]"
-      >
-        {/* Floor shadow */}
-        <motion.div
-          style={{ opacity: useTransform(liftZ, [0, 1], [0.65, 0.35]) }}
-          className="pointer-events-none absolute -bottom-4 left-1/2 h-6 w-[80%] -translate-x-1/2 rounded-full blur-2xl"
-          aria-hidden
-        >
-          <div className="h-full w-full rounded-full" style={{ background: theme.glow }} />
-        </motion.div>
+      {/* Ambient floor aura */}
+      <div
+        className="pointer-events-none -z-10 absolute -bottom-2 left-1/2 h-5 w-[78%] -translate-x-1/2 rounded-full opacity-45 blur-xl transition-opacity duration-200 group-hover:opacity-85"
+        style={{ background: screenGlow }}
+        aria-hidden
+      />
 
-        {/* Outer halo ring */}
+      {/* Pod shell */}
+      <div
+        className="relative overflow-hidden rounded-[20px] border p-3 transition-[border-color,box-shadow] duration-150"
+        style={{
+          borderColor: selected
+            ? screenRing
+            : accent
+              ? `${accent}50`
+              : "rgba(255,255,255,0.10)",
+          background: accent
+            ? `linear-gradient(165deg, ${hexToRgba(accent, 0.12)} 0%, rgba(15,11,28,0.92) 48%, rgba(8,6,18,0.98) 100%)`
+            : `linear-gradient(165deg, rgba(255,255,255,0.055) 0%, rgba(14,10,26,0.94) 48%, rgba(8,6,18,0.98) 100%)`,
+          boxShadow: selected
+            ? `0 0 0 1px ${screenRing}, 0 18px 42px -18px ${screenGlow}, inset 0 1px 0 rgba(255,255,255,0.18)`
+            : `0 14px 32px -20px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.12)`,
+        }}
+      >
+        {/* Top specular highlight */}
         <div
-          className="pointer-events-none absolute -inset-px rounded-[22px] opacity-70 transition-opacity duration-500 group-hover:opacity-100"
-          style={{ boxShadow: `0 0 0 1px ${theme.ring}33, 0 30px 80px -28px ${theme.glow}` }}
+          className="pointer-events-none absolute inset-x-4 top-0 h-px opacity-70"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${padAccent}99, transparent)`,
+          }}
+          aria-hidden
         />
 
-        {/* Main pod body — tinted by accent (zone) when provided */}
-        <div
-          className="relative overflow-hidden rounded-[22px] border bg-card p-4 shadow-soft"
-          style={{
-            borderColor: accent ? `${accent}55` : "var(--color-border)",
-            backgroundImage: accent
-              ? `linear-gradient(180deg, ${hexToRgba(accent, 0.1)} 0%, var(--color-card) 65%)`
-              : `linear-gradient(180deg, var(--color-card) 0%, color-mix(in oklab, var(--color-card) 85%, black) 100%)`,
-          }}
-        >
-          {/* Grid floor (perspective) */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-50"
-            style={{
-              backgroundImage: `linear-gradient(${theme.ring}22 1px, transparent 1px), linear-gradient(90deg, ${theme.ring}22 1px, transparent 1px)`,
-              backgroundSize: "22px 22px",
-              maskImage: "linear-gradient(180deg, transparent 30%, black 100%)",
-              WebkitMaskImage: "linear-gradient(180deg, transparent 30%, black 100%)",
-              transform: "perspective(500px) rotateX(60deg) translateY(35%) scale(1.4)",
-            }}
-            aria-hidden
-          />
-
-          {/* Top row */}
-          <div className="relative flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <div
-                className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"
-                style={{ background: `linear-gradient(135deg, ${theme.ring}33, transparent)` }}
-              >
-                <Icon className="h-4 w-4" style={{ color: theme.ring }} />
-              </div>
-              <div className="min-w-0">
-                <div className="truncate font-display text-sm font-bold leading-none text-foreground">
-                  {name}
-                </div>
-                <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
-                  {type} · ₹{hourlyRate}/hr
-                </div>
-              </div>
-            </div>
-            <Glyph className="h-3.5 w-3.5 opacity-80" style={{ color: theme.ring }} />
-          </div>
-
-          {/* 3D Monitor */}
-          <div className="relative mt-4 [transform:translateZ(20px)]">
+        {/* Header: Icon + Name + Rate/Zone */}
+        <div className="relative flex items-start justify-between gap-1.5">
+          <div className="flex min-w-0 items-center gap-2">
             <div
-              className="relative mx-auto aspect-[16/9] w-full overflow-hidden rounded-md border border-ink/20"
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border transition-transform duration-150 group-hover:scale-105"
               style={{
-                background:
-                  status === "in_use"
-                    ? `radial-gradient(120% 80% at 50% 0%, ${theme.ring}88 0%, #0a0a16 70%)`
-                    : status === "available"
-                      ? `radial-gradient(120% 80% at 50% 100%, ${theme.ring}55 0%, #0a0a16 80%)`
-                      : status === "reserved"
-                        ? `linear-gradient(135deg, ${theme.ring}33, #0a0a16)`
-                        : status === "suspended"
-                          ? "linear-gradient(135deg, #1a1a24, #0a0a16)"
-                          : "repeating-linear-gradient(45deg, #1a0d12 0 8px, #0a0a16 8px 16px)",
-                boxShadow: `inset 0 0 30px ${theme.ring}33`,
+                borderColor: `${padAccent}44`,
+                background: `linear-gradient(135deg, ${padAccent}26, rgba(0,0,0,0.25))`,
+                color: padAccent,
               }}
             >
-              {/* Scanlines */}
+              <Icon className="h-3.5 w-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="truncate font-display text-[13px] font-bold leading-tight text-foreground">
+                {name}
+              </div>
+              <div className="mt-0.5 flex items-center gap-1 truncate font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground tabular-nums">
+                <span>{type}</span>
+                <span aria-hidden="true">·</span>
+                <span>₹{hourlyRate}/hr</span>
+              </div>
+            </div>
+          </div>
+
+          {controls ? (
+            <div
+              className="relative z-10 flex shrink-0 items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {controls}
+            </div>
+          ) : (
+            <Glyph
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-80"
+              style={{ color: screenRing }}
+            />
+          )}
+        </div>
+
+        {/* Sculpted OLED Monitor Bezel + Screen */}
+        <div className="relative mt-2.5">
+          <div
+            className="relative rounded-[13px] p-[3px] pb-[5px]"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 55%, rgba(0,0,0,0.65) 100%)",
+              boxShadow:
+                "0 10px 22px -12px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.16)",
+            }}
+          >
+            {/* Camera/sensor pinhole */}
+            <div className="mx-auto mb-[2px] h-[2px] w-[2px] rounded-full bg-white/30" />
+
+            {/* OLED Display */}
+            <div
+              className="relative aspect-[16/9] w-full overflow-hidden rounded-[9px] border"
+              style={{
+                borderColor: `${screenRing}38`,
+                background:
+                  status === "in_use"
+                    ? `radial-gradient(125% 85% at 50% 0%, ${screenRing}55 0%, #090714 72%)`
+                    : status === "available"
+                      ? `radial-gradient(120% 85% at 50% 100%, ${screenRing}30 0%, #070712 80%)`
+                      : status === "reserved"
+                        ? `radial-gradient(120% 85% at 50% 0%, ${screenRing}35 0%, #080713 78%)`
+                        : status === "suspended"
+                          ? "linear-gradient(145deg, #161722 0%, #080810 100%)"
+                          : "repeating-linear-gradient(45deg, #1b0c12 0 7px, #09060d 7px 14px)",
+                boxShadow: `inset 0 0 24px -6px ${screenRing}45`,
+              }}
+            >
+              {/* Crisp scanline texture */}
               <div
-                className="pointer-events-none absolute inset-0 opacity-30 mix-blend-overlay"
+                className="pointer-events-none absolute inset-0 opacity-25"
                 style={{
                   backgroundImage:
                     "repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 3px)",
                 }}
                 aria-hidden
               />
-              {/* Sweep */}
-              {(status === "in_use" || hover) && (
-                <div
-                  className="pointer-events-none absolute -inset-y-2 left-0 w-1/3 opacity-50"
-                  style={{
-                    background: `linear-gradient(90deg, transparent, ${theme.ring}66, transparent)`,
-                    animation: "sweep-x 2.6s linear infinite",
-                  }}
-                  aria-hidden
-                />
-              )}
-              {/* Center icon */}
-              <div className="absolute inset-0 grid place-items-center">
-                {theme.pulse ? (
-                  <motion.div
-                    animate={{ scale: [1, 1.18, 1], opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+
+              {/* Subtle glass diagonal reflection */}
+              <div
+                className="pointer-events-none absolute inset-0 opacity-30"
+                style={{
+                  background:
+                    "linear-gradient(125deg, rgba(255,255,255,0.14) 0%, transparent 42%)",
+                }}
+                aria-hidden
+              />
+
+              {/* Phosphor sweep when running or hovered */}
+              <div
+                className={`pointer-events-none absolute -inset-y-2 left-0 w-1/3 ${
+                  status === "in_use"
+                    ? "opacity-45 animate-sweep-x"
+                    : "opacity-0 group-hover:opacity-35 group-hover:animate-sweep-x"
+                }`}
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${screenRing}66, transparent)`,
+                }}
+                aria-hidden
+              />
+
+              {/* Screen HUD top strip */}
+              <div className="relative flex items-center justify-between px-2 pt-1.5">
+                <span
+                  className="inline-flex items-center gap-1 font-mono text-[8.5px] font-bold uppercase tracking-[0.16em]"
+                  style={{ color: screenRing }}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${statusTheme.pulse ? "animate-pulse" : ""}`}
+                    style={{ background: screenRing, boxShadow: `0 0 6px ${screenRing}` }}
+                  />
+                  {statusTheme.chip}
+                </span>
+
+                {status === "in_use" ? (
+                  <span className="flex h-2.5 items-end gap-[2px]" aria-hidden>
+                    <span className="animate-eq-1 h-full w-[2px] rounded-full" style={{ background: screenRing }} />
+                    <span className="animate-eq-2 h-full w-[2px] rounded-full" style={{ background: screenRing }} />
+                    <span className="animate-eq-3 h-full w-[2px] rounded-full" style={{ background: screenRing }} />
+                  </span>
+                ) : zone ? (
+                  <span
+                    className="max-w-[65%] truncate font-mono text-[8px] uppercase tracking-[0.14em]"
+                    style={{ color: padAccent }}
                   >
-                    <Glyph
-                      className="h-7 w-7"
-                      style={{ color: theme.ring, filter: `drop-shadow(0 0 14px ${theme.glow})` }}
-                    />
-                  </motion.div>
+                    {zone}
+                  </span>
+                ) : null}
+              </div>
+
+              {/* Screen centerpiece */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-2 pt-3 text-center">
+                {caption ? (
+                  <div className="w-full truncate font-mono text-[11px] font-bold tracking-tight text-white tabular-nums drop-shadow">
+                    {caption}
+                  </div>
                 ) : (
                   <Glyph
-                    className="h-7 w-7 opacity-90"
-                    style={{ color: theme.ring, filter: `drop-shadow(0 0 10px ${theme.glow})` }}
+                    className="h-5 w-5 opacity-85 transition-transform duration-150 group-hover:scale-110"
+                    style={{
+                      color: screenRing,
+                      filter: `drop-shadow(0 0 10px ${screenGlow})`,
+                    }}
                   />
                 )}
               </div>
             </div>
 
-            {/* Monitor neck + base */}
-            <div className="mx-auto mt-1 h-2 w-3 rounded-b-sm bg-ink/30" />
-            <div className="mx-auto h-[3px] w-12 rounded-full bg-ink/20" />
+            {/* Chin power LED */}
+            <div className="mt-[3px] flex justify-center">
+              <span
+                className="h-[2px] w-4 rounded-full opacity-90"
+                style={{
+                  background: screenRing,
+                  boxShadow: `0 0 8px ${screenRing}`,
+                }}
+              />
+            </div>
           </div>
 
-          {/* Status chip */}
-          <div className="relative mt-3 flex items-center justify-between">
-            <span
-              className="rounded-md border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em]"
-              style={{
-                borderColor: `${theme.ring}55`,
-                color: theme.ring,
-                background: `${theme.ring}11`,
-              }}
-            >
-              {theme.chip}
-            </span>
-            {caption && (
-              <span className="font-mono text-[10px] text-muted-foreground">{caption}</span>
-            )}
-          </div>
-
-          {/* Overlay (timer, customer name…) */}
-          {overlay && <div className="relative mt-2">{overlay}</div>}
+          {/* CNC Monitor Neck + Desk Foot */}
+          <div className="mx-auto h-1.5 w-3 bg-gradient-to-b from-white/20 to-white/5" />
+          <div
+            className="mx-auto h-[3px] w-11 rounded-full border-t border-white/25"
+            style={{
+              background: "linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.22), rgba(255,255,255,0.06))",
+              boxShadow: `0 2px 10px -1px ${screenGlow}`,
+            }}
+          />
         </div>
-      </motion.div>
 
-      {/* keyframes (scoped) */}
-      <style>{`@keyframes sweep-x{0%{transform:translateX(-30%)}100%{transform:translateX(330%)}}`}</style>
-    </motion.button>
+        {/* Footer metadata line (unboxed, clean) */}
+        {(overlay || zone) && (
+          <div className="relative mt-2 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+            {zone ? (
+              <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-mono text-[9.5px] uppercase tracking-[0.14em]">
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ background: padAccent }}
+                />
+                <span className="truncate" style={{ color: padAccent }}>
+                  {zone}
+                </span>
+              </span>
+            ) : (
+              <span />
+            )}
+            {overlay && <div className="min-w-0 truncate">{overlay}</div>}
+          </div>
+        )}
+      </div>
+    </div>
   );
-}
+});
 
 /** Tiny live countdown for suspended stations. */
 export function SuspendCountdown({ until }: { until: string }) {

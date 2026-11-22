@@ -345,9 +345,14 @@ export function CustomerQuickAdd({
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="flex w-full items-center gap-2 rounded-lg border border-dashed border-lf-line px-2.5 py-2 text-[12px] font-semibold text-lf-dim transition-colors hover:border-lf-violet/40 hover:text-lf-text"
+          className="flex w-full items-center gap-2 rounded-lg border border-dashed border-lf-violet/45 bg-lf-violet/[0.06] px-2.5 py-2 text-[12px] font-semibold text-lf-text transition-colors hover:border-lf-violet/70 hover:bg-lf-violet/15"
         >
-          <UserPlus className="h-3.5 w-3.5" /> + New customer
+          <UserPlus className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <span className="truncate">
+            {results.length === 0 && raw.trim()
+              ? `Add “${raw.trim()}” as new customer`
+              : "+ New customer"}
+          </span>
         </button>
       )}
     </div>

@@ -26,7 +26,13 @@ export function OwnerBilling() {
   const submit = useServerFn(submitInvoiceProof);
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-billing"],
-    queryFn: () => load(),
+    queryFn: async () => {
+      const res = await load();
+      if (!res || typeof res !== "object" || !("payTo" in res) || !res.payTo || !Array.isArray(res.cafes)) {
+        throw new Error("Could not load subscription details right now. Please try again.");
+      }
+      return res;
+    },
     refetchInterval: 60000,
   });
 
@@ -56,10 +62,18 @@ export function OwnerBilling() {
     return <div className="h-40 animate-pulse rounded-3xl border border-border/40 bg-card/30" />;
   }
 
-  const open = (data.invoices ?? []).filter(
+  const cafes = Array.isArray(data.cafes) ? data.cafes : [];
+  const payTo = data.payTo ?? {
+    upi_id: null,
+    qr_url: null,
+    note: null,
+    monthly_price_rupees: 999,
+  };
+  const monthlyPrice = Number(payTo.monthly_price_rupees ?? 999);
+  const open = (Array.isArray(data.invoices) ? data.invoices : []).filter(
     (i) => i.status === "pending" || i.status === "submitted",
   );
-  const events = (data.events ?? []).slice(0, 6);
+  const events = (Array.isArray(data.events) ? data.events : []).slice(0, 6);
 
   return (
     <div className="hub-card relative overflow-hidden rounded-3xl p-5 sm:p-6">
@@ -73,13 +87,13 @@ export function OwnerBilling() {
           </h2>
         </div>
         <span className="text-xs text-muted-foreground">
-          ₹{data.payTo.monthly_price_rupees.toLocaleString("en-IN")}/month
+          ₹{monthlyPrice.toLocaleString("en-IN")}/month
         </span>
       </div>
 
       {/* Days left per café */}
-      <div className={`mt-4 grid gap-2 ${data.cafes.length > 1 ? "sm:grid-cols-2" : ""}`}>
-        {data.cafes.map((c) => {
+      <div className={`mt-4 grid gap-2 ${cafes.length > 1 ? "sm:grid-cols-2" : ""}`}>
+        {cafes.map((c) => {
           const col = tone(c.days_left, c.subscription_status);
           return (
             <div key={c.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -140,9 +154,9 @@ export function OwnerBilling() {
 
           <div className="rounded-2xl border border-primary/25 bg-primary/[0.06] p-4">
             <div className="flex flex-wrap items-center gap-4">
-              {data.payTo.qr_url ? (
+              {payTo.qr_url ? (
                 <img
-                  src={data.payTo.qr_url}
+                  src={payTo.qr_url}
                   alt="Scan to pay CoreCade"
                   className="h-28 w-28 rounded-xl border border-border/60 object-cover"
                 />
@@ -156,16 +170,16 @@ export function OwnerBilling() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (!data.payTo.upi_id) return;
-                    navigator.clipboard.writeText(data.payTo.upi_id);
+                    if (!payTo.upi_id) return;
+                    navigator.clipboard.writeText(payTo.upi_id);
                     toast.success("UPI ID copied");
                   }}
                   className="mt-0.5 inline-flex max-w-full items-center gap-1.5 break-all text-left font-mono text-base font-semibold hover:text-primary [&>svg]:shrink-0"
                 >
-                  {data.payTo.upi_id ?? "UPI ID not set"} <Copy className="h-3.5 w-3.5" />
+                  {payTo.upi_id ?? "UPI ID not set"} <Copy className="h-3.5 w-3.5" />
                 </button>
-                {data.payTo.note ? (
-                  <p className="mt-1 text-xs text-muted-foreground">{data.payTo.note}</p>
+                {payTo.note ? (
+                  <p className="mt-1 text-xs text-muted-foreground">{payTo.note}</p>
                 ) : null}
               </div>
             </div>

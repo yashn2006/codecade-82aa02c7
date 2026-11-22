@@ -57,11 +57,24 @@ function OwnerHub() {
   const fetchDash = useServerFn(getOwnerDashboard);
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["owner-dashboard"],
-    queryFn: () => fetchDash(),
+    queryFn: async () => {
+      const res = await fetchDash();
+      if (!res || typeof res !== "object" || !Array.isArray(res.cafes)) {
+        throw new Error("Live data couldn't be synced right now. Try again in a moment.");
+      }
+      return res;
+    },
     refetchInterval: 30_000,
   });
-  const cafes = data?.cafes ?? [];
-  const totals = data?.totals ?? { revenue: 0, revenueToday: 0, bookings: 0, activeSessions: 0, devices: 0, customers: 0 };
+  const cafes = Array.isArray(data?.cafes) ? data.cafes : [];
+  const totals = {
+    revenue: Number(data?.totals?.revenue ?? 0),
+    revenueToday: Number(data?.totals?.revenueToday ?? 0),
+    bookings: Number(data?.totals?.bookings ?? 0),
+    activeSessions: Number(data?.totals?.activeSessions ?? 0),
+    devices: Number(data?.totals?.devices ?? 0),
+    customers: Number(data?.totals?.customers ?? 0),
+  };
 
   return (
     <ConsoleShell

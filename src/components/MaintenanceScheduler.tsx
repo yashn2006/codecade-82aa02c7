@@ -94,7 +94,7 @@ export function MaintenanceScheduler({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent variant="compact-center" className="max-w-[460px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wrench className="h-4 w-4 text-amber-400" /> {title}

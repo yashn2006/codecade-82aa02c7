@@ -23,6 +23,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogIcon,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { CustomerQuickAdd, type FloorCustomer } from "@/components/CustomerQuickAdd";
 import { BookingDetailDialog, type BookingRow } from "@/components/BookingDetailDialog";
 import { ConfirmModal, DepositModal } from "@/components/ConfirmDialog";
 import { useCafeAccess } from "@/hooks/useCafeAccess";
@@ -60,6 +61,7 @@ function BookingsPage() {
   const cafeId = cafe?.id;
   const { can } = useCafeAccess(cafeId);
   const canBook = can("create_bookings");
+  const canRegister = can("register_customers");
   const canWallet = can("manage_wallet");
 
   const list = useServerFn(listBookings);
@@ -104,11 +106,19 @@ function BookingsPage() {
   const cxlM = useMutation({ mutationFn: cxlRef, onSuccess: () => { refresh(); toast.success("Booking cancelled + refunded"); }, onError: (e) => toast.error(e instanceof Error ? e.message : "Failed") });
   const createM = useMutation({
     mutationFn: create,
-    onSuccess: () => { refresh(); toast.success("Booking created"); setOpen(false); },
+    onSuccess: () => {
+      refresh();
+      toast.success("Booking created");
+      setOpen(false);
+      setSelectedCustomer(null);
+      setCreateTried(false);
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
   const [open, setOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<FloorCustomer | null>(null);
+  const [createTried, setCreateTried] = useState(false);
   const [tab, setTab] = useState<"upcoming" | "today" | "past">("today");
   const [detail, setDetail] = useState<BookingRow | null>(null);
   const [pastLimit, setPastLimit] = useState(25);
@@ -400,8 +410,17 @@ function BookingsPage() {
       )}
 
       {canBook && (
-        <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <Dialog
+          open={open}
+          onOpenChange={(v) => {
+            setOpen(v);
+            if (!v) {
+              setSelectedCustomer(null);
+              setCreateTried(false);
+            }
+          }}
+        >
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogIcon><CalendarRange className="h-5 w-5" /></DialogIcon>
             <DialogTitle>Create booking</DialogTitle>
@@ -409,6 +428,15 @@ function BookingsPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              setCreateTried(true);
+              if (!selectedCustomer) {
+                toast.error(
+                  canRegister
+                    ? "Select a customer or add a new one"
+                    : "Select a customer",
+                );
+                return;
+              }
               const fd = new FormData(e.currentTarget);
               const rawScheduled = String(fd.get("scheduled_at") ?? "");
               const parsedDate = new Date(rawScheduled);
@@ -419,37 +447,50 @@ function BookingsPage() {
               createM.mutate({ data: {
                 cafe_id: cafeId,
                 device_id: String(fd.get("device_id")),
-                customer_id: String(fd.get("customer_id")),
+                customer_id: selectedCustomer.id,
                 scheduled_at: parsedDate.toISOString(),
                 duration_minutes: Number(fd.get("duration_minutes")),
               } });
             }}
             className="space-y-4"
           >
-            {((customersQ.data ?? []).length === 0 || (devicesQ.data ?? []).length === 0) && (
+            {((devicesQ.data ?? []).length === 0 || (!canRegister && (customersQ.data ?? []).length === 0)) && (
               <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-200">
-                {(customersQ.data ?? []).length === 0 && (devicesQ.data ?? []).length === 0
-                  ? "Add at least one customer and one station before creating a booking."
-                  : (customersQ.data ?? []).length === 0
-                  ? "No customers yet — register a customer first."
-                  : "No stations yet — add a device first."}
+                {(devicesQ.data ?? []).length === 0
+                  ? "No stations yet — add a device first."
+                  : "No customers yet — ask a manager to register a customer first."}
               </div>
             )}
             <div className="space-y-1.5">
-              <Label>Customer</Label>
-              <select name="customer_id" required className="field-select">
-                <option value="">Select…</option>
-                {(customersQ.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-              </select>
+              <Label>Customer *</Label>
+              <CustomerQuickAdd
+                cafeId={cafeId}
+                customers={customersQ.data ?? []}
+                value={selectedCustomer}
+                onChange={(c) => {
+                  setSelectedCustomer(c);
+                  if (createTried) setCreateTried(false);
+                }}
+                canCreateCustomer={canRegister}
+                invalid={createTried && !selectedCustomer}
+                listClassName="max-h-[168px]"
+              />
+              {createTried && !selectedCustomer && (
+                <p className="text-xs text-destructive">
+                  {canRegister
+                    ? "Select an existing customer or click + New customer above."
+                    : "Please select a customer."}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
-              <Label>Station</Label>
+              <Label>Station *</Label>
               <select name="device_id" required className="field-select">
                 <option value="">Select…</option>
                 {(devicesQ.data ?? []).map((d) => <option key={d.id} value={d.id}>{d.name} · {d.type}</option>)}
               </select>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
               <div className="space-y-1.5">
                 <Label>Date &amp; time</Label>
                 <Input

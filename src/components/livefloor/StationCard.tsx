@@ -156,65 +156,87 @@ export const StationCard = memo(function StationCard({
         <StatusBadge status={status} />
       </div>
 
-      {/* screen */}
-      <div className="lf-screen mt-3 flex min-h-[78px] flex-1 flex-col justify-center px-3 py-2.5">
-        {running ? (
-          <>
-            <div className="flex items-center gap-2">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-lf-run/15 font-mono text-[9px] font-bold text-lf-run">
-                {initials(who ?? "Walk in")}
-              </span>
-              <span className="truncate text-[12.5px] font-semibold text-lf-text">{who ?? "Walk-in"}</span>
-            </div>
-            <div className="mt-1.5 flex items-end justify-between gap-2">
-              <LiveClock session={session!} className="font-mono text-[22px] font-bold leading-none text-lf-run" />
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-lf-dim">
-                {Number(session!.planned_minutes ?? 0) > 0 ? "left" : "played"}
-              </span>
-            </div>
-            <div className="mt-2"><SessionProgress session={session!} /></div>
-          </>
-        ) : arrived && booking ? (
-          <>
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--lf-run)" }}>
-              Confirmed booking · {fmtTime(booking.scheduled_at)}
-            </div>
-            <div className="mt-1 truncate text-[13px] font-semibold text-lf-text">{who ?? "Reserved"}</div>
-            <div className="font-mono text-[10px] text-lf-dim">{booking.duration_minutes} min</div>
-          </>
-        ) : status === "reserved" ? (
-          <>
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-dim">
-              {booking ? `Booked · ${fmtTime(booking.scheduled_at)}` : "Held for a customer"}
-            </div>
-            <div className="mt-1 truncate text-[13px] font-semibold text-lf-text">{who ?? "Reserved"}</div>
-            {booking && <div className="font-mono text-[10px] text-lf-dim">{booking.duration_minutes} min</div>}
-          </>
-        ) : status === "maintenance" ? (
-          <>
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-maint">Out of service</div>
-            <div className="mt-1 line-clamp-2 text-[12px] text-lf-dim">{reason ?? "No reason recorded"}</div>
-          </>
-        ) : status === "suspended" ? (
-          <>
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-dim">
-              {pausedSession ? "Session paused" : "Station paused"}
-            </div>
-            <div className="mt-1 truncate text-[12.5px] text-lf-text">
-              {pausedSession ? who ?? "Walk-in" : device.suspend_until ? `Back at ${fmtTime(device.suspend_until)}` : "Out of rotation"}
-            </div>
-          </>
-        ) : (
-          <div className="flex items-end justify-between gap-2">
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-dim">Ready to play</div>
-              <div className="mt-1 font-mono text-[20px] font-bold leading-none text-lf-text">
-                ₹{device.hourly_rate}<span className="text-[11px] font-medium text-lf-dim">/hr</span>
+      {/* monitor bezel + live screen */}
+      <div className="lf-screen-bezel mt-3 flex flex-1 flex-col">
+        <div className="lf-screen flex min-h-[84px] flex-1 flex-col justify-center px-3 py-2.5">
+          {running ? (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-lf-run/15 font-mono text-[9px] font-bold text-lf-run">
+                    {initials(who ?? "Walk in")}
+                  </span>
+                  <span className="truncate text-[12.5px] font-semibold text-lf-text">{who ?? "Walk-in"}</span>
+                </div>
+                <span className="flex h-2.5 shrink-0 items-end gap-[2px]" aria-hidden>
+                  <span className="animate-eq-1 h-full w-[2px] rounded-full bg-[var(--tone)]" />
+                  <span className="animate-eq-2 h-full w-[2px] rounded-full bg-[var(--tone)]" />
+                  <span className="animate-eq-3 h-full w-[2px] rounded-full bg-[var(--tone)]" />
+                </span>
               </div>
+              <div className="mt-1.5 flex items-end justify-between gap-2">
+                <LiveClock session={session!} className="font-mono text-[22px] font-bold leading-none text-lf-run tabular-nums" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-lf-dim">
+                  {Number(session!.planned_minutes ?? 0) > 0 ? "left" : "played"}
+                </span>
+              </div>
+              <div className="mt-2"><SessionProgress session={session!} /></div>
+            </>
+          ) : arrived && booking ? (
+            <>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--lf-run)" }}>
+                Confirmed booking · {fmtTime(booking.scheduled_at)}
+              </div>
+              <div className="mt-1 truncate text-[13px] font-semibold text-lf-text">{who ?? "Reserved"}</div>
+              <div className="font-mono text-[10px] text-lf-dim tabular-nums">{booking.duration_minutes} min</div>
+            </>
+          ) : status === "reserved" ? (
+            <>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-dim">
+                {booking ? `Booked · ${fmtTime(booking.scheduled_at)}` : "Held for a customer"}
+              </div>
+              <div className="mt-1 truncate text-[13px] font-semibold text-lf-text">{who ?? "Reserved"}</div>
+              {booking && <div className="font-mono text-[10px] text-lf-dim tabular-nums">{booking.duration_minutes} min</div>}
+            </>
+          ) : status === "maintenance" ? (
+            <>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-maint">Out of service</div>
+              <div className="mt-1 line-clamp-2 text-[12px] text-lf-dim">{reason ?? "No reason recorded"}</div>
+            </>
+          ) : status === "suspended" ? (
+            <>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-dim">
+                {pausedSession ? "Session paused" : "Station paused"}
+              </div>
+              <div className="mt-1 truncate text-[12.5px] text-lf-text">
+                {pausedSession ? who ?? "Walk-in" : device.suspend_until ? `Back at ${fmtTime(device.suspend_until)}` : "Out of rotation"}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-end justify-between gap-2">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-lf-dim">Ready to play</div>
+                <div className="mt-1 font-mono text-[20px] font-bold leading-none text-lf-text tabular-nums">
+                  ₹{device.hourly_rate}<span className="text-[11px] font-medium text-lf-dim">/hr</span>
+                </div>
+              </div>
+              {device.zone && (
+                <span
+                  className="inline-flex max-w-[46%] items-center gap-1 truncate font-mono text-[10px]"
+                  style={{ color: device.zone_color || "var(--lf-dim)" }}
+                >
+                  {device.zone_color && (
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: device.zone_color }} />
+                  )}
+                  <span className="truncate">{device.zone}</span>
+                </span>
+              )}
             </div>
-            {device.zone && <span className="truncate font-mono text-[10px] text-lf-dim">{device.zone}</span>}
-          </div>
-        )}
+          )}
+        </div>
+        <div className="lf-screen-chin" aria-hidden>
+          <span className="lf-screen-led" />
+        </div>
       </div>
 
       {/* actions */}

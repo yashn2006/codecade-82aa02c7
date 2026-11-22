@@ -141,8 +141,14 @@ export async function getSupabaseUserReady(timeoutMs = 1600): Promise<User | nul
 
     const timer = window.setTimeout(async () => {
       // Last-ditch: ask Supabase to validate whatever's in storage.
-      const { data } = await supabase.auth.getUser();
-      finish(data.user ?? null);
+      const [{ data: userData }, { data: sessionData }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession(),
+      ]);
+      const validUser =
+        userData.user && sessionData.session?.access_token ? userData.user : null;
+      if (validUser) cachedUser = validUser;
+      finish(validUser);
     }, timeoutMs);
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {

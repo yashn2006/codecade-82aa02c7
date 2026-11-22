@@ -20,15 +20,18 @@ function hourlyStarts(sessions: FloorSession[], now: number): number[] {
 
 function Wave({ values }: { values: number[] }) {
   const max = Math.max(1, ...values);
-  const w = 200, h = 44;
+  const w = 200;
+  const h = 44;
   const step = w / (values.length - 1);
   const pts = values.map((v, i) => [i * step, h - 4 - (v / max) * (h - 10)] as const);
-  const d = pts.map(([x, y], i) => {
-    if (i === 0) return `M${x},${y}`;
-    const [px, py] = pts[i - 1];
-    const cx = (px + x) / 2;
-    return `C${cx},${py} ${cx},${y} ${x},${y}`;
-  }).join(" ");
+  const d = pts
+    .map(([x, y], i) => {
+      if (i === 0) return `M${x},${y}`;
+      const [px, py] = pts[i - 1];
+      const cx = (px + x) / 2;
+      return `C${cx},${py} ${cx},${y} ${x},${y}`;
+    })
+    .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="block h-11 w-full" aria-hidden>
       <defs>
@@ -42,7 +45,7 @@ function Wave({ values }: { values: number[] }) {
         </linearGradient>
       </defs>
       <path d={`${d} L${w},${h} L0,${h} Z`} fill="url(#lf-wave-fill)" />
-      <path d={d} fill="none" stroke="url(#lf-wave-stroke)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      <path d={d} fill="none" stroke="url(#lf-wave-stroke)" strokeWidth="1.75" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
@@ -57,13 +60,16 @@ export const FloorFooter = memo(function FloorFooter({
 }) {
   const values = useMemo(() => hourlyStarts(sessions, now || Date.now()), [sessions, now]);
   const started = values.reduce((a, b) => a + b, 0);
+
   return (
     <section className="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
       <div className="lf-panel flex items-center gap-3 px-4 py-3">
-        <span className="lf-stat-ico" style={{ ["--tone" as string]: "var(--lf-magenta)" }}><BarChart3 className="h-4 w-4" /></span>
+        <span className="lf-stat-ico" style={{ ["--tone" as string]: "var(--lf-magenta)" }}>
+          <BarChart3 className="h-4 w-4" />
+        </span>
         <div className="min-w-0">
-          <div className="text-[13px] font-bold">Live activity</div>
-          <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px] text-lf-dim">
+          <div className="text-[13px] font-bold text-white">Live activity</div>
+          <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px] tabular-nums text-lf-dim">
             <span><b className="text-lf-run">{counts.in_use}</b> running</span>
             <span><b className="text-lf-cyan">{counts.available}</b> available</span>
             <span><b className="text-lf-maint">{counts.maintenance}</b> maintenance</span>
@@ -71,24 +77,31 @@ export const FloorFooter = memo(function FloorFooter({
           </div>
         </div>
       </div>
-      <div className="lf-panel flex items-center gap-3 px-4 py-2">
+
+      <div className="lf-panel flex items-center gap-3 px-4 py-2.5">
         <div className="min-w-0 flex-1">
           <Wave values={values} />
-          <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-lf-dim">{started} sessions · last 12h</div>
+          <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] tabular-nums text-lf-dim">
+            {started} sessions · last 12h
+          </div>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="text-[10.5px] text-lf-dim">Total stations</div>
-          <div className="flex items-center justify-end gap-1 font-mono text-[20px] font-bold">
+        <div className="shrink-0 border-l border-white/10 pl-3 text-right">
+          <div className="text-[10.5px] text-lf-dim">Total rigs</div>
+          <div className="flex items-center justify-end gap-1 font-mono text-[20px] font-bold tabular-nums text-white">
             <Gamepad2 className="h-4 w-4 text-lf-violet" /> {counts.total}
           </div>
         </div>
       </div>
-      <div className="lf-panel flex items-center gap-3 px-4 py-3" style={{ ["--tone" as string]: healthy ? "var(--lf-run)" : "var(--lf-maint)" }}>
+
+      <div
+        className="lf-panel flex items-center gap-3 px-4 py-3"
+        style={{ ["--tone" as string]: healthy ? "var(--lf-run)" : "var(--lf-maint)" }}
+      >
         <span className="lf-stat-ico"><HeartPulse className="h-4 w-4" /></span>
         <div className="min-w-0">
-          <div className="text-[13px] font-bold">System health</div>
+          <div className="text-[13px] font-bold text-white">Floor sync</div>
           <div className="truncate text-[11.5px]" style={{ color: "var(--tone)" }}>
-            {healthy ? "All systems operational" : "Reconnecting — showing last known state"}
+            {healthy ? "Live updates active" : "Reconnecting — showing cached state"}
           </div>
         </div>
       </div>
