@@ -12,7 +12,7 @@ export const listCustomers = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id);
+    await assertCafeAccess(context.userId, data.cafe_id, undefined, context.supabase);
     const { data: rows, error } = await context.supabase
       .from("customers")
       .select("id, full_name, phone, email, wallet_balance, created_at")
@@ -34,7 +34,7 @@ export const createCustomer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "register_customers");
+    await assertCafeAccess(context.userId, data.cafe_id, "register_customers", context.supabase);
     const fullName = data.full_name.trim();
     const phone = data.phone?.trim() || null;
     const email = data.email?.trim() || null;

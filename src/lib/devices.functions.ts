@@ -24,7 +24,7 @@ export const listDevices = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id);
+    await assertCafeAccess(context.userId, data.cafe_id, undefined, context.supabase);
     // Auto-expire suspensions opportunistically (best-effort, ignore errors).
     await context.supabase.rpc("expire_device_suspensions").then(() => {}, () => {});
     const { data: rows, error } = await context.supabase
@@ -41,7 +41,7 @@ export const createDevice = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => DeviceInput.parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "manage_devices");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_devices", context.supabase);
     const { error, data: row } = await context.supabase
       .from("devices")
       .insert(data)
@@ -61,8 +61,8 @@ export const updateDevice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("devices", data.id);
-    await assertCafeAccess(context.userId, cafeId, "manage_devices");
+    const cafeId = await lookupCafeId("devices", data.id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "manage_devices", context.supabase);
     const rateChanged = data.patch.hourly_rate !== undefined;
     const prev = rateChanged
       ? (
@@ -83,6 +83,7 @@ export const updateDevice = createServerFn({ method: "POST" })
     if (rateChanged && prev && prev.hourly_rate !== data.patch.hourly_rate) {
       const { writeAudit } = await import("@/lib/audit.server");
       await writeAudit({
+        supabase: context.supabase,
         cafeId: prev.cafe_id,
         actorId: context.userId,
         action: "device.price_changed",
@@ -103,8 +104,8 @@ export const deleteDevice = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("devices", data.id);
-    await assertCafeAccess(context.userId, cafeId, "manage_devices");
+    const cafeId = await lookupCafeId("devices", data.id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "manage_devices", context.supabase);
     const { error } = await context.supabase.from("devices").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -126,8 +127,9 @@ export const setDeviceStatus = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: dev } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: dev } = await db
       .from("devices")
       .select("cafe_id, status")
       .eq("id", data.id)
@@ -144,6 +146,7 @@ export const setDeviceStatus = createServerFn({ method: "POST" })
       context.userId,
       dev.cafe_id,
       needsDeviceAdmin ? "manage_devices" : ["manage_devices", "create_bookings", "start_sessions"],
+      context.supabase,
     );
     const patch: Record<string, unknown> = { status: data.status };
     if (data.status === "suspended" && data.suspend_minutes) {
@@ -169,8 +172,8 @@ export const placeDevice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("devices", data.id);
-    await assertCafeAccess(context.userId, cafeId, "manage_devices");
+    const cafeId = await lookupCafeId("devices", data.id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "manage_devices", context.supabase);
     const { error } = await context.supabase
       .from("devices")
       .update({ pos_x: data.pos_x, pos_y: data.pos_y })

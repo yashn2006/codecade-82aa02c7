@@ -7,7 +7,7 @@ export const getCafeAnalytics = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "view_revenue");
+    await assertCafeAccess(context.userId, data.cafe_id, "view_revenue", context.supabase);
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const startOfWeek = new Date(Date.now() - 7 * 86400_000);
 
@@ -57,21 +57,24 @@ export const getNetworkAnalytics = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
     if (!isAdmin) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
 
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const start7 = new Date(Date.now() - 7 * 86400_000);
 
     const [today, week, recentSessions, topCafes] = await Promise.all([
-      supabaseAdmin.from("sessions").select("amount, duration_minutes")
+      db.from("sessions").select("amount, duration_minutes")
         .gte("ended_at", startOfDay.toISOString()).not("ended_at", "is", null),
-      supabaseAdmin.from("sessions").select("amount, ended_at")
+      db.from("sessions").select("amount, ended_at")
         .gte("ended_at", start7.toISOString()).not("ended_at", "is", null),
-      supabaseAdmin.from("sessions")
+      db.from("sessions")
         .select("id, started_at, ended_at, amount, status, cafes(name, slug), devices(name, type), customers(full_name)")
         .order("started_at", { ascending: false }).limit(12),
-      supabaseAdmin.from("cafes").select("id, name, slug, city, created_at").order("created_at", { ascending: false }).limit(8),
+      db.from("cafes").select("id, name, slug, city, created_at").order("created_at", { ascending: false }).limit(8),
     ]);
+
+    if (topCafes.error) throw new Error(topCafes.error.message);
 
     const revenueToday = (today.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
     const dayBuckets = new Map<string, number>();

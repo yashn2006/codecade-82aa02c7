@@ -7,7 +7,7 @@ export const listTournaments = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id, context.supabase);
     const { data: rows, error } = await context.supabase
       .from("tournaments").select("*, tournament_registrations(count)").eq("cafe_id", data.cafe_id)
       .order("starts_at", { ascending: false });
@@ -35,7 +35,7 @@ export const upsertTournament = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id, context.supabase);
     const { error } = await context.supabase.from("tournaments").upsert(data);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -46,8 +46,8 @@ export const deleteTournament = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("tournaments", data.id);
-    await assertCafeOwnerOrAdmin(context.userId, cafeId);
+    const cafeId = await lookupCafeId("tournaments", data.id, context.supabase);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId, context.supabase);
     const { error } = await context.supabase.from("tournaments").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -58,8 +58,8 @@ export const listRegistrations = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ tournament_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("tournaments", data.tournament_id);
-    await assertCafeOwnerOrAdmin(context.userId, cafeId);
+    const cafeId = await lookupCafeId("tournaments", data.tournament_id, context.supabase);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId, context.supabase);
     const { data: rows, error } = await context.supabase
       .from("tournament_registrations").select("*").eq("tournament_id", data.tournament_id)
       .order("created_at");
@@ -80,8 +80,8 @@ export const registerForTournament = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("tournaments", data.tournament_id);
-    await assertCafeOwnerOrAdmin(context.userId, cafeId);
+    const cafeId = await lookupCafeId("tournaments", data.tournament_id, context.supabase);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId, context.supabase);
     const { error } = await context.supabase.from("tournament_registrations").insert(data);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -93,8 +93,8 @@ export const listMatches = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ tournament_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("tournaments", data.tournament_id);
-    await assertCafeOwnerOrAdmin(context.userId, cafeId);
+    const cafeId = await lookupCafeId("tournaments", data.tournament_id, context.supabase);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId, context.supabase);
     const { data: rows, error } = await context.supabase
       .from("tournament_matches").select("*")
       .eq("tournament_id", data.tournament_id)
@@ -109,8 +109,8 @@ export const generateBracket = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ tournament_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("tournaments", data.tournament_id);
-    await assertCafeOwnerOrAdmin(context.userId, cafeId);
+    const cafeId = await lookupCafeId("tournaments", data.tournament_id, context.supabase);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId, context.supabase);
     const { data: regs, error: re } = await context.supabase
       .from("tournament_registrations").select("team_name").eq("tournament_id", data.tournament_id);
     if (re) throw new Error(re.message);
@@ -162,13 +162,14 @@ export const setMatchResult = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: m, error: me } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: m, error: me } = await db
       .from("tournament_matches").select("*").eq("id", data.match_id).single();
     if (me || !m) throw new Error(me?.message ?? "Match not found");
     const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("tournaments", m.tournament_id);
-    await assertCafeOwnerOrAdmin(context.userId, cafeId);
+    const cafeId = await lookupCafeId("tournaments", m.tournament_id, context.supabase);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId, context.supabase);
     const winnerName = data.winner === "a" ? m.team_a : m.team_b;
 
     await context.supabase.from("tournament_matches").update({
@@ -205,8 +206,8 @@ export const payoutTournament = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("tournaments", data.tournament_id);
-    await assertCafeOwnerOrAdmin(context.userId, cafeId);
+    const cafeId = await lookupCafeId("tournaments", data.tournament_id, context.supabase);
+    await assertCafeOwnerOrAdmin(context.userId, cafeId, context.supabase);
     const { error } = await context.supabase.rpc("payout_tournament", {
       _tournament_id: data.tournament_id,
       _customer_id: data.customer_id,

@@ -41,23 +41,24 @@ export const publicRegisterTournament = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { getSupabaseAdminOrPublic } = await import("@/lib/supabase/client.server");
+    const db = getSupabaseAdminOrPublic();
 
     // Defense-in-depth: re-check tournament state from server.
-    const { data: t, error: te } = await supabaseAdmin
+    const { data: t, error: te } = await db
       .from("tournaments")
       .select("id, status, capacity")
       .eq("id", data.tournament_id).maybeSingle();
     if (te) throw new Error(te.message);
     if (!t || t.status !== "upcoming") throw new Error("Registration closed");
 
-    const { count } = await supabaseAdmin
+    const { count } = await db
       .from("tournament_registrations")
       .select("id", { count: "exact", head: true })
       .eq("tournament_id", t.id);
     if ((count ?? 0) >= t.capacity) throw new Error("Tournament is full");
 
-    const { error } = await supabaseAdmin.from("tournament_registrations").insert({
+    const { error } = await db.from("tournament_registrations").insert({
       tournament_id: data.tournament_id,
       team_name: data.team_name,
       contact: data.contact,

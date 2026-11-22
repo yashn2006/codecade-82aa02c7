@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Users, Search, X, UserPlus, MoreHorizontal, Trash2, KeyRound, Mail, Copy, Eye, ShieldAlert } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,7 @@ function UsersPanel() {
   const [q, setQ] = useState("");
   const [openUserId, setOpenUserId] = useState<string | null>(null);
   const fn = useServerFn(adminListUsersFull);
-  const { data, refetch, isFetching } = useQuery({
+  const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["admin-users-full", q],
     queryFn: () => fn({ data: { q, page: 1, perPage: 200 } }),
   });
@@ -98,7 +99,15 @@ function UsersPanel() {
         </TabsList>
         {(Object.keys(buckets) as Array<keyof typeof buckets>).map((k) => (
           <TabsContent key={k} value={k} className="mt-4 space-y-2">
-            {buckets[k].length === 0 ? (
+            {isLoading ? (
+              <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
+            ) : isError ? (
+              <ErrorState
+                title="Couldn't load users"
+                description={error instanceof Error && error.message ? error.message : "Failed to sync user accounts."}
+                onRetry={() => refetch()}
+              />
+            ) : buckets[k].length === 0 ? (
               <EmptyState icon={Users} title="No users" description="Try a different search or category." />
             ) : buckets[k].map((u) => {
               const isBanned = !!(u.banned_until && new Date(u.banned_until).getTime() > Date.now());

@@ -1,4 +1,5 @@
-import { supabaseAdmin } from "@/lib/supabase/client.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { hasSupabaseAdminKey, supabaseAdmin, supabasePublic } from "@/lib/supabase/client.server";
 import { STAFF_PERMS, type StaffPerm } from "@/lib/staff.functions";
 
 export type CafeAccessResult = {
@@ -15,25 +16,34 @@ export type CafeAccessResult = {
 
 const VALID_PERMS = new Set<string>(STAFF_PERMS);
 
-export async function resolveCafeAccess(userId: string, cafeId: string): Promise<CafeAccessResult | null> {
+function pickDb(client?: SupabaseClient): SupabaseClient {
+  return hasSupabaseAdminKey() ? supabaseAdmin : (client ?? supabasePublic);
+}
+
+export async function resolveCafeAccess(
+  userId: string,
+  cafeId: string,
+  client?: SupabaseClient,
+): Promise<CafeAccessResult | null> {
+  const db = pickDb(client);
   const [
     { data: adminRole, error: adminErr },
     { data: cafe, error: cafeErr },
     { data: staffRow, error: staffErr },
   ] = await Promise.all([
-    supabaseAdmin
+    db
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
       .eq("role", "super_admin")
       .limit(1)
       .maybeSingle(),
-    supabaseAdmin
+    db
       .from("cafes")
       .select("owner_id")
       .eq("id", cafeId)
       .maybeSingle(),
-    supabaseAdmin
+    db
       .from("staff_permissions")
       .select("id, permissions, must_change_pin, is_active, display_name, username, login_email")
       .eq("cafe_id", cafeId)
@@ -95,8 +105,9 @@ export async function assertCafeAccess(
   userId: string,
   cafeId: string,
   requiredPerm?: StaffPerm | StaffPerm[],
+  client?: SupabaseClient,
 ): Promise<CafeAccessResult> {
-  const access = await resolveCafeAccess(userId, cafeId);
+  const access = await resolveCafeAccess(userId, cafeId, client);
   if (!access) {
     throw new Error("You don't have permission");
   }
@@ -116,8 +127,12 @@ export async function assertCafeAccess(
   return access;
 }
 
-export async function assertCafeOwnerOrAdmin(userId: string, cafeId: string): Promise<CafeAccessResult> {
-  const access = await resolveCafeAccess(userId, cafeId);
+export async function assertCafeOwnerOrAdmin(
+  userId: string,
+  cafeId: string,
+  client?: SupabaseClient,
+): Promise<CafeAccessResult> {
+  const access = await resolveCafeAccess(userId, cafeId, client);
   if (!access || !access.isOwnerOrAdmin) {
     throw new Error("You don't have permission");
   }
@@ -127,10 +142,14 @@ export async function assertCafeOwnerOrAdmin(userId: string, cafeId: string): Pr
 export async function lookupCafeId(
   table: string,
   id: string,
-  col = "cafe_id",
+  colOrClient: string | SupabaseClient = "cafe_id",
+  maybeClient?: SupabaseClient,
 ): Promise<string> {
+  const col = typeof colOrClient === "string" ? colOrClient : "cafe_id";
+  const client = typeof colOrClient === "string" ? maybeClient : colOrClient;
+  const db = pickDb(client);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabaseAdmin.from(table as any) as any)
+  const { data, error } = await (db.from(table as any) as any)
     .select(col)
     .eq("id", id)
     .maybeSingle();

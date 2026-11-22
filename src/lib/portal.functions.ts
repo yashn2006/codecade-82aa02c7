@@ -351,13 +351,15 @@ export const customerSubmitTopupProof = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
     const utr = data.utr_number.trim();
     if (!/^[A-Za-z0-9._-]{6,60}$/.test(utr)) {
       throw new Error("UTR / transaction reference can only contain letters, numbers, dots or dashes.");
     }
 
-    const { data: customer } = await supabaseAdmin
+    const { data: customer } = await db
       .from("customers")
       .select("id, user_id, cafe_id, full_name")
       .eq("id", data.customer_id)
@@ -367,15 +369,15 @@ export const customerSubmitTopupProof = createServerFn({ method: "POST" })
     if (!customer) throw new Error("Customer record not found for this café");
 
     const [{ data: cafe }, { data: cafePage }] = await Promise.all([
-      supabaseAdmin.from("cafes").select("id, name, slug, owner_id").eq("id", data.cafe_id).maybeSingle(),
-      supabaseAdmin.from("cafe_pages").select("upi_id").eq("cafe_id", data.cafe_id).maybeSingle(),
+      db.from("cafes").select("id, name, slug, owner_id").eq("id", data.cafe_id).maybeSingle(),
+      db.from("cafe_pages").select("upi_id").eq("cafe_id", data.cafe_id).maybeSingle(),
     ]);
     if (!cafe) throw new Error("Café not found");
     if (!cafePage?.upi_id) {
       throw new Error("This café has not enabled Direct UPI yet. Please pay at the counter.");
     }
 
-    const { data: dup } = await supabaseAdmin
+    const { data: dup } = await db
       .from("wallet_topups")
       .select("id, status")
       .eq("cafe_id", data.cafe_id)
@@ -387,7 +389,7 @@ export const customerSubmitTopupProof = createServerFn({ method: "POST" })
       throw new Error("This UTR reference has already been submitted.");
     }
 
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await db
       .from("wallet_topups")
       .insert({
         cafe_id: data.cafe_id,
@@ -408,15 +410,19 @@ export const customerSubmitTopupProof = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    if (cafe.owner_id) {
-      await supabaseAdmin.from("notifications").insert({
-        user_id: cafe.owner_id,
-        cafe_id: cafe.id,
-        kind: "wallet_topup",
-        title: `UPI top-up proof · ₹${data.amount}`,
-        body: `${customer.full_name ?? "A player"} submitted UTR ${utr}. Verify in Wallet to credit.`,
-        link: `/cafe/${cafe.slug}/wallet`,
-      });
+    if (hasAdmin && cafe.owner_id) {
+      try {
+        await supabaseAdmin.from("notifications").insert({
+          user_id: cafe.owner_id,
+          cafe_id: cafe.id,
+          kind: "wallet_topup",
+          title: `UPI top-up proof · ₹${data.amount}`,
+          body: `${customer.full_name ?? "A player"} submitted UTR ${utr}. Verify in Wallet to credit.`,
+          link: `/cafe/${cafe.slug}/wallet`,
+        });
+      } catch {
+        /* non-fatal */
+      }
     }
 
     return { ok: true, status: "pending" as const, topup_id: row.id };

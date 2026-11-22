@@ -44,8 +44,9 @@ export const deleteNotification = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db
       .from("notifications")
       .delete()
       .eq("id", data.id)
@@ -57,8 +58,9 @@ export const deleteNotification = createServerFn({ method: "POST" })
 export const clearAllNotifications = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db
       .from("notifications")
       .delete()
       .eq("user_id", context.userId);
@@ -79,7 +81,8 @@ export const pushNotification = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     // verify caller is owner/admin of cafe (or super_admin)
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
     if (!isAdmin && data.cafe_id) {
@@ -88,7 +91,7 @@ export const pushNotification = createServerFn({ method: "POST" })
     } else if (!isAdmin) {
       throw new Error("Forbidden");
     }
-    const { error } = await supabaseAdmin.from("notifications").insert(data);
+    const { error } = await db.from("notifications").insert(data);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

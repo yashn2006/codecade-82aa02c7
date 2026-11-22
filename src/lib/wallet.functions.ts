@@ -15,7 +15,7 @@ export const adjustWallet = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet", context.supabase);
     const { error } = await context.supabase.rpc("apply_wallet_tx", {
       _customer_id: data.customer_id,
       _cafe_id: data.cafe_id,
@@ -27,6 +27,7 @@ export const adjustWallet = createServerFn({ method: "POST" })
 
     const { writeAudit } = await import("@/lib/audit.server");
     await writeAudit({
+      supabase: context.supabase,
       cafeId: data.cafe_id,
       actorId: context.userId,
       action: data.kind === "topup" && data.amount > 0 ? "wallet.topped_up" : "wallet.adjusted",
@@ -52,17 +53,18 @@ export const listWalletTransactions = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
     if (data.cafe_id) {
-      await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
+      await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet", context.supabase);
     } else if (data.customer_id) {
-      const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-      const { data: cust } = await supabaseAdmin
+      const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+      const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+      const { data: cust } = await db
         .from("customers")
         .select("cafe_id, user_id")
         .eq("id", data.customer_id)
         .maybeSingle();
       if (!cust) throw new Error("Customer not found");
       if (cust.user_id !== context.userId) {
-        await assertCafeAccess(context.userId, cust.cafe_id, "manage_wallet");
+        await assertCafeAccess(context.userId, cust.cafe_id, "manage_wallet", context.supabase);
       }
     } else {
       throw new Error("You don't have permission");
@@ -84,7 +86,7 @@ export const exportWalletCSV = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet", context.supabase);
     const { data: rows, error } = await context.supabase
       .from("wallet_transactions")
       .select("created_at, amount, kind, note, customers(full_name, phone)")
@@ -113,9 +115,10 @@ export const listWalletTopupRequests = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet", context.supabase);
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: rows, error } = await db
       .from("wallet_topups")
       .select("id, cafe_id, customer_id, amount, status, razorpay_payment_id, notes, created_at, paid_at, customers(id, full_name, phone, user_id)")
       .eq("cafe_id", data.cafe_id)
@@ -140,16 +143,18 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafe } = await supabaseAdmin
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet", context.supabase);
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
+    const { data: cafe } = await db
       .from("cafes")
       .select("id, owner_id, name, slug")
       .eq("id", data.cafe_id)
       .maybeSingle();
     if (!cafe) throw new Error("Café not found");
 
-    const { data: reqRow, error: getErr } = await supabaseAdmin
+    const { data: reqRow, error: getErr } = await db
       .from("wallet_topups")
       .select("id, cafe_id, customer_id, amount, status, razorpay_payment_id, notes, customers(id, full_name, user_id)")
       .eq("id", data.id)
@@ -168,7 +173,7 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
     const customer = (reqRow as any).customers as { id: string; full_name?: string; user_id?: string | null } | null;
 
     if (data.action === "approve") {
-      const { data: claimed, error: updErr } = await supabaseAdmin
+      const { data: claimed, error: updErr } = await db
         .from("wallet_topups")
         .update({
           status: "paid",
@@ -182,7 +187,7 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
       if (updErr) throw new Error(updErr.message);
       if (!claimed) throw new Error("Request was already processed.");
 
-      const { error: txErr } = await supabaseAdmin.rpc("apply_wallet_tx", {
+      const { error: txErr } = await db.rpc("apply_wallet_tx", {
         _customer_id: reqRow.customer_id,
         _cafe_id: reqRow.cafe_id,
         _amount: reqRow.amount,
@@ -191,18 +196,23 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
       });
       if (txErr) throw new Error(txErr.message);
 
-      if (customer?.user_id) {
-        await supabaseAdmin.from("notifications").insert({
-          user_id: customer.user_id,
-          cafe_id: cafe.id,
-          kind: "wallet_topup",
-          title: `₹${reqRow.amount} added to your ${cafe.name} wallet`,
-          body: `Your UPI payment (UTR: ${utr}) was verified.`,
-          link: "/portal#wallet",
-        });
+      if (hasAdmin && customer?.user_id) {
+        try {
+          await supabaseAdmin.from("notifications").insert({
+            user_id: customer.user_id,
+            cafe_id: cafe.id,
+            kind: "wallet_topup",
+            title: `₹${reqRow.amount} added to your ${cafe.name} wallet`,
+            body: `Your UPI payment (UTR: ${utr}) was verified.`,
+            link: "/portal#wallet",
+          });
+        } catch {
+          /* ignore */
+        }
       }
       const { writeAudit } = await import("@/lib/audit.server");
       await writeAudit({
+        supabase: context.supabase,
         cafeId: cafe.id,
         actorId: context.userId,
         action: "wallet.topped_up",
@@ -219,7 +229,7 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
       return { ok: true, status: "paid" as const };
     }
 
-    const { error: rejErr } = await supabaseAdmin
+    const { error: rejErr } = await db
       .from("wallet_topups")
       .update({
         status: "failed",
@@ -234,18 +244,23 @@ export const reviewWalletTopupRequest = createServerFn({ method: "POST" })
       .eq("status", "created");
     if (rejErr) throw new Error(rejErr.message);
 
-    if (customer?.user_id) {
-      await supabaseAdmin.from("notifications").insert({
-        user_id: customer.user_id,
-        cafe_id: cafe.id,
-        kind: "wallet_topup",
-        title: `UPI top-up not verified · ${cafe.name}`,
-        body: data.review_note ?? `UTR ${utr} could not be matched. Contact the café counter.`,
-        link: "/portal#wallet",
-      });
+    if (hasAdmin && customer?.user_id) {
+      try {
+        await supabaseAdmin.from("notifications").insert({
+          user_id: customer.user_id,
+          cafe_id: cafe.id,
+          kind: "wallet_topup",
+          title: `UPI top-up not verified · ${cafe.name}`,
+          body: data.review_note ?? `UTR ${utr} could not be matched. Contact the café counter.`,
+          link: "/portal#wallet",
+        });
+      } catch {
+        /* ignore */
+      }
     }
     const { writeAudit } = await import("@/lib/audit.server");
     await writeAudit({
+      supabase: context.supabase,
       cafeId: cafe.id,
       actorId: context.userId,
       action: "wallet.topup_rejected",

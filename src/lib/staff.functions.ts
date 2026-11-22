@@ -98,8 +98,9 @@ export const listStaff = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertCafeOwner(context, data.cafe_id);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: rows, error } = await db
       .from("staff_permissions")
       .select(
         "id, staff_user_id, permissions, username, login_email, display_name, must_change_pin, failed_attempts, locked_until, is_active, last_seen_at, created_at, profiles:staff_user_id(email, full_name)",
@@ -121,15 +122,16 @@ export const updateStaffPermissions = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertCafeOwner(context, data.cafe_id);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: row } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: row } = await db
       .from("staff_permissions")
       .select("username, display_name")
       .eq("cafe_id", data.cafe_id)
       .eq("staff_user_id", data.staff_user_id)
       .maybeSingle();
 
-    const { error } = await supabaseAdmin
+    const { error } = await db
       .from("staff_permissions")
       .update({ permissions: data.permissions })
       .eq("cafe_id", data.cafe_id)
@@ -148,6 +150,7 @@ export const updateStaffPermissions = createServerFn({ method: "POST" })
         display_name: (row as { display_name?: string | null } | null)?.display_name ?? null,
         permissions: data.permissions,
       },
+      supabase: context.supabase,
     });
     return { ok: true };
   });
@@ -157,8 +160,9 @@ export const staffHeartbeat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    await supabaseAdmin.from("staff_permissions")
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    await db.from("staff_permissions")
       .update({ last_seen_at: new Date().toISOString() })
       .eq("cafe_id", data.cafe_id)
       .eq("staff_user_id", context.userId);
@@ -170,7 +174,7 @@ export const getMyCafeAccess = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { resolveCafeAccess } = await import("@/lib/staff-access.server");
-    const access = await resolveCafeAccess(context.userId, data.cafe_id);
+    const access = await resolveCafeAccess(context.userId, data.cafe_id, context.supabase);
     if (!access) {
       return {
         role: null as "super_admin" | "owner" | "staff" | null,
@@ -218,7 +222,10 @@ export const createStaffWithPin = createServerFn({ method: "POST" })
       throw new Error("Username may only contain lowercase letters, numbers, dots, underscores, or hyphens.");
     }
 
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) {
+      throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to create PIN staff accounts.");
+    }
     const { randomUUID } = await import("node:crypto");
 
     const { data: cafe, error: cafeErr } = await supabaseAdmin
@@ -344,7 +351,10 @@ export const resetStaffPin = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertCafeOwner(context, data.cafe_id);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) {
+      throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to reset staff PINs.");
+    }
 
     const { data: row, error: fetchErr } = await supabaseAdmin
       .from("staff_permissions")
@@ -383,6 +393,7 @@ export const resetStaffPin = createServerFn({ method: "POST" })
         username: (row as { username?: string | null }).username ?? null,
         display_name: (row as { display_name?: string | null }).display_name ?? null,
       },
+      supabase: context.supabase,
     });
 
     return { ok: true, pin };
@@ -399,9 +410,11 @@ export const setStaffActive = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertCafeOwner(context, data.cafe_id);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
 
-    const { data: row, error: fetchErr } = await supabaseAdmin
+    const { data: row, error: fetchErr } = await db
       .from("staff_permissions")
       .select("id, login_email, username, display_name")
       .eq("cafe_id", data.cafe_id)
@@ -416,35 +429,37 @@ export const setStaffActive = createServerFn({ method: "POST" })
       patch.locked_until = null;
     }
 
-    const { error: updErr } = await supabaseAdmin
+    const { error: updErr } = await db
       .from("staff_permissions")
       .update(patch)
       .eq("cafe_id", data.cafe_id)
       .eq("staff_user_id", data.staff_user_id);
     if (updErr) throw new Error(updErr.message);
 
-    // Ban/unban auth user (skip global ban if user is an owner/staff elsewhere unless PIN-created)
-    const isPinStaff = Boolean((row as { login_email?: string | null }).login_email);
-    let canBanGlobally = isPinStaff;
-    if (!canBanGlobally) {
-      const [{ count: otherStaffCount }, { count: ownedCount }] = await Promise.all([
-        supabaseAdmin
-          .from("staff_permissions")
-          .select("id", { count: "exact", head: true })
-          .eq("staff_user_id", data.staff_user_id)
-          .eq("is_active", true),
-        supabaseAdmin
-          .from("cafes")
-          .select("id", { count: "exact", head: true })
-          .eq("owner_id", data.staff_user_id),
-      ]);
-      canBanGlobally = (otherStaffCount ?? 0) === 0 && (ownedCount ?? 0) === 0;
-    }
-    if (canBanGlobally || data.active) {
-      const { error: banErr } = await supabaseAdmin.auth.admin.updateUserById(data.staff_user_id, {
-        ban_duration: data.active ? "none" : "876000h",
-      });
-      if (banErr) throw new Error(banErr.message);
+    // Ban/unban auth user when service-role key is available
+    if (hasAdmin) {
+      const isPinStaff = Boolean((row as { login_email?: string | null }).login_email);
+      let canBanGlobally = isPinStaff;
+      if (!canBanGlobally) {
+        const [{ count: otherStaffCount }, { count: ownedCount }] = await Promise.all([
+          supabaseAdmin
+            .from("staff_permissions")
+            .select("id", { count: "exact", head: true })
+            .eq("staff_user_id", data.staff_user_id)
+            .eq("is_active", true),
+          supabaseAdmin
+            .from("cafes")
+            .select("id", { count: "exact", head: true })
+            .eq("owner_id", data.staff_user_id),
+        ]);
+        canBanGlobally = (otherStaffCount ?? 0) === 0 && (ownedCount ?? 0) === 0;
+      }
+      if (canBanGlobally || data.active) {
+        const { error: banErr } = await supabaseAdmin.auth.admin.updateUserById(data.staff_user_id, {
+          ban_duration: data.active ? "none" : "876000h",
+        });
+        if (banErr) throw new Error(banErr.message);
+      }
     }
 
     const { writeAudit } = await import("@/lib/audit.server");
@@ -458,6 +473,7 @@ export const setStaffActive = createServerFn({ method: "POST" })
         username: (row as { username?: string | null }).username ?? null,
         display_name: (row as { display_name?: string | null }).display_name ?? null,
       },
+      supabase: context.supabase,
     });
 
     return { ok: true, is_active: data.active };
@@ -478,7 +494,10 @@ export const staffChangePin = createServerFn({ method: "POST" })
     if (isTrivialPin(data.new_pin)) {
       throw new Error("Please choose a stronger PIN (avoid 000000, 123456, 654321, or repeating patterns).");
     }
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) {
+      throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to update PIN credentials.");
+    }
 
     const { data: staffRow, error: fetchErr } = await supabaseAdmin
       .from("staff_permissions")
@@ -539,6 +558,7 @@ export const staffChangePin = createServerFn({ method: "POST" })
         username: (staffRow as { username?: string | null }).username ?? null,
         display_name: (staffRow as { display_name?: string | null }).display_name ?? null,
       },
+      supabase: context.supabase,
     });
 
     return { ok: true, access_token, refresh_token };
@@ -555,16 +575,21 @@ export const inviteStaff = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertCafeOwner(context, data.cafe_id);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
     const { getRequestHeader } = await import("@tanstack/react-start/server");
 
     const cleanEmail = data.email.trim().toLowerCase();
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
       .from("profiles").select("id").ilike("email", cleanEmail).maybeSingle();
     let staffId = existing?.id;
     let alreadyRegistered = Boolean(staffId);
 
     if (!staffId) {
+      if (!hasAdmin) {
+        throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to invite unregistered email addresses.");
+      }
       const originHeader = getRequestHeader("origin");
       const fwdProto = getRequestHeader("x-forwarded-proto") || "https";
       const fwdHost = getRequestHeader("x-forwarded-host") || getRequestHeader("host");
@@ -581,7 +606,7 @@ export const inviteStaff = createServerFn({ method: "POST" })
     }
     if (!staffId) throw new Error("Could not invite");
 
-    const { error: pErr } = await supabaseAdmin.from("staff_permissions")
+    const { error: pErr } = await db.from("staff_permissions")
       .upsert(
         {
           cafe_id: data.cafe_id,
@@ -594,8 +619,10 @@ export const inviteStaff = createServerFn({ method: "POST" })
       );
     if (pErr) throw new Error(pErr.message);
 
-    await supabaseAdmin.from("user_roles")
-      .upsert({ user_id: staffId, role: "cafe_staff", cafe_id: data.cafe_id }, { onConflict: "user_id,role,cafe_id" });
+    try {
+      await db.from("user_roles")
+        .upsert({ user_id: staffId, role: "cafe_staff", cafe_id: data.cafe_id }, { onConflict: "user_id,role,cafe_id" });
+    } catch { /* non-fatal */ }
 
     const { writeAudit } = await import("@/lib/audit.server");
     await writeAudit({
@@ -605,6 +632,7 @@ export const inviteStaff = createServerFn({ method: "POST" })
       resourceType: "staff",
       resourceId: staffId,
       meta: { email: cleanEmail, permissions: data.permissions },
+      supabase: context.supabase,
     });
 
     return { ok: true, alreadyRegistered };
@@ -617,21 +645,27 @@ export const removeStaff = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertCafeOwner(context, data.cafe_id);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
 
-    const { data: row } = await supabaseAdmin
+    const { data: row } = await db
       .from("staff_permissions")
       .select("login_email, username, display_name")
       .eq("cafe_id", data.cafe_id)
       .eq("staff_user_id", data.staff_user_id)
       .maybeSingle();
 
-    await supabaseAdmin.from("staff_permissions").delete()
+    const { error: delPermErr } = await db.from("staff_permissions").delete()
       .eq("cafe_id", data.cafe_id).eq("staff_user_id", data.staff_user_id);
-    await supabaseAdmin.from("user_roles").delete()
-      .eq("cafe_id", data.cafe_id).eq("user_id", data.staff_user_id).eq("role", "cafe_staff");
+    if (delPermErr) throw new Error(delPermErr.message);
 
-    if ((row as { login_email?: string | null } | null)?.login_email) {
+    try {
+      await db.from("user_roles").delete()
+        .eq("cafe_id", data.cafe_id).eq("user_id", data.staff_user_id).eq("role", "cafe_staff");
+    } catch { /* non-fatal */ }
+
+    if (hasAdmin && (row as { login_email?: string | null } | null)?.login_email) {
       const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(data.staff_user_id);
       if (delErr) {
         await supabaseAdmin.auth.admin.updateUserById(data.staff_user_id, {
@@ -651,6 +685,7 @@ export const removeStaff = createServerFn({ method: "POST" })
         username: (row as { username?: string | null } | null)?.username ?? null,
         display_name: (row as { display_name?: string | null } | null)?.display_name ?? null,
       },
+      supabase: context.supabase,
     });
     return { ok: true };
   });

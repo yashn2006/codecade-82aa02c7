@@ -16,13 +16,15 @@ export const adminOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const [cafes, users, sessions, leads] = await Promise.all([
-      supabaseAdmin.from("cafes").select("id", { count: "exact", head: true }),
-      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }),
-      supabaseAdmin.from("sessions").select("id", { count: "exact", head: true }).eq("status", "active"),
-      supabaseAdmin.from("contacts").select("id", { count: "exact", head: true }).eq("status", "new"),
+      db.from("cafes").select("id", { count: "exact", head: true }),
+      db.from("profiles").select("id", { count: "exact", head: true }),
+      db.from("sessions").select("id", { count: "exact", head: true }).eq("status", "active"),
+      db.from("contacts").select("id", { count: "exact", head: true }).eq("status", "new"),
     ]);
+    if (cafes.error) throw new Error(cafes.error.message);
     return {
       cafes: cafes.count ?? 0,
       users: users.count ?? 0,
@@ -35,8 +37,9 @@ export const listAllCafes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafes, error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: cafes, error } = await db
       .from("cafes")
       .select("id, slug, name, city, state, is_active, restricted_message, maintenance_starts_at, maintenance_ends_at, maintenance_message, owner_id, trial_ends_at, created_at")
       .order("created_at", { ascending: false });
@@ -45,7 +48,7 @@ export const listAllCafes = createServerFn({ method: "GET" })
     const ownerIds = Array.from(new Set(rows.map((c) => c.owner_id).filter(Boolean)));
     let ownerMap = new Map<string, { email: string | null; full_name: string | null }>();
     if (ownerIds.length) {
-      const { data: owners } = await supabaseAdmin
+      const { data: owners } = await db
         .from("profiles")
         .select("id, email, full_name")
         .in("id", ownerIds);
@@ -64,8 +67,9 @@ export const setCafeRestriction = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db
       .from("cafes")
       .update({ restricted_message: data.restricted_message })
       .eq("id", data.id);
@@ -78,8 +82,9 @@ export const listContacts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data, error } = await db
       .from("contacts").select("*").order("created_at", { ascending: false }).limit(200);
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -92,8 +97,10 @@ export const setContactStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    await supabaseAdmin.from("contacts").update({ status: data.status }).eq("id", data.id);
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db.from("contacts").update({ status: data.status }).eq("id", data.id);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -102,8 +109,9 @@ export const searchUsers = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ q: z.string().max(120).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    let query = supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    let query = db
       .from("profiles")
       .select("id, email, full_name, created_at, user_roles(role, cafe_id)")
       .order("created_at", { ascending: false })
@@ -125,8 +133,9 @@ export const grantRole = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin.from("user_roles").insert({
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db.from("user_roles").insert({
       user_id: data.user_id,
       role: data.role,
       cafe_id: data.cafe_id ?? null,
@@ -146,8 +155,9 @@ export const revokeRole = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    let q = supabaseAdmin.from("user_roles").delete()
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    let q = db.from("user_roles").delete()
       .eq("user_id", data.user_id).eq("role", data.role);
     if (data.cafe_id) q = q.eq("cafe_id", data.cafe_id);
     else q = q.is("cafe_id", null);
@@ -172,7 +182,10 @@ export const adminCreateUser = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) {
+      throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to create or invite auth users.");
+    }
 
     // Look up an existing auth user by email (profile row may be stale / missing)
     let userId: string | undefined;
@@ -260,8 +273,9 @@ export const deleteCafe = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin.from("cafes").delete().eq("id", data.id);
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db.from("cafes").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -272,7 +286,10 @@ export const deleteUser = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     if (data.user_id === context.userId) throw new Error("You cannot delete your own account here.");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) {
+      throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to delete auth users.");
+    }
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -285,7 +302,10 @@ export const setUserPassword = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) {
+      throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to set user passwords.");
+    }
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
       password: data.password,
     });
@@ -298,7 +318,10 @@ export const generateRecoveryLink = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ email: z.string().email() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) {
+      throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to generate recovery links.");
+    }
     const { data: link, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: data.email,
@@ -312,15 +335,16 @@ export const cafeDeepStats = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const [devices, customers, staff, sessTotal, sessToday, revAll] = await Promise.all([
-      supabaseAdmin.from("devices").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
-      supabaseAdmin.from("customers").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
-      supabaseAdmin.from("user_roles").select("user_id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id).eq("role", "cafe_staff"),
-      supabaseAdmin.from("sessions").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
-      supabaseAdmin.from("sessions").select("amount").eq("cafe_id", data.cafe_id).gte("started_at", startOfDay.toISOString()),
-      supabaseAdmin.from("sessions").select("amount").eq("cafe_id", data.cafe_id).not("amount", "is", null),
+      db.from("devices").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
+      db.from("customers").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
+      db.from("user_roles").select("user_id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id).eq("role", "cafe_staff"),
+      db.from("sessions").select("id", { count: "exact", head: true }).eq("cafe_id", data.cafe_id),
+      db.from("sessions").select("amount").eq("cafe_id", data.cafe_id).gte("started_at", startOfDay.toISOString()),
+      db.from("sessions").select("amount").eq("cafe_id", data.cafe_id).not("amount", "is", null),
     ]);
     const revenueToday = (sessToday.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
     const revenueAll = (revAll.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -342,8 +366,9 @@ export const networkBroadcast = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin.from("platform_settings").upsert({
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db.from("platform_settings").upsert({
       id: true,
       maintenance_title: data.title,
       maintenance_message: data.message,
@@ -368,8 +393,9 @@ export const adminListAuditLogs = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    let q = supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    let q = db
       .from("audit_logs")
       .select("*, cafes(name, slug)")
       .order("created_at", { ascending: false })
@@ -395,14 +421,15 @@ export const broadcastAnnouncement = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     let userIds: string[] = [];
     if (data.audience === "all") {
-      const { data: rows } = await supabaseAdmin.from("profiles").select("id");
+      const { data: rows } = await db.from("profiles").select("id");
       userIds = (rows ?? []).map((r) => r.id);
     } else {
       const roleMap = { owners: "cafe_owner", staff: "cafe_staff", customers: "customer" } as const;
-      const { data: rows } = await supabaseAdmin
+      const { data: rows } = await db
         .from("user_roles").select("user_id").eq("role", roleMap[data.audience]);
       userIds = Array.from(new Set((rows ?? []).map((r) => r.user_id)));
     }
@@ -416,7 +443,7 @@ export const broadcastAnnouncement = createServerFn({ method: "POST" })
       link: data.link ?? null,
     }));
     for (let i = 0; i < payload.length; i += 500) {
-      const { error } = await supabaseAdmin.from("notifications").insert(payload.slice(i, i + 500));
+      const { error } = await db.from("notifications").insert(payload.slice(i, i + 500));
       if (error) throw new Error(error.message);
     }
     return { ok: true, count: userIds.length };
@@ -427,27 +454,29 @@ export const systemHealth = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const since = new Date(Date.now() - 86400_000).toISOString();
     const [
       cafes, devices, sessionsActive, sessions24, users, users24,
       orders24, bookings24, leadsNew, notif24, audit24,
       cafesActive, cafesPaused,
     ] = await Promise.all([
-      supabaseAdmin.from("cafes").select("id", { count: "exact", head: true }),
-      supabaseAdmin.from("devices").select("id", { count: "exact", head: true }),
-      supabaseAdmin.from("sessions").select("id", { count: "exact", head: true }).eq("status", "active"),
-      supabaseAdmin.from("sessions").select("id", { count: "exact", head: true }).gte("started_at", since),
-      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }),
-      supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", since),
-      supabaseAdmin.from("orders").select("id", { count: "exact", head: true }).gte("created_at", since),
-      supabaseAdmin.from("bookings").select("id", { count: "exact", head: true }).gte("created_at", since),
-      supabaseAdmin.from("contacts").select("id", { count: "exact", head: true }).eq("status", "new"),
-      supabaseAdmin.from("notifications").select("id", { count: "exact", head: true }).gte("created_at", since),
-      supabaseAdmin.from("audit_logs").select("id", { count: "exact", head: true }).gte("created_at", since),
-      supabaseAdmin.from("cafes").select("id", { count: "exact", head: true }).eq("is_active", true),
-      supabaseAdmin.from("cafes").select("id", { count: "exact", head: true }).eq("is_active", false),
+      db.from("cafes").select("id", { count: "exact", head: true }),
+      db.from("devices").select("id", { count: "exact", head: true }),
+      db.from("sessions").select("id", { count: "exact", head: true }).eq("status", "active"),
+      db.from("sessions").select("id", { count: "exact", head: true }).gte("started_at", since),
+      db.from("profiles").select("id", { count: "exact", head: true }),
+      db.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", since),
+      db.from("orders").select("id", { count: "exact", head: true }).gte("created_at", since),
+      db.from("bookings").select("id", { count: "exact", head: true }).gte("created_at", since),
+      db.from("contacts").select("id", { count: "exact", head: true }).eq("status", "new"),
+      db.from("notifications").select("id", { count: "exact", head: true }).gte("created_at", since),
+      db.from("audit_logs").select("id", { count: "exact", head: true }).gte("created_at", since),
+      db.from("cafes").select("id", { count: "exact", head: true }).eq("is_active", true),
+      db.from("cafes").select("id", { count: "exact", head: true }).eq("is_active", false),
     ]);
+    if (cafes.error) throw new Error(cafes.error.message);
     return {
       cafes: cafes.count ?? 0,
       cafesActive: cafesActive.count ?? 0,
@@ -470,8 +499,9 @@ export const adminCafeOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data, error } = await db
       .from("cafes").select("id, name, slug").order("name");
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -485,14 +515,16 @@ export const platformRevenueAnalytics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const since = new Date(Date.now() - 30 * 86400_000).toISOString();
 
-    const [{ data: orders }, { data: sessions }, { data: topCafes }] = await Promise.all([
-      supabaseAdmin.from("orders").select("cafe_id, total_amount, subtotal, refund_amount, created_at, status").gte("created_at", since),
-      supabaseAdmin.from("sessions").select("cafe_id, amount, duration_minutes, ended_at").not("ended_at", "is", null).gte("ended_at", since),
-      supabaseAdmin.from("cafes").select("id, name, slug, city").order("created_at", { ascending: false }).limit(100),
+    const [{ data: orders }, { data: sessions }, { data: topCafes, error: cafesErr }] = await Promise.all([
+      db.from("orders").select("cafe_id, total_amount, subtotal, refund_amount, created_at, status").gte("created_at", since),
+      db.from("sessions").select("cafe_id, amount, duration_minutes, ended_at").not("ended_at", "is", null).gte("ended_at", since),
+      db.from("cafes").select("id, name, slug, city").order("created_at", { ascending: false }).limit(100),
     ]);
+    if (cafesErr) throw new Error(cafesErr.message);
 
     const cafeMap = new Map((topCafes ?? []).map((c) => [c.id, c]));
     const daily = new Map<string, { date: string; orders: number; sessions: number; revenue: number }>();
@@ -538,8 +570,9 @@ export const getPlatformConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data, error } = await db
       .from("platform_settings")
       .select("platform_fee_pct, default_tax_pct, currency, support_email, support_phone, brand_name, brand_tagline, signup_enabled, new_cafes_require_approval")
       .eq("id", true).maybeSingle();
@@ -564,8 +597,9 @@ export const savePlatformConfig = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db
       .from("platform_settings")
       .update({ ...data, updated_at: new Date().toISOString(), updated_by: context.userId })
       .eq("id", true);
@@ -579,12 +613,13 @@ export const userActivity = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: summary, error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: summary, error } = await db
       .rpc("user_activity_summary", { _user_id: data.user_id });
     if (error) throw new Error(error.message);
     // Recent audit (as actor)
-    const { data: audit } = await supabaseAdmin
+    const { data: audit } = await db
       .from("audit_logs")
       .select("id, created_at, action, resource_type, cafes(name, slug)")
       .eq("actor_id", data.user_id)
@@ -601,7 +636,8 @@ export const exportDataset = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const cfg: Record<string, { table: string; select: string; order: string }> = {
       cafes:    { table: "cafes",    select: "id, name, slug, city, state, owner_id, is_active, restricted_message, created_at", order: "created_at" },
       users:    { table: "profiles", select: "id, email, full_name, created_at",                                                   order: "created_at" },
@@ -611,7 +647,7 @@ export const exportDataset = createServerFn({ method: "GET" })
       leads:    { table: "contacts", select: "id, name, email, phone, message, status, created_at",                                 order: "created_at" },
     };
     const c = cfg[data.kind];
-    const { data: rows, error } = await supabaseAdmin
+    const { data: rows, error } = await db
       .from(c.table).select(c.select).order(c.order, { ascending: false }).limit(10000);
     if (error) throw new Error(error.message);
     return rows ?? [];
@@ -619,7 +655,7 @@ export const exportDataset = createServerFn({ method: "GET" })
 
 
 // ─── Phase 7 — Deep user inspector & moderation ───
-// Lists every user from auth.users (paginated) and joins profile + roles.
+// Lists every user from auth.users (or profiles + user_roles fallback when service-role key is unset).
 export const adminListUsersFull = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -631,7 +667,51 @@ export const adminListUsersFull = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+
+    if (!hasSupabaseAdminKey()) {
+      const from = (data.page - 1) * data.perPage;
+      const to = from + data.perPage - 1;
+      let query = context.supabase
+        .from("profiles")
+        .select("id, email, full_name, phone, created_at")
+        .order("created_at", { ascending: false })
+        .range(from, to);
+      const qTrim = (data.q ?? "").trim();
+      if (qTrim) {
+        query = query.or(`email.ilike.%${qTrim}%,full_name.ilike.%${qTrim}%`);
+      }
+      const { data: profiles, error: pErr } = await query;
+      if (pErr) throw new Error(pErr.message);
+      const ids = (profiles ?? []).map((p) => p.id);
+      const { data: roles } = ids.length
+        ? await context.supabase.from("user_roles").select("user_id, role, cafe_id").in("user_id", ids)
+        : { data: [] as Array<{ user_id: string; role: string; cafe_id: string | null }> };
+      const rMap = new Map<string, Array<{ role: string; cafe_id: string | null }>>();
+      for (const r of roles ?? []) {
+        const arr = rMap.get(r.user_id) ?? [];
+        arr.push({ role: r.role, cafe_id: r.cafe_id });
+        rMap.set(r.user_id, arr);
+      }
+      const merged = (profiles ?? []).map((p) => ({
+        id: p.id,
+        email: p.email ?? null,
+        phone: (p as { phone?: string | null }).phone ?? null,
+        full_name: p.full_name ?? null,
+        created_at: p.created_at,
+        last_sign_in_at: null,
+        email_confirmed_at: null,
+        banned_until: null,
+        providers: [] as string[],
+        user_roles: rMap.get(p.id) ?? [],
+      }));
+      return {
+        users: merged,
+        page: data.page,
+        perPage: data.perPage,
+        total: merged.length,
+      };
+    }
 
     const { data: page, error } = await supabaseAdmin.auth.admin.listUsers({
       page: data.page,
@@ -692,17 +772,22 @@ export const userDetail = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
 
-    const { data: au, error: aErr } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
-    if (aErr) throw new Error(aErr.message);
-    const u = au.user;
+    let u = null;
+    if (hasAdmin) {
+      const { data: au, error: aErr } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
+      if (aErr) throw new Error(aErr.message);
+      u = au.user;
+    }
 
     const [{ data: profile }, { data: roles }, { data: ownedCafes }, { data: audit }] = await Promise.all([
-      supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
-      supabaseAdmin.from("user_roles").select("role, cafe_id, cafes(name, slug)").eq("user_id", data.user_id),
-      supabaseAdmin.from("cafes").select("id, name, slug, city, is_active, created_at").eq("owner_id", data.user_id),
-      supabaseAdmin.from("audit_logs")
+      db.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
+      db.from("user_roles").select("role, cafe_id, cafes(name, slug)").eq("user_id", data.user_id),
+      db.from("cafes").select("id, name, slug, city, is_active, created_at").eq("owner_id", data.user_id),
+      db.from("audit_logs")
         .select("id, created_at, action, resource_type, resource_id, meta, cafes(name, slug)")
         .eq("actor_id", data.user_id)
         .order("created_at", { ascending: false })
@@ -749,7 +834,10 @@ export const setUserBan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     if (data.user_id === context.userId) throw new Error("You cannot ban yourself.");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    if (!hasSupabaseAdminKey()) {
+      throw new Error("Server admin key (SUPABASE_SERVICE_ROLE_KEY) is required to ban or unban users.");
+    }
     const map = { none: "none", "1h": "1h", "24h": "24h", "7d": "168h", "30d": "720h", permanent: "876000h" } as const;
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
       ban_duration: map[data.duration],

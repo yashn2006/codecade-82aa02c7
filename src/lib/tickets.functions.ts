@@ -211,12 +211,13 @@ export const listCafeCustomerTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const superAdmin = await isSuperAdmin(context.supabase, context.userId);
-    const { ok, cafe } = await canManageCafeTickets(supabaseAdmin, context.userId, data.cafe_id);
+    const { ok, cafe } = await canManageCafeTickets(db, context.userId, data.cafe_id);
     if (!superAdmin && !ok) throw new Error("Forbidden");
 
-    const { data: rows, error } = await supabaseAdmin
+    const { data: rows, error } = await db
       .from("support_tickets")
       .select("id, user_id, role, subject, description, category, priority, status, admin_reply, replied_at, created_at, cafe_id")
       .eq("cafe_id", data.cafe_id)
@@ -228,7 +229,7 @@ export const listCafeCustomerTickets = createServerFn({ method: "GET" })
     const list = rows ?? [];
     const userIds = Array.from(new Set(list.map((t) => t.user_id)));
     const { data: profiles } = userIds.length
-      ? await supabaseAdmin.from("profiles").select("id, email, full_name, phone").in("id", userIds)
+      ? await db.from("profiles").select("id, email, full_name, phone").in("id", userIds)
       : { data: [] as { id: string; email: string | null; full_name: string | null; phone: string | null }[] };
     const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
 
@@ -243,8 +244,9 @@ export const listAdminTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     if (!(await isSuperAdmin(context.supabase, context.userId))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data, error } = await db
       .from("support_tickets")
       .select("id, user_id, role, subject, description, category, priority, status, admin_reply, replied_at, created_at, cafe_id")
       .order("created_at", { ascending: false })
@@ -255,10 +257,10 @@ export const listAdminTickets = createServerFn({ method: "GET" })
     const cafeIds = Array.from(new Set((data ?? []).map((t) => t.cafe_id).filter(Boolean) as string[]));
     const [{ data: profiles }, { data: cafes }] = await Promise.all([
       userIds.length
-        ? supabaseAdmin.from("profiles").select("id, email, full_name, phone").in("id", userIds)
+        ? db.from("profiles").select("id, email, full_name, phone").in("id", userIds)
         : Promise.resolve({ data: [] as { id: string; email: string | null; full_name: string | null; phone: string | null }[] }),
       cafeIds.length
-        ? supabaseAdmin.from("cafes").select("id, name, slug").in("id", cafeIds)
+        ? db.from("cafes").select("id, name, slug").in("id", cafeIds)
         : Promise.resolve({ data: [] as { id: string; name: string; slug: string }[] }),
     ]);
     const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
@@ -280,8 +282,10 @@ export const sendTicketMessage = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: ticket, error: te } = await supabaseAdmin
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
+    const { data: ticket, error: te } = await db
       .from("support_tickets")
       .select("id, user_id, role, cafe_id, subject, description, status, admin_reply, replied_at, created_at")
       .eq("id", data.ticket_id)
@@ -290,12 +294,12 @@ export const sendTicketMessage = createServerFn({ method: "POST" })
     if (!ticket) throw new Error("Ticket not found");
 
     const [{ data: profile }, superAdmin] = await Promise.all([
-      supabaseAdmin.from("profiles").select("full_name, email").eq("id", context.userId).maybeSingle(),
+      db.from("profiles").select("full_name, email").eq("id", context.userId).maybeSingle(),
       isSuperAdmin(context.supabase, context.userId),
     ]);
 
     const cafeCheck = ticket.cafe_id
-      ? await canManageCafeTickets(supabaseAdmin, context.userId, ticket.cafe_id)
+      ? await canManageCafeTickets(db, context.userId, ticket.cafe_id)
       : { ok: false, cafe: null };
 
     const isCreator = ticket.user_id === context.userId;
@@ -318,7 +322,7 @@ export const sendTicketMessage = createServerFn({ method: "POST" })
       senderName = profile?.full_name?.trim() || profile?.email || (senderRole === "customer" ? "Player" : "Café Owner");
     }
 
-    const { data: creatorProfile } = await supabaseAdmin
+    const { data: creatorProfile } = await db
       .from("profiles")
       .select("full_name, email")
       .eq("id", ticket.user_id)
@@ -349,7 +353,7 @@ export const sendTicketMessage = createServerFn({ method: "POST" })
           : ticket.status);
 
     const nowIso = new Date().toISOString();
-    const { error: ue } = await supabaseAdmin
+    const { error: ue } = await db
       .from("support_tickets")
       .update({
         admin_reply: encoded,
@@ -362,7 +366,9 @@ export const sendTicketMessage = createServerFn({ method: "POST" })
     // Notify counterparty
     const ref = formatTicketRef(ticket.id);
     try {
-      if (isCreator) {
+      if (!hasAdmin) {
+        // Cross-user notification delivery requires the service role key
+      } else if (isCreator) {
         if (ticket.role === "customer" && cafeCheck.cafe?.owner_id && cafeCheck.cafe.owner_id !== context.userId) {
           await supabaseAdmin.from("notifications").insert({
             user_id: cafeCheck.cafe.owner_id,
@@ -422,8 +428,9 @@ export const updateTicketStatus = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: ticket, error: te } = await supabaseAdmin
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: ticket, error: te } = await db
       .from("support_tickets")
       .select("id, user_id, role, cafe_id")
       .eq("id", data.id)
@@ -433,7 +440,7 @@ export const updateTicketStatus = createServerFn({ method: "POST" })
 
     const superAdmin = await isSuperAdmin(context.supabase, context.userId);
     const cafeCheck = ticket.cafe_id
-      ? await canManageCafeTickets(supabaseAdmin, context.userId, ticket.cafe_id)
+      ? await canManageCafeTickets(db, context.userId, ticket.cafe_id)
       : { ok: false, cafe: null };
     const isCreator = ticket.user_id === context.userId;
     const isCafeDesk = ticket.role === "customer" && cafeCheck.ok;
@@ -442,7 +449,7 @@ export const updateTicketStatus = createServerFn({ method: "POST" })
       throw new Error("Forbidden");
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await db
       .from("support_tickets")
       .update({ status: data.status })
       .eq("id", data.id);
@@ -462,10 +469,11 @@ export const replyTicket = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context.supabase, context.userId))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { supabaseAdmin, hasSupabaseAdminKey } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
 
     if (!data.admin_reply.trim()) {
-      const { error } = await supabaseAdmin
+      const { error } = await db
         .from("support_tickets")
         .update({ status: data.status ?? "in_progress" })
         .eq("id", data.id);
@@ -473,7 +481,7 @@ export const replyTicket = createServerFn({ method: "POST" })
       return { ok: true };
     }
 
-    const { data: ticket } = await supabaseAdmin
+    const { data: ticket } = await db
       .from("support_tickets")
       .select("id, user_id, role, cafe_id, description, admin_reply, replied_at, created_at")
       .eq("id", data.id)
@@ -488,7 +496,7 @@ export const replyTicket = createServerFn({ method: "POST" })
         })
       : data.admin_reply.trim();
 
-    const { error } = await supabaseAdmin
+    const { error } = await db
       .from("support_tickets")
       .update({
         admin_reply: encoded,

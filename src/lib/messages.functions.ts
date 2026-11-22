@@ -24,7 +24,7 @@ export const sendOwnerMessage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (data.cafe_id) {
       const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-      await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
+      await assertCafeOwnerOrAdmin(context.userId, data.cafe_id, context.supabase);
     } else {
       const [{ data: isOwner }, admin] = await Promise.all([
         context.supabase.rpc("has_role", { _user_id: context.userId, _role: "cafe_owner" }),
@@ -40,19 +40,25 @@ export const sendOwnerMessage = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     // Notify all super admins in-app (best-effort).
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: admins } = await supabaseAdmin
-      .from("user_roles").select("user_id").eq("role", "super_admin");
-    if (admins?.length) {
-      await supabaseAdmin.from("notifications").insert(
-        admins.map((a: { user_id: string }) => ({
-          user_id: a.user_id,
-          kind: "owner_message",
-          title: `Owner: ${data.subject}`,
-          body: data.body.slice(0, 240),
-          link: "/admin/support",
-        })),
-      );
+    try {
+      const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+      if (hasSupabaseAdminKey()) {
+        const { data: admins } = await supabaseAdmin
+          .from("user_roles").select("user_id").eq("role", "super_admin");
+        if (admins?.length) {
+          await supabaseAdmin.from("notifications").insert(
+            admins.map((a: { user_id: string }) => ({
+              user_id: a.user_id,
+              kind: "owner_message",
+              title: `Owner: ${data.subject}`,
+              body: data.body.slice(0, 240),
+              link: "/admin/support",
+            })),
+          );
+        }
+      }
+    } catch {
+      /* ignore notification failure */
     }
     return { ok: true };
   });
@@ -97,15 +103,17 @@ export const sendAdminMessage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafe, error: cErr } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
+    const { data: cafe, error: cErr } = await db
       .from("cafes")
       .select("id, owner_id, name, slug")
       .eq("id", data.cafe_id)
       .single();
     if (cErr || !cafe?.owner_id) throw new Error(cErr?.message ?? "Cafe not found");
 
-    const { error } = await supabaseAdmin.from("admin_messages").insert({
+    const { error } = await db.from("admin_messages").insert({
       sender_id: context.userId,
       recipient_id: cafe.owner_id,
       cafe_id: cafe.id,
@@ -115,14 +123,20 @@ export const sendAdminMessage = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // best-effort in-app notification
-    await supabaseAdmin.from("notifications").insert({
-      user_id: cafe.owner_id,
-      cafe_id: cafe.id,
-      kind: "admin_message",
-      title: `CoreCade: ${data.subject}`,
-      body: data.body.slice(0, 240),
-      link: cafe.slug ? `/cafe/${cafe.slug}/support#messages` : "/owner",
-    });
+    if (hasAdmin) {
+      try {
+        await supabaseAdmin.from("notifications").insert({
+          user_id: cafe.owner_id,
+          cafe_id: cafe.id,
+          kind: "admin_message",
+          title: `CoreCade: ${data.subject}`,
+          body: data.body.slice(0, 240),
+          link: cafe.slug ? `/cafe/${cafe.slug}/support#messages` : "/owner",
+        });
+      } catch {
+        /* ignore notification failure */
+      }
+    }
     return { ok: true };
   });
 
@@ -206,7 +220,7 @@ export const logManualRevenue = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id, context.supabase);
     const { data: id, error } = await context.supabase.rpc("record_revenue", {
       _cafe_id: data.cafe_id,
       _amount: Math.round(data.amount_rupees * 100),
@@ -218,6 +232,7 @@ export const logManualRevenue = createServerFn({ method: "POST" })
 
     const { writeAudit } = await import("@/lib/audit.server");
     await writeAudit({
+      supabase: context.supabase,
       cafeId: data.cafe_id,
       actorId: context.userId,
       action: "revenue.manual_logged",

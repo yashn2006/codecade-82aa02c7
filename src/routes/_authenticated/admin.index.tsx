@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Shield, Users, Building2, FileText, Activity, TrendingUp, ArrowUpRight } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryErrorBanner } from "@/components/QueryBoundary";
 import { Sparkline } from "@/components/Sparkline";
 import { Badge } from "@/components/ui/badge";
 import { adminOverview } from "@/lib/admin.functions";
@@ -24,6 +25,7 @@ function OverviewPanel() {
 
   return (
     <div className="space-y-6">
+      <QueryErrorBanner queries={[ov, an]} title="Couldn't sync live admin metrics" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Building2} label="Cafés" value={s.cafes} accent="violet" delay={0} />
         <StatCard icon={Users} label="Users" value={s.users} accent="azure" delay={0.05} />

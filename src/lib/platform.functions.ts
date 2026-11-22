@@ -35,8 +35,9 @@ export const setPlatformMaintenance = createServerFn({ method: "POST" })
       _user_id: context.userId, _role: "super_admin",
     });
     if (!ok) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db
       .from("platform_settings")
       .upsert({
         id: true,

@@ -16,7 +16,7 @@ export const listDeviceCommands = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "manage_devices");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_devices", context.supabase);
     let q = context.supabase
       .from("device_commands")
       .select("id, device_id, cafe_id, command, payload, status, result, created_at, executed_at, devices(name)")
@@ -41,7 +41,7 @@ export const createDeviceCommand = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "manage_devices");
+    await assertCafeAccess(context.userId, data.cafe_id, "manage_devices", context.supabase);
     const { error, data: row } = await context.supabase
       .from("device_commands")
       .insert({
@@ -62,8 +62,8 @@ export const cancelDeviceCommand = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("device_commands", data.id);
-    await assertCafeAccess(context.userId, cafeId, "manage_devices");
+    const cafeId = await lookupCafeId("device_commands", data.id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "manage_devices", context.supabase);
     const { error } = await context.supabase
       .from("device_commands")
       .update({ status: "cancelled" })

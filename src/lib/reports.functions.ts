@@ -18,7 +18,7 @@ export const getCafeReports = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { cafe_id, from, to } = data;
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, cafe_id, "view_revenue");
+    await assertCafeAccess(context.userId, cafe_id, "view_revenue", context.supabase);
     const [sessions, pos, memberships, tournaments, customers, devices] = await Promise.all([
       context.supabase.from("sessions")
         .select("id, amount, duration_minutes, started_at, ended_at, customer_id, device_id, devices(name, type), customers(full_name)")
@@ -87,14 +87,16 @@ export const getNetworkReports = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
     if (!isAdmin) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
 
     const [sessions, pos, memberships, cafes] = await Promise.all([
-      supabaseAdmin.from("sessions").select("id, amount, cafe_id, started_at, cafes(name, slug)").gte("started_at", data.from).lte("started_at", data.to),
-      supabaseAdmin.from("pos_orders").select("total_amount, cafe_id, created_at").gte("created_at", data.from).lte("created_at", data.to),
-      supabaseAdmin.from("customer_memberships").select("amount_paid, cafe_id, created_at").gte("created_at", data.from).lte("created_at", data.to),
-      supabaseAdmin.from("cafes").select("id, name, slug, city"),
+      db.from("sessions").select("id, amount, cafe_id, started_at, cafes(name, slug)").gte("started_at", data.from).lte("started_at", data.to),
+      db.from("pos_orders").select("total_amount, cafe_id, created_at").gte("created_at", data.from).lte("created_at", data.to),
+      db.from("customer_memberships").select("amount_paid, cafe_id, created_at").gte("created_at", data.from).lte("created_at", data.to),
+      db.from("cafes").select("id, name, slug, city"),
     ]);
+    if (cafes.error) throw new Error(cafes.error.message);
 
     const sessionsRevenue = (sessions.data ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
     const fnbRevenue = (pos.data ?? []).reduce((s, r) => s + (r.total_amount ?? 0), 0);

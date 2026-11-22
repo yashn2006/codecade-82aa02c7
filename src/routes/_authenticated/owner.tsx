@@ -10,6 +10,7 @@ import {
 import { motion } from "framer-motion";
 import { ConsoleShell } from "@/components/ConsoleShell";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { ReferralCard } from "@/components/ReferralCard";
 import { OwnerBilling } from "@/components/OwnerBilling";
@@ -54,7 +55,7 @@ const QUICK = [
 
 function OwnerHub() {
   const fetchDash = useServerFn(getOwnerDashboard);
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["owner-dashboard"],
     queryFn: () => fetchDash(),
     refetchInterval: 30_000,
@@ -133,6 +134,12 @@ function OwnerHub() {
 
       {isLoading ? (
         <div className="h-48 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
+      ) : isError ? (
+        <ErrorState
+          title="Couldn't load your cafés"
+          description={error instanceof Error && error.message ? error.message : "Live data couldn't be synced right now. Try again in a moment."}
+          onRetry={() => refetch()}
+        />
       ) : cafes.length === 0 ? (
         <EmptyState
           icon={Building2}

@@ -77,7 +77,7 @@ export const updateCafePage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id, context.supabase);
     const { error } = await context.supabase.from("cafe_pages").upsert({
       ...data,
       updated_at: new Date().toISOString(),
@@ -86,6 +86,7 @@ export const updateCafePage = createServerFn({ method: "POST" })
 
     const { writeAudit } = await import("@/lib/audit.server");
     await writeAudit({
+      supabase: context.supabase,
       cafeId: data.cafe_id,
       actorId: context.userId,
       action: "cafe.page_updated",
@@ -103,7 +104,7 @@ export const getCafePage = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id, context.supabase);
     const { data: row } = await context.supabase
       .from("cafe_pages").select("*").eq("cafe_id", data.cafe_id).maybeSingle();
     return row;

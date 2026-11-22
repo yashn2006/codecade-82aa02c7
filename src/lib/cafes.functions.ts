@@ -47,7 +47,7 @@ export const toggleCafeActive = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), is_active: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.id);
+    await assertCafeOwnerOrAdmin(context.userId, data.id, context.supabase);
     const { error } = await context.supabase
       .from("cafes").update({ is_active: data.is_active }).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -60,6 +60,7 @@ export const toggleCafeActive = createServerFn({ method: "POST" })
       resourceType: "cafe",
       resourceId: data.id,
       meta: { is_active: data.is_active },
+      supabase: context.supabase,
     });
     return { ok: true };
   });
@@ -78,7 +79,7 @@ export const setCafeMaintenance = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.id);
+    await assertCafeOwnerOrAdmin(context.userId, data.id, context.supabase);
     // RLS on cafes already restricts to owner; super admin bypasses via has_role policy.
     const { error } = await context.supabase
       .from("cafes")
@@ -102,6 +103,7 @@ export const setCafeMaintenance = createServerFn({ method: "POST" })
         ends_at: data.ends_at,
         message: data.message,
       },
+      supabase: context.supabase,
     });
     return { ok: true };
   });
@@ -111,7 +113,7 @@ export const getCafeMaintenance = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.id);
+    await assertCafeAccess(context.userId, data.id, undefined, context.supabase);
     const { data: row, error } = await context.supabase
       .from("cafes")
       .select("maintenance_starts_at, maintenance_ends_at, maintenance_message")
@@ -125,8 +127,9 @@ export const getCafeBySlug = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ slug: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafe, error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: cafe, error } = await db
       .from("cafes")
       .select("*")
       .eq("slug", data.slug)
@@ -134,7 +137,7 @@ export const getCafeBySlug = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!cafe) throw new Error("Café not found");
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    const access = await assertCafeAccess(context.userId, cafe.id);
+    const access = await assertCafeAccess(context.userId, cafe.id, undefined, context.supabase);
     return {
       ...cafe,
       staff_code: access.isOwnerOrAdmin ? (cafe as { staff_code?: string | null }).staff_code ?? null : null,
@@ -153,15 +156,20 @@ export const createCafe = createServerFn({ method: "POST" })
     });
     if (!isAdmin && !isOwner) throw new Error("Forbidden — only café owners or admins can create cafés.");
 
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
 
     // Resolve owner. Café owners always own their own cafés.
     let ownerId: string | undefined;
     if (isAdmin && data.owner_email) {
-      const { data: profile } = await supabaseAdmin
+      const { data: profile } = await db
         .from("profiles").select("id").eq("email", data.owner_email).maybeSingle();
       ownerId = profile?.id;
       if (!ownerId) {
+        if (!hasAdmin) {
+          throw new Error("No account exists with that owner email yet (admin key required to send new-user invites).");
+        }
         const { data: invited, error: invErr } =
           await supabaseAdmin.auth.admin.inviteUserByEmail(data.owner_email);
         if (invErr) throw new Error(invErr.message);
@@ -173,11 +181,11 @@ export const createCafe = createServerFn({ method: "POST" })
     if (!ownerId) throw new Error("Could not resolve owner");
 
     // Unique slug guard
-    const { data: clash } = await supabaseAdmin
+    const { data: clash } = await db
       .from("cafes").select("id").eq("slug", data.slug).maybeSingle();
     if (clash) throw new Error("That slug is taken — pick another.");
 
-    const { data: cafe, error } = await supabaseAdmin
+    const { data: cafe, error } = await db
       .from("cafes")
       .insert({
         owner_id: ownerId,
@@ -196,11 +204,15 @@ export const createCafe = createServerFn({ method: "POST" })
       .select().single();
     if (error) throw new Error(error.message);
 
-    // Ensure cafe_owner role exists (scoped + global) — ignore duplicates
-    await supabaseAdmin.from("user_roles")
-      .insert({ user_id: ownerId, role: "cafe_owner", cafe_id: cafe.id });
-    await supabaseAdmin.from("user_roles")
-      .insert({ user_id: ownerId, role: "cafe_owner", cafe_id: null });
+    // Ensure cafe_owner role exists (scoped + global) — ignore duplicates / RLS when already owner
+    try {
+      await db.from("user_roles")
+        .insert({ user_id: ownerId, role: "cafe_owner", cafe_id: cafe.id });
+      await db.from("user_roles")
+        .insert({ user_id: ownerId, role: "cafe_owner", cafe_id: null });
+    } catch {
+      /* non-fatal */
+    }
 
     return cafe;
   });
@@ -234,9 +246,9 @@ export const updateCafe = createServerFn({ method: "POST" })
     const floorGridOnly =
       patchKeys.length > 0 && patchKeys.every((k) => k === "floor_cols" || k === "floor_rows");
     if (floorGridOnly) {
-      await assertCafeAccess(context.userId, data.id, "manage_devices");
+      await assertCafeAccess(context.userId, data.id, "manage_devices", context.supabase);
     } else {
-      await assertCafeOwnerOrAdmin(context.userId, data.id);
+      await assertCafeOwnerOrAdmin(context.userId, data.id, context.supabase);
     }
     const { error } = await context.supabase
       .from("cafes")
@@ -252,6 +264,7 @@ export const updateCafe = createServerFn({ method: "POST" })
       resourceType: "cafe",
       resourceId: data.id,
       meta: { updated_fields: Object.keys(data.patch), ...data.patch },
+      supabase: context.supabase,
     });
     return { ok: true };
   });
@@ -260,12 +273,14 @@ export const updateCafe = createServerFn({ method: "POST" })
 export const getOwnerDashboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafes } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: cafes, error: cafesErr } = await db
       .from("cafes")
       .select("id, slug, name, city, is_active, created_at, trial_ends_at, subscription_status, plan")
       .eq("owner_id", context.userId)
       .order("created_at", { ascending: true });
+    if (cafesErr) throw new Error(cafesErr.message);
 
     const list = cafes ?? [];
     if (list.length === 0) {
@@ -275,12 +290,12 @@ export const getOwnerDashboard = createServerFn({ method: "GET" })
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
 
     const [devicesRes, customersRes, sessionsActiveRes, sessionsAllRes, sessionsTodayRes, bookingsRes] = await Promise.all([
-      supabaseAdmin.from("devices").select("id, cafe_id").in("cafe_id", ids),
-      supabaseAdmin.from("customers").select("id, cafe_id").in("cafe_id", ids),
-      supabaseAdmin.from("sessions").select("id, cafe_id").in("cafe_id", ids).eq("status", "active"),
-      supabaseAdmin.from("sessions").select("cafe_id, amount").in("cafe_id", ids).not("amount", "is", null),
-      supabaseAdmin.from("sessions").select("cafe_id, amount").in("cafe_id", ids).gte("started_at", startOfDay.toISOString()),
-      supabaseAdmin.from("bookings").select("id, cafe_id, status").in("cafe_id", ids),
+      db.from("devices").select("id, cafe_id").in("cafe_id", ids),
+      db.from("customers").select("id, cafe_id").in("cafe_id", ids),
+      db.from("sessions").select("id, cafe_id").in("cafe_id", ids).eq("status", "active"),
+      db.from("sessions").select("cafe_id, amount").in("cafe_id", ids).not("amount", "is", null),
+      db.from("sessions").select("cafe_id, amount").in("cafe_id", ids).gte("started_at", startOfDay.toISOString()),
+      db.from("bookings").select("id, cafe_id, status").in("cafe_id", ids),
     ]);
 
     const count = (rows: { cafe_id: string }[] | null) => {
@@ -334,7 +349,7 @@ export const ownerDeleteCafe = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.id);
+    await assertCafeOwnerOrAdmin(context.userId, data.id, context.supabase);
     const { data: cafe, error: getErr } = await context.supabase
       .from("cafes")
       .select("id, slug, owner_id, name")
@@ -353,8 +368,9 @@ export const ownerDeleteCafe = createServerFn({ method: "POST" })
       throw new Error(`Type "${cafe.slug}" exactly to confirm deletion.`);
     }
 
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin.from("cafes").delete().eq("id", cafe.id);
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db.from("cafes").delete().eq("id", cafe.id);
     if (error) throw new Error(error.message);
     return { ok: true, name: cafe.name };
   });

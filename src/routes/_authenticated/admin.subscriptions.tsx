@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ErrorState } from "@/components/ErrorState";
 import { adminListSubscriptions, adminExtendSubscription, type SubscriptionRow } from "@/lib/billing.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/subscriptions")({
@@ -36,7 +37,7 @@ function SubscriptionsPanel() {
   const [q, setQ] = useState("");
   const [custom, setCustom] = useState<Record<string, string>>({});
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-subscriptions"],
     queryFn: () => listFn(),
     refetchInterval: 30000,
@@ -99,7 +100,14 @@ function SubscriptionsPanel() {
 
       <div className="space-y-2">
         {isLoading && <div className="rounded-2xl border border-border/50 p-6 text-center text-sm text-muted-foreground">Loading subscriptions…</div>}
-        {!isLoading && rows.length === 0 && (
+        {!isLoading && isError && (
+          <ErrorState
+            title="Couldn't load subscriptions"
+            description={error instanceof Error && error.message ? error.message : "Failed to sync subscription records."}
+            onRetry={() => refetch()}
+          />
+        )}
+        {!isLoading && !isError && rows.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border/50 p-10 text-center text-sm text-muted-foreground">No cafés match that search.</div>
         )}
         {rows.map((r, i) => {

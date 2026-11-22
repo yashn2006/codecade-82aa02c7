@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { Plus, Building2, Power, PowerOff, Lock, Unlock, Wrench, MoreHorizontal, Trash2, ExternalLink, LayoutDashboard, Cpu, CalendarClock, Users as UsersIcon, ShoppingBag, Wallet, UserCog, Utensils, Map as MapIcon, BadgePercent, Trophy, FileEdit, BarChart3 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,7 @@ type CafeRow = {
 
 function CafesPanel() {
   const fn = useServerFn(listAllCafes);
-  const { data, isLoading } = useQuery({ queryKey: ["admin-cafes"], queryFn: () => fn() });
+  const { data, isLoading, isError, error, refetch } = useQuery({ queryKey: ["admin-cafes"], queryFn: () => fn() });
   const qc = useQueryClient();
   const create = useServerFn(createCafe);
   const [open, setOpen] = useState(false);
@@ -141,6 +142,12 @@ function CafesPanel() {
           <TabsContent key={k} value={k} className="mt-5">
             {isLoading ? (
               <div className="h-40 animate-pulse rounded-2xl border border-border/40 bg-card/30" />
+            ) : isError ? (
+              <ErrorState
+                title="Couldn't load cafés"
+                description={error instanceof Error && error.message ? error.message : "Failed to sync the café directory."}
+                onRetry={() => refetch()}
+              />
             ) : buckets[k].length === 0 ? (
               <EmptyState icon={Building2} title="Nothing here" description="No cafés in this bucket yet." />
             ) : (

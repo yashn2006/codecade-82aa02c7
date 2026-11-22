@@ -84,12 +84,24 @@ function MenuPageContent() {
     onSuccess: () => { toast.success("Saved"); refresh(); setEdit(null); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
-  const rmItem = useMutation({ mutationFn: delItem, onSuccess: () => { toast.success("Deleted"); refresh(); } });
+  const rmItem = useMutation({
+    mutationFn: delItem,
+    onSuccess: (res) => {
+      toast.success(res?.archived ? "Item has past orders — hidden from menu & POS." : "Deleted");
+      refresh();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
   const saveCat = useMutation({
     mutationFn: upCat,
     onSuccess: () => { toast.success("Saved"); refresh(); setCatOpen(false); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
-  const rmCat = useMutation({ mutationFn: delCat, onSuccess: () => { toast.success("Deleted"); refresh(); } });
+  const rmCat = useMutation({
+    mutationFn: delCat,
+    onSuccess: () => { toast.success("Deleted"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
 
   const [edit, setEdit] = useState<Partial<MItem> | null>(null);
   const [catOpen, setCatOpen] = useState(false);

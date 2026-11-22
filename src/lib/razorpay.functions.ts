@@ -23,15 +23,16 @@ export const createTopupOrder = createServerFn({ method: "POST" })
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keyId || !keySecret) throw new Error("Razorpay is not configured");
 
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cust } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: cust } = await db
       .from("customers")
       .select("user_id")
       .eq("id", data.customer_id)
       .maybeSingle();
     if (cust?.user_id !== context.userId) {
       const { assertCafeAccess } = await import("@/lib/staff-access.server");
-      await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet");
+      await assertCafeAccess(context.userId, data.cafe_id, "manage_wallet", context.supabase);
     }
 
     // Insert pending row first (RLS verifies caller owns/staffs the café)
@@ -95,21 +96,22 @@ export const verifyTopupPayment = createServerFn({ method: "POST" })
       throw new Error("Invalid payment signature");
     }
 
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
     const { data: row, error: getErr } = await context.supabase
       .from("wallet_topups")
       .select("id, cafe_id, customer_id, amount, status")
       .eq("id", data.topup_id)
       .single();
     if (getErr) throw new Error(getErr.message);
-    const { data: cust } = await supabaseAdmin
+    const { data: cust } = await db
       .from("customers")
       .select("user_id")
       .eq("id", row.customer_id)
       .maybeSingle();
     if (cust?.user_id !== context.userId) {
       const { assertCafeAccess } = await import("@/lib/staff-access.server");
-      await assertCafeAccess(context.userId, row.cafe_id, "manage_wallet");
+      await assertCafeAccess(context.userId, row.cafe_id, "manage_wallet", context.supabase);
     }
     if (row.status === "paid") return { ok: true, already: true };
 
@@ -148,6 +150,7 @@ export const verifyTopupPayment = createServerFn({ method: "POST" })
 
     const { writeAudit } = await import("@/lib/audit.server");
     await writeAudit({
+      supabase: context.supabase,
       cafeId: row.cafe_id,
       actorId: context.userId,
       action: "wallet.topped_up",
@@ -180,15 +183,16 @@ export const createBookingOrder = createServerFn({ method: "POST" })
       .eq("id", data.booking_id)
       .single();
     if (error) throw new Error(error.message);
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cust } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: cust } = await db
       .from("customers")
       .select("user_id")
       .eq("id", b.customer_id)
       .maybeSingle();
     if (cust?.user_id !== context.userId) {
       const { assertCafeAccess } = await import("@/lib/staff-access.server");
-      await assertCafeAccess(context.userId, b.cafe_id, "manage_wallet");
+      await assertCafeAccess(context.userId, b.cafe_id, "manage_wallet", context.supabase);
     }
     if (b.paid_at) throw new Error("Already paid");
     const amount = b.deposit_amount ?? 0;
@@ -231,21 +235,22 @@ export const verifyBookingPayment = createServerFn({ method: "POST" })
       .digest("hex");
     if (expected !== data.razorpay_signature) throw new Error("Invalid payment signature");
 
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: existingBk } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: existingBk } = await db
       .from("bookings")
       .select("cafe_id, customer_id")
       .eq("id", data.booking_id)
       .maybeSingle();
     if (!existingBk) throw new Error("Booking not found");
-    const { data: cust } = await supabaseAdmin
+    const { data: cust } = await db
       .from("customers")
       .select("user_id")
       .eq("id", existingBk.customer_id)
       .maybeSingle();
     if (cust?.user_id !== context.userId) {
       const { assertCafeAccess } = await import("@/lib/staff-access.server");
-      await assertCafeAccess(context.userId, existingBk.cafe_id, "manage_wallet");
+      await assertCafeAccess(context.userId, existingBk.cafe_id, "manage_wallet", context.supabase);
     }
 
     const { data: bk, error } = await context.supabase

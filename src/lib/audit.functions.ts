@@ -9,7 +9,7 @@ export const listAuditLogs = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeOwnerOrAdmin } = await import("@/lib/staff-access.server");
-    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id);
+    await assertCafeOwnerOrAdmin(context.userId, data.cafe_id, context.supabase);
     const { data: rows, error } = await context.supabase
       .from("audit_logs")
       .select("*")

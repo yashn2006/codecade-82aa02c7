@@ -33,9 +33,10 @@ export const adminListSubscriptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SubscriptionRow[]> => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
 
-    const { data: cafes, error } = await supabaseAdmin
+    const { data: cafes, error } = await db
       .from("cafes")
       .select("id, name, slug, city, owner_id, trial_ends_at, subscription_status")
       .order("trial_ends_at", { ascending: true, nullsFirst: true });
@@ -47,10 +48,10 @@ export const adminListSubscriptions = createServerFn({ method: "GET" })
     const ids = rows.map((c) => c.id);
     const [ownersRes, eventsRes, invRes] = await Promise.all([
       ownerIds.length
-        ? supabaseAdmin.from("profiles").select("id, email, full_name").in("id", ownerIds)
+        ? db.from("profiles").select("id, email, full_name").in("id", ownerIds)
         : Promise.resolve({ data: [] as { id: string; email: string | null; full_name: string | null }[] }),
-      supabaseAdmin.from("subscription_events").select("cafe_id, added_days, created_at, source").in("cafe_id", ids).order("created_at", { ascending: false }),
-      supabaseAdmin.from("cafe_invoices").select("cafe_id, status").in("cafe_id", ids),
+      db.from("subscription_events").select("cafe_id, added_days, created_at, source").in("cafe_id", ids).order("created_at", { ascending: false }),
+      db.from("cafe_invoices").select("cafe_id, status").in("cafe_id", ids),
     ]);
 
     const owners = new Map((ownersRes.data ?? []).map((o) => [o.id, o]));
@@ -101,17 +102,21 @@ export const adminExtendSubscription = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // Notify the owner in-app (best effort).
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafe } = await supabaseAdmin.from("cafes").select("owner_id, name").eq("id", data.cafe_id).maybeSingle();
-    if (cafe?.owner_id) {
-      await supabaseAdmin.from("notifications").insert({
-        user_id: cafe.owner_id,
-        kind: "subscription",
-        title: `Subscription extended by ${data.add_days} days`,
-        body: `${cafe.name}: active until ${new Date(newEnds as string).toDateString()}.`,
-        link: "/owner",
-      });
-    }
+    try {
+      const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+      if (hasSupabaseAdminKey()) {
+        const { data: cafe } = await supabaseAdmin.from("cafes").select("owner_id, name").eq("id", data.cafe_id).maybeSingle();
+        if (cafe?.owner_id) {
+          await supabaseAdmin.from("notifications").insert({
+            user_id: cafe.owner_id,
+            kind: "subscription",
+            title: `Subscription extended by ${data.add_days} days`,
+            body: `${cafe.name}: active until ${new Date(newEnds as string).toDateString()}.`,
+            link: "/owner",
+          });
+        }
+      }
+    } catch { /* non-fatal */ }
     return { new_ends_at: newEnds as string };
   });
 
@@ -119,9 +124,10 @@ export const adminExtendSubscription = createServerFn({ method: "POST" })
 
 export const getBillingDetails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data } = await supabaseAdmin
+  .handler(async ({ context }) => {
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data } = await db
       .from("platform_settings")
       .select("billing_upi_id, billing_qr_url, billing_note, billing_monthly_price_paise")
       .eq("id", true)
@@ -146,8 +152,9 @@ export const setBillingDetails = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin.from("platform_settings").upsert({
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { error } = await db.from("platform_settings").upsert({
       id: true,
       billing_upi_id: data.upi_id,
       billing_qr_url: data.qr_url,
@@ -183,8 +190,9 @@ export const adminListInvoices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<InvoiceRow[]> => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data, error } = await db
       .from("cafe_invoices")
       .select("*, cafes(name, slug)")
       .order("created_at", { ascending: false })
@@ -213,8 +221,10 @@ export const adminCreateInvoice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { error } = await supabaseAdmin.from("cafe_invoices").insert({
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
+    const { error } = await db.from("cafe_invoices").insert({
       cafe_id: data.cafe_id,
       amount_paise: Math.round(data.amount_rupees * 100),
       days: data.days,
@@ -223,16 +233,20 @@ export const adminCreateInvoice = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
 
-    const { data: cafe } = await supabaseAdmin.from("cafes").select("owner_id, name").eq("id", data.cafe_id).maybeSingle();
-    if (cafe?.owner_id) {
-      await supabaseAdmin.from("notifications").insert({
-        user_id: cafe.owner_id,
-        kind: "billing",
-        title: `New charge · ₹${data.amount_rupees.toLocaleString("en-IN")}`,
-        body: `${data.days} days of subscription for ${cafe.name}. Pay and submit your transaction ID.`,
-        link: "/owner",
-      });
-    }
+    try {
+      if (hasAdmin) {
+        const { data: cafe } = await supabaseAdmin.from("cafes").select("owner_id, name").eq("id", data.cafe_id).maybeSingle();
+        if (cafe?.owner_id) {
+          await supabaseAdmin.from("notifications").insert({
+            user_id: cafe.owner_id,
+            kind: "billing",
+            title: `New charge · ₹${data.amount_rupees.toLocaleString("en-IN")}`,
+            body: `${data.days} days of subscription for ${cafe.name}. Pay and submit your transaction ID.`,
+            link: "/owner",
+          });
+        }
+      }
+    } catch { /* non-fatal */ }
     return { ok: true };
   });
 
@@ -247,8 +261,10 @@ export const adminReviewInvoice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: inv, error: e1 } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
+    const { data: inv, error: e1 } = await db
       .from("cafe_invoices").select("*").eq("id", data.id).maybeSingle();
     if (e1) throw new Error(e1.message);
     if (!inv) throw new Error("Invoice not found");
@@ -267,7 +283,7 @@ export const adminReviewInvoice = createServerFn({ method: "POST" })
       newEnds = ends as string;
     }
 
-    const { error: e2 } = await supabaseAdmin.from("cafe_invoices").update({
+    const { error: e2 } = await db.from("cafe_invoices").update({
       status: data.action === "approve" ? "approved" : "rejected",
       reviewed_at: new Date().toISOString(),
       reviewed_by: context.userId,
@@ -275,18 +291,22 @@ export const adminReviewInvoice = createServerFn({ method: "POST" })
     }).eq("id", data.id);
     if (e2) throw new Error(e2.message);
 
-    const { data: cafe } = await supabaseAdmin.from("cafes").select("owner_id, name").eq("id", inv.cafe_id).maybeSingle();
-    if (cafe?.owner_id) {
-      await supabaseAdmin.from("notifications").insert({
-        user_id: cafe.owner_id,
-        kind: "billing",
-        title: data.action === "approve" ? "Payment approved — subscription resumed" : "Payment could not be verified",
-        body: data.action === "approve"
-          ? `${inv.days} days added. Active until ${newEnds ? new Date(newEnds).toDateString() : "—"}.`
-          : (data.review_note ?? "Please check your transaction details and submit again."),
-        link: "/owner",
-      });
-    }
+    try {
+      if (hasAdmin) {
+        const { data: cafe } = await supabaseAdmin.from("cafes").select("owner_id, name").eq("id", inv.cafe_id).maybeSingle();
+        if (cafe?.owner_id) {
+          await supabaseAdmin.from("notifications").insert({
+            user_id: cafe.owner_id,
+            kind: "billing",
+            title: data.action === "approve" ? "Payment approved — subscription resumed" : "Payment could not be verified",
+            body: data.action === "approve"
+              ? `${inv.days} days added. Active until ${newEnds ? new Date(newEnds).toDateString() : "—"}.`
+              : (data.review_note ?? "Please check your transaction details and submit again."),
+            link: "/owner",
+          });
+        }
+      }
+    } catch { /* non-fatal */ }
     return { ok: true, new_ends_at: newEnds };
   });
 
@@ -295,19 +315,21 @@ export const adminReviewInvoice = createServerFn({ method: "POST" })
 export const myBilling = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafes } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const db = hasSupabaseAdminKey() ? supabaseAdmin : context.supabase;
+    const { data: cafes, error: cafesErr } = await db
       .from("cafes")
       .select("id, name, slug, trial_ends_at, subscription_status")
       .eq("owner_id", context.userId)
       .order("created_at", { ascending: true });
+    if (cafesErr) throw new Error(cafesErr.message);
     const list = cafes ?? [];
     const ids = list.map((c) => c.id);
 
     const [evRes, invRes, payRes] = await Promise.all([
-      ids.length ? supabaseAdmin.from("subscription_events").select("*").in("cafe_id", ids).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [] }),
-      ids.length ? supabaseAdmin.from("cafe_invoices").select("*").in("cafe_id", ids).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [] }),
-      supabaseAdmin.from("platform_settings").select("billing_upi_id, billing_qr_url, billing_note, billing_monthly_price_paise").eq("id", true).maybeSingle(),
+      ids.length ? db.from("subscription_events").select("*").in("cafe_id", ids).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [] }),
+      ids.length ? db.from("cafe_invoices").select("*").in("cafe_id", ids).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [] }),
+      db.from("platform_settings").select("billing_upi_id, billing_qr_url, billing_note, billing_monthly_price_paise").eq("id", true).maybeSingle(),
     ]);
 
     return {
@@ -340,15 +362,17 @@ export const submitInvoiceProof = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: inv } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
+    const { data: inv } = await db
       .from("cafe_invoices").select("id, cafe_id").eq("id", data.invoice_id).maybeSingle();
     if (!inv) throw new Error("Invoice not found");
-    const { data: cafe } = await supabaseAdmin
+    const { data: cafe } = await db
       .from("cafes").select("id, name").eq("id", inv.cafe_id).eq("owner_id", context.userId).maybeSingle();
     if (!cafe) throw new Error("Not your café");
 
-    const { error } = await supabaseAdmin.from("cafe_invoices").update({
+    const { error } = await db.from("cafe_invoices").update({
       status: "submitted",
       txn_ref: data.txn_ref,
       proof_url: data.proof_url ?? null,
@@ -356,18 +380,22 @@ export const submitInvoiceProof = createServerFn({ method: "POST" })
     }).eq("id", data.invoice_id);
     if (error) throw new Error(error.message);
 
-    const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "super_admin");
-    if (admins?.length) {
-      await supabaseAdmin.from("notifications").insert(
-        admins.map((a: { user_id: string }) => ({
-          user_id: a.user_id,
-          kind: "billing",
-          title: `Payment proof submitted — ${cafe.name}`,
-          body: `Transaction ${data.txn_ref}. Review and approve to resume the subscription.`,
-          link: "/admin/billing",
-        })),
-      );
-    }
+    try {
+      if (hasAdmin) {
+        const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "super_admin");
+        if (admins?.length) {
+          await supabaseAdmin.from("notifications").insert(
+            admins.map((a: { user_id: string }) => ({
+              user_id: a.user_id,
+              kind: "billing",
+              title: `Payment proof submitted — ${cafe.name}`,
+              body: `Transaction ${data.txn_ref}. Review and approve to resume the subscription.`,
+              link: "/admin/billing",
+            })),
+          );
+        }
+      }
+    } catch { /* non-fatal */ }
     return { ok: true };
   });
 
@@ -384,8 +412,10 @@ export const ownerCreateUpgradePayment = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/lib/supabase/client.server");
-    const { data: cafe } = await supabaseAdmin
+    const { hasSupabaseAdminKey, supabaseAdmin } = await import("@/lib/supabase/client.server");
+    const hasAdmin = hasSupabaseAdminKey();
+    const db = hasAdmin ? supabaseAdmin : context.supabase;
+    const { data: cafe } = await db
       .from("cafes")
       .select("id, name, owner_id")
       .eq("id", data.cafe_id)
@@ -393,7 +423,7 @@ export const ownerCreateUpgradePayment = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!cafe) throw new Error("Café not found or unauthorized");
 
-    const { data: inv, error } = await supabaseAdmin
+    const { data: inv, error } = await db
       .from("cafe_invoices")
       .insert({
         cafe_id: data.cafe_id,
@@ -410,18 +440,22 @@ export const ownerCreateUpgradePayment = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "super_admin");
-    if (admins?.length) {
-      await supabaseAdmin.from("notifications").insert(
-        admins.map((a: { user_id: string }) => ({
-          user_id: a.user_id,
-          kind: "billing",
-          title: `Upgrade submitted — ${cafe.name} (${data.plan_name})`,
-          body: `₹${data.amount_rupees.toLocaleString("en-IN")} · UTR: ${data.txn_ref}. Review to activate.`,
-          link: "/admin/billing",
-        })),
-      );
-    }
+    try {
+      if (hasAdmin) {
+        const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "super_admin");
+        if (admins?.length) {
+          await supabaseAdmin.from("notifications").insert(
+            admins.map((a: { user_id: string }) => ({
+              user_id: a.user_id,
+              kind: "billing",
+              title: `Upgrade submitted — ${cafe.name} (${data.plan_name})`,
+              body: `₹${data.amount_rupees.toLocaleString("en-IN")} · UTR: ${data.txn_ref}. Review to activate.`,
+              link: "/admin/billing",
+            })),
+          );
+        }
+      }
+    } catch { /* non-fatal */ }
     return { ok: true, invoice_id: inv?.id };
   });
 

@@ -21,7 +21,7 @@ export const createOrder = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "generate_bills");
+    await assertCafeAccess(context.userId, data.cafe_id, "generate_bills", context.supabase);
     const subtotal = data.items.reduce((s, i) => s + i.unit_price * i.qty, 0);
     const discount = Math.min(data.discount_amount ?? 0, subtotal);
     const taxable = subtotal - discount;
@@ -65,10 +65,10 @@ export const settleOrder = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("orders", data.order_id);
-    await assertCafeAccess(context.userId, cafeId, "generate_bills");
+    const cafeId = await lookupCafeId("orders", data.order_id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "generate_bills", context.supabase);
     if (data.payment_method === "wallet") {
-      await assertCafeAccess(context.userId, cafeId, "manage_wallet");
+      await assertCafeAccess(context.userId, cafeId, "manage_wallet", context.supabase);
     }
     const { error } = await context.supabase.rpc("settle_order", {
       _order_id: data.order_id,
@@ -83,7 +83,7 @@ export const listRecentOrders = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ cafe_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "generate_bills");
+    await assertCafeAccess(context.userId, data.cafe_id, "generate_bills", context.supabase);
     const { data: orders, error } = await context.supabase
       .from("orders")
       .select("*, order_items(*), customers(full_name)")
@@ -99,8 +99,8 @@ export const getOrderForReceipt = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("orders", data.id);
-    await assertCafeAccess(context.userId, cafeId, "generate_bills");
+    const cafeId = await lookupCafeId("orders", data.id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "generate_bills", context.supabase);
     const { data: order, error } = await context.supabase
       .from("orders")
       .select("*, order_items(*), customers(full_name, phone), cafes(name, address, city, phone, gst_no)")
@@ -115,8 +115,8 @@ export const voidOrder = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("orders", data.id);
-    await assertCafeAccess(context.userId, cafeId, "generate_bills");
+    const cafeId = await lookupCafeId("orders", data.id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "generate_bills", context.supabase);
     const { error } = await context.supabase
       .from("orders").update({ status: "void" }).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -134,8 +134,8 @@ export const refundOrder = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("orders", data.order_id);
-    await assertCafeAccess(context.userId, cafeId, "generate_bills");
+    const cafeId = await lookupCafeId("orders", data.order_id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "generate_bills", context.supabase);
     const { data: ord } = await context.supabase
       .from("orders")
       .select("cafe_id, receipt_no")
@@ -150,6 +150,7 @@ export const refundOrder = createServerFn({ method: "POST" })
 
     const { writeAudit } = await import("@/lib/audit.server");
     await writeAudit({
+      supabase: context.supabase,
       cafeId: ord?.cafe_id,
       actorId: context.userId,
       action: "pos.order_refunded",
@@ -175,7 +176,7 @@ export const dailyZReport = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess } = await import("@/lib/staff-access.server");
-    await assertCafeAccess(context.userId, data.cafe_id, "view_revenue");
+    await assertCafeAccess(context.userId, data.cafe_id, "view_revenue", context.supabase);
     // Compute IST day boundaries
     const d = data.date ? new Date(data.date + "T00:00:00+05:30") : new Date();
     const istStart = data.date
@@ -245,8 +246,8 @@ export const splitOrder = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { assertCafeAccess, lookupCafeId } = await import("@/lib/staff-access.server");
-    const cafeId = await lookupCafeId("orders", data.order_id);
-    await assertCafeAccess(context.userId, cafeId, "generate_bills");
+    const cafeId = await lookupCafeId("orders", data.order_id, context.supabase);
+    await assertCafeAccess(context.userId, cafeId, "generate_bills", context.supabase);
     const { data: parent, error: pe } = await context.supabase
       .from("orders")
       .select("id, cafe_id, status, subtotal, total_amount, gst_rate, session_id")
